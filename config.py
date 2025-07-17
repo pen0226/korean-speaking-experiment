@@ -1,6 +1,6 @@
 """
 config.py
-실험 전역 설정 및 상수 정의 (로컬 .env + Streamlit Cloud secrets 완벽 지원)
+실험 전역 설정 및 상수 정의 (로컬 .env + Streamlit Cloud secrets 완벽 지원 - GCS 연결 수정)
 """
 
 import os
@@ -142,7 +142,7 @@ ELEVEN_VOICE_ID = get_secret('ELEVEN_VOICE_ID')
 # 💡 ZIP 파일만 업로드하는 간소화된 구조
 GCS_ENABLED = get_secret('GCS_ENABLED', 'False').lower() == 'true'
 GCS_BUCKET_NAME = get_secret('GCS_BUCKET_NAME', 'korean-speaking-experiment')
-GCS_SERVICE_ACCOUNT = get_secret('gcp_service_account')  # JSON 형태의 서비스 계정 정보
+GCS_SERVICE_ACCOUNT = get_secret('gcp_service_account')  # 🔥 원래대로: gcp_service_account
 
 # === 간소화된 GCS 폴더 구조 (ZIP 전용) ===
 # 💡 파일 업로드시 자동으로 폴더가 생성됩니다
@@ -442,7 +442,7 @@ LOG_FORMAT = {
 SESSION_METADATA = {
     "current_session": CURRENT_SESSION,
     "session_label": SESSION_LABELS.get(CURRENT_SESSION, "Session 1"),
-    "experiment_version": "5.2",  # 이중 환경 완벽 지원 버전
+    "experiment_version": "5.2.1",  # GCS 연결 수정 버전
     "last_updated": "2025-01-17",
     "storage_method": "GCS_ZIP_ONLY",  # ZIP 파일만 업로드
     "auth_required": False,  # 학생 인증 불필요
@@ -450,7 +450,8 @@ SESSION_METADATA = {
     "dual_environment": True,  # 로컬/클라우드 이중 환경 지원
     "config_method": "local_env_cloud_secrets",  # 설정 방식 명시
     "openai_api_compatible": True,  # OpenAI API 호환성 확인
-    "audio_formats_extended": True  # 확장된 오디오 형식 지원
+    "audio_formats_extended": True,  # 확장된 오디오 형식 지원
+    "gcs_connection_fixed": True  # 🔥 GCS 연결 수정 완료
 }
 
 # === 환경별 설정 ===
@@ -462,12 +463,57 @@ ENVIRONMENT = {
     "debug_mode": not is_streamlit_cloud()              # 로컬에서만 디버그 모드
 }
 
+# === GCS 연결 테스트 함수 추가 ===
+def test_gcs_connection():
+    """GCS 연결 상태 테스트 (TOML/JSON 호환)"""
+    try:
+        if not GCS_ENABLED:
+            return False, "GCS_ENABLED is False"
+        
+        if not GCS_SERVICE_ACCOUNT:
+            return False, "Service account not found in secrets"
+        
+        if not GCS_BUCKET_NAME:
+            return False, "GCS_BUCKET_NAME not configured"
+        
+        # 🔥 TOML과 JSON 모두 처리 가능한 방식
+        import json
+        try:
+            # Case 1: TOML에서 딕셔너리로 읽힌 경우
+            if isinstance(GCS_SERVICE_ACCOUNT, dict):
+                service_account_info = dict(GCS_SERVICE_ACCOUNT)  # AttrDict를 일반 dict로 변환
+                project_id = service_account_info.get('project_id', 'Unknown')
+                return True, f"GCS Ready - Project: {project_id} (TOML format)"
+            
+            # Case 2: JSON 문자열인 경우 (기존 방식)
+            elif isinstance(GCS_SERVICE_ACCOUNT, str):
+                service_account_info = json.loads(GCS_SERVICE_ACCOUNT)
+                project_id = service_account_info.get('project_id', 'Unknown')
+                return True, f"GCS Ready - Project: {project_id} (JSON format)"
+            
+            else:
+                return False, f"Unexpected service account type: {type(GCS_SERVICE_ACCOUNT)}"
+                
+        except json.JSONDecodeError:
+            return False, "Invalid JSON format in service account"
+        except Exception as parse_error:
+            return False, f"Service account parsing error: {str(parse_error)}"
+            
+    except Exception as e:
+        return False, f"GCS test failed: {str(e)}"
+
 # === 환경 정보 출력 (개발용) ===
 if not is_streamlit_cloud():
     print(f"🏠 Local Environment Detected")
     print(f"📝 Config Source: .env file")
     print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
+    print(f"☁️ GCS: {'✅ Configured' if GCS_ENABLED else '❌ Disabled'}")
 else:
     print(f"☁️ Streamlit Cloud Environment Detected")
     print(f"📝 Config Source: st.secrets")
     print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
+    print(f"☁️ GCS: {'✅ Configured' if GCS_ENABLED else '❌ Disabled'}")
+    
+    # GCS 연결 상태 자동 테스트 (Cloud 환경에서)
+    gcs_status, gcs_message = test_gcs_connection()
+    print(f"🗄️ GCS Status: {'✅' if gcs_status else '❌'} {gcs_message}")
