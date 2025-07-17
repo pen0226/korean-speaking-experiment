@@ -210,3 +210,4 @@ __marimo__/
 # GCS service account key
 streamlit-gcs-key.json
 
+token.json
