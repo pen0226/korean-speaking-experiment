@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (중복 저장 방지 + ZIP 전용 + 닉네임 매칭 - 최종)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (Excel 변환 제거 - 간소화 버전)
 """
 
 import os
@@ -25,7 +25,7 @@ from config import (
 
 def save_session_data():
     """
-    세션 데이터를 CSV 및 Excel 형식으로 저장 (중복 저장 방지)
+    세션 데이터를 CSV 형식으로 저장 (Excel 변환 제거)
     
     Returns:
         tuple: (csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp)
@@ -52,8 +52,8 @@ def save_session_data():
         # CSV 파일 저장
         csv_filename = save_to_csv(session_data, timestamp)
         
-        # Excel 변환
-        excel_filename = convert_csv_to_excel(csv_filename)
+        # Excel 변환 제거 - None 반환
+        excel_filename = None
         
         # 음성 파일들 저장
         audio_folder, saved_files = save_audio_files(timestamp)
@@ -209,33 +209,17 @@ def save_to_csv(session_data, timestamp):
 
 def convert_csv_to_excel(csv_filename):
     """
-    CSV를 Excel로 변환
+    CSV를 Excel로 변환 - 기능 제거 (용량 절약)
     
     Args:
         csv_filename: CSV 파일 경로
         
     Returns:
-        str: Excel 파일 경로 또는 None
+        None: Excel 변환 기능 제거됨
     """
-    try:
-        import pandas as pd
-        
-        # CSV 읽기
-        df = pd.read_csv(csv_filename, encoding='utf-8')
-        
-        # Excel 파일명 생성
-        excel_filename = csv_filename.replace('.csv', '.xlsx')
-        
-        # Excel로 저장
-        df.to_excel(excel_filename, index=False, engine='openpyxl')
-        
-        return excel_filename
-    except ImportError:
-        st.warning("⚠️ Excel conversion requires pandas and openpyxl. Install with: pip install pandas openpyxl")
-        return None
-    except Exception as e:
-        st.error(f"❌ Error converting to Excel: {e}")
-        return None
+    # Excel 변환 기능 제거 - pandas/openpyxl 의존성 제거
+    # 연구자는 CSV 파일을 Excel에서 직접 열어서 사용
+    return None
 
 
 def save_audio_files(timestamp):
@@ -362,7 +346,7 @@ Contact: pen0226@gmail.com for any data requests or questions.
 
 def create_comprehensive_backup_zip(session_id, timestamp):
     """
-    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (participant_info.txt 포함)
+    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (Excel 파일 제외)
     
     Args:
         session_id: 세션 ID
@@ -391,10 +375,10 @@ def create_comprehensive_backup_zip(session_id, timestamp):
             if os.path.exists(csv_file):
                 zipf.write(csv_file, f"session_data_{timestamp}.csv")
             
-            # Excel 파일 추가
-            excel_file = csv_file.replace('.csv', '.xlsx')
-            if os.path.exists(excel_file):
-                zipf.write(excel_file, f"session_data_{timestamp}.xlsx")
+            # Excel 파일 추가 제거 (기능 제거됨)
+            # excel_file = csv_file.replace('.csv', '.xlsx')
+            # if os.path.exists(excel_file):
+            #     zipf.write(excel_file, f"session_data_{timestamp}.xlsx")
             
             # 동의서 PDF 추가
             consent_pdf = os.path.join(FOLDERS["data"], f"{session_id}_consent.pdf")
@@ -408,7 +392,7 @@ def create_comprehensive_backup_zip(session_id, timestamp):
                     file_path = os.path.join(audio_folder, file)
                     zipf.write(file_path, f"audio/{file}")
             
-            # 📝 ZIP 내용 요약 파일 추가
+            # 📝 ZIP 내용 요약 파일 추가 (Excel 제거 반영)
             readme_content = f"""=== ZIP CONTENTS SUMMARY ===
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 Participant: {session_id} (Session {session_num})
@@ -417,9 +401,11 @@ Save Trigger: Auto-save after second recording completion
 Files included:
 - participant_info.txt: Participant details and nickname mapping
 - session_data_{timestamp}.csv: Complete session data in CSV format
-- session_data_{timestamp}.xlsx: Complete session data in Excel format  
 - consent_form_{session_id}.pdf: Signed consent form
 - audio/: All recorded audio files (student + model pronunciations)
+
+NOTE: Excel file generation has been removed for faster deployment.
+The CSV file can be opened directly in Excel for analysis.
 
 IMPORTANT: Data was automatically saved after second recording completion.
 This ensures no data loss even if survey is not completed.
@@ -524,8 +510,8 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
     ZIP 파일만 GCS에 자동 백업 + nickname_mapping.csv 백업
     
     Args:
-        csv_filename: CSV 파일 경로 (사용 안 함)
-        excel_filename: Excel 파일 경로 (사용 안 함)
+        csv_filename: CSV 파일 경로
+        excel_filename: Excel 파일 경로 (None - 기능 제거됨)
         zip_filename: ZIP 파일 경로 (메인 업로드)
         session_id: 세션 ID
         timestamp: 타임스탬프
@@ -651,6 +637,7 @@ Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_fi
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: ✅ Secured before survey step
+Excel conversion: ❌ Removed for faster deployment (CSV only)
 {'='*80}
 """
         
@@ -666,11 +653,11 @@ Data Safety: ✅ Secured before survey step
 
 def display_download_buttons(csv_filename, excel_filename, zip_filename):
     """
-    연구자용 다운로드 버튼들 표시 (ZIP 중심으로 수정)
+    연구자용 다운로드 버튼들 표시 (Excel 제거 버전)
     
     Args:
         csv_filename: CSV 파일 경로
-        excel_filename: Excel 파일 경로  
+        excel_filename: Excel 파일 경로 (None - 기능 제거됨)
         zip_filename: ZIP 파일 경로
     """
     if GCS_ENABLED:
@@ -678,8 +665,8 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
     else:
         st.warning("⚠️ GCS upload is disabled. Use these download buttons to save your data.")
     
-    # ZIP을 중심으로 표시
-    col1, col2, col3 = st.columns(3)
+    # Excel 제거로 2개 컬럼만 사용
+    col1, col2 = st.columns(2)
     
     # 세션 정보를 다운로드 파일명에 포함
     session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
@@ -710,7 +697,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
                 with open(csv_filename, 'r', encoding='utf-8') as f:
                     csv_data = f.read()
                 st.download_button(
-                    label="📄 CSV Data",
+                    label="📄 CSV Data (Open in Excel)",
                     data=csv_data,
                     file_name=f"session{session_num}_{st.session_state.session_id}_{timestamp_str}.csv",
                     mime='text/csv',
@@ -721,23 +708,8 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         else:
             st.info("CSV unavailable")
     
-    with col3:
-        # Excel 다운로드
-        if excel_filename and os.path.exists(excel_filename):
-            try:
-                with open(excel_filename, 'rb') as f:
-                    excel_data = f.read()
-                st.download_button(
-                    label="📊 Excel Data",
-                    data=excel_data,
-                    file_name=f"session{session_num}_{st.session_state.session_id}_{timestamp_str}.xlsx",
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    use_container_width=True
-                )
-            except:
-                st.info("Excel unavailable")
-        else:
-            st.info("Excel unavailable")
+    # Excel 제거 안내
+    st.caption("ℹ️ Excel file generation has been removed for faster deployment. The CSV file can be opened directly in Excel.")
 
 
 def display_session_details():

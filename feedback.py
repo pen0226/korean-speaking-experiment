@@ -1,6 +1,6 @@
 """
 feedback.py
-GPT를 이용한 한국어 학습 피드백 생성 (1분 기준 - 3개 오류 유형)
+GPT를 이용한 한국어 학습 피드백 생성 (tiktoken 제거 - 문자 수 기반 처리)
 """
 
 import openai
@@ -38,7 +38,7 @@ COMMON_BEGINNER_ERRORS = {
 }
 
 
-# === 긴 텍스트 처리 함수들 ===
+# === 긴 텍스트 처리 함수들 (문자 수 기반만) ===
 def split_korean_sentences(text):
     """
     한국어 문장을 적절히 분할
@@ -68,61 +68,9 @@ def split_korean_sentences(text):
     return [s for s in result if len(s.strip()) > 3]  # 너무 짧은 문장 제외
 
 
-def preprocess_long_transcript_with_tokens(transcript, max_tokens=GPT_FEEDBACK_MAX_TOKENS):
-    """
-    토큰 수 기반으로 긴 전사 텍스트를 문장 단위로 처리
-    
-    Args:
-        transcript: 전사된 텍스트
-        max_tokens: 최대 토큰 수
-        
-    Returns:
-        str: 처리된 텍스트
-    """
-    try:
-        import tiktoken
-        encoding = tiktoken.encoding_for_model("gpt-4o")
-        
-        # 토큰 수가 제한 내면 그대로 반환
-        token_count = len(encoding.encode(transcript))
-        if token_count <= max_tokens:
-            return transcript
-        
-        # 한국어 문장 구분자로 분할
-        sentences = split_korean_sentences(transcript)
-        
-        if not sentences:
-            # 문장 분할 실패시 앞부분만 자르기
-            return transcript[:GPT_FEEDBACK_MAX_CHARS]
-        
-        # 토큰 수 내에서 문장 단위로 선택
-        result = ""
-        for sentence in sentences:
-            temp = result + " " + sentence if result else sentence
-            temp_tokens = len(encoding.encode(temp))
-            
-            if temp_tokens <= max_tokens:
-                result = temp
-            else:
-                break
-        
-        # 결과가 너무 짧으면 최소한 첫 문장은 포함
-        if not result and sentences:
-            result = sentences[0]
-        
-        return result if result else transcript[:GPT_FEEDBACK_MAX_CHARS]
-        
-    except ImportError:
-        # tiktoken 없으면 fallback 방식
-        return preprocess_long_transcript_fallback(transcript)
-    except Exception as e:
-        print(f"Token-based preprocessing failed: {e}")
-        return preprocess_long_transcript_fallback(transcript)
-
-
 def preprocess_long_transcript_fallback(transcript, max_chars=GPT_FEEDBACK_MAX_CHARS):
     """
-    tiktoken 없을 때의 fallback 처리 (문자 수 기반)
+    문자 수 기반 긴 텍스트 처리
     
     Args:
         transcript: 전사된 텍스트
@@ -158,7 +106,7 @@ def preprocess_long_transcript_fallback(transcript, max_chars=GPT_FEEDBACK_MAX_C
 
 def preprocess_long_transcript(transcript):
     """
-    긴 전사 텍스트 전처리 메인 함수
+    긴 전사 텍스트 전처리 메인 함수 (문자 수 기반만 사용)
     
     Args:
         transcript: 전사된 텍스트
@@ -172,16 +120,12 @@ def preprocess_long_transcript(transcript):
     # 간단한 정리
     cleaned = transcript.strip()
     
-    # 길이별 처리 전략
-    if len(cleaned) <= 500:
-        # 짧은 텍스트는 그대로
+    # 문자 수 기반 처리 (tiktoken 제거)
+    if len(cleaned) <= GPT_FEEDBACK_MAX_CHARS:
         return cleaned
-    elif len(cleaned) <= GPT_FEEDBACK_MAX_CHARS:
-        # 중간 텍스트는 문장 단위로만 정리
-        return preprocess_long_transcript_fallback(cleaned)
     else:
-        # 긴 텍스트는 토큰 기반 처리
-        return preprocess_long_transcript_with_tokens(cleaned)
+        # 긴 텍스트는 문자 수 기반으로 문장 단위로 자르기
+        return preprocess_long_transcript_fallback(cleaned)
 
 
 # === 간소화된 오류 분류 함수 (3개 유형만) ===
@@ -310,7 +254,7 @@ def generate_prompt(template, **kwargs):
 # === 메인 피드백 함수들 ===
 def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     """
-    STT 기반 루브릭을 적용한 GPT 피드백 생성 (긴 텍스트 처리 개선 + duration 정보 추가)
+    STT 기반 루브릭을 적용한 GPT 피드백 생성 (문자 수 기반 텍스트 처리)
     
     Args:
         transcript: 전사된 텍스트
@@ -321,7 +265,7 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
         st.error("Critical Error: OpenAI API key is required for feedback!")
         return {}
     
-    # 긴 텍스트 전처리
+    # 긴 텍스트 전처리 (문자 수 기반)
     processed_transcript = preprocess_long_transcript(transcript)
     
     # 전처리 결과 로깅
@@ -349,7 +293,8 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
         'raw_response': None,
         'original_length': len(transcript),
         'processed_length': len(processed_transcript),
-        'duration_provided': duration
+        'duration_provided': duration,
+        'processing_method': 'character_based'  # tiktoken 제거 표시
     }
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
     
