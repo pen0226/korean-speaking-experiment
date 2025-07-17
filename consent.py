@@ -1,14 +1,13 @@
 """
 consent.py
-연구 참여 동의서 처리 및 PDF 생성 모듈 (최종 버전 - GDPR 준수 + Google Drive 자동 업로드 + 배경 정보)
+연구 참여 동의서 처리 및 PDF 생성 모듈 (최종 버전 - GDPR 준수 + 닉네임 매칭 시스템)
 """
 
 import streamlit as st
 import csv
 import os
 from datetime import datetime, timedelta
-from config import DATA_RETENTION_DAYS, FOLDERS, GOOGLE_DRIVE_ENABLED, GOOGLE_DRIVE_FOLDER_ID, BACKGROUND_INFO
-from data_io import upload_to_google_drive
+from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION
 
 # ReportLab import (전역 스코프)
 try:
@@ -53,7 +52,7 @@ def enhanced_consent_section():
         - All AI tools are processed via international servers / 모든 AI 도구는 국제 서버를 통해 처리됩니다
         
         **Data Processing and Storage:**
-        - **Storage**: Encrypted cloud storage / 암호화된 클라우드 저장소
+        - **Storage**: Encrypted cloud storage (Google Cloud Storage) / 암호화된 클라우드 저장소 (구글 클라우드 스토리지)
         - **Access**: Researcher access only / 연구자 단독 접근
         - **Retention**: Up to 2 years post-completion, immediate deletion upon request / 논문 완성 후 최대 2년, 요청 시 즉시 삭제
         - **Anonymization**: Nickname converted to anonymous ID (e.g., Student01) / 닉네임을 익명 ID로 변환 (예: Student01)
@@ -68,8 +67,8 @@ def enhanced_consent_section():
         - Accountability: Accountability in all processing / 모든 처리 과정 기록
         
         **International Data Transfer Notice:**
-        - **Transfer to**: International AI service providers / 국제 AI 서비스 제공업체
-        - **Purpose**: AI feedback functionality / AI 피드백 기능 구현
+        - **Transfer to**: International AI service providers and Google Cloud Storage / 국제 AI 서비스 제공업체 및 구글 클라우드 스토리지
+        - **Purpose**: AI feedback functionality and secure data storage / AI 피드백 기능 및 안전한 데이터 저장
         - **Protection**: Protection under respective privacy policies and international standards / 각 서비스의 개인정보 처리방침 및 국제 표준 적용
         - **GDPR compliance**: Lawful processing for academic research / 학술 연구 목적의 적법한 처리
         
@@ -238,12 +237,49 @@ def save_background_to_session(background_details):
     st.session_state.speaking_confidence = background_details['speaking_confidence']
 
 
-def generate_anonymous_id():
+def find_or_create_anonymous_id(nickname):
     """
-    순차적 익명 ID 생성 (Student01, Student02, ...)
+    닉네임 기반으로 기존 익명 ID를 찾거나 새로 생성 (세션 간 매칭을 위함)
+    
+    Args:
+        nickname: 사용자 닉네임
+        
+    Returns:
+        str: 기존 또는 새로 생성된 익명 ID
+    """
+    try:
+        mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
+        
+        # 기존 매핑 파일에서 닉네임 검색
+        if os.path.exists(mapping_file):
+            try:
+                with open(mapping_file, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if row.get('Nickname', '').strip().lower() == nickname.lower():
+                            # 기존 닉네임 발견! 기존 ID 반환
+                            existing_id = row.get('Anonymous_ID', '').strip()
+                            if existing_id:
+                                print(f"✅ Found existing ID for '{nickname}': {existing_id}")
+                                return existing_id
+            except Exception as e:
+                print(f"Error reading mapping file: {e}")
+        
+        # 기존 닉네임 없음 → 새 ID 생성
+        return generate_new_anonymous_id()
+        
+    except Exception as e:
+        print(f"Error in find_or_create_anonymous_id: {e}")
+        # 오류 시 타임스탬프 기반 ID
+        return f"Student{datetime.now().strftime('%m%d%H%M')}"
+
+
+def generate_new_anonymous_id():
+    """
+    새로운 순차적 익명 ID 생성 (Student01, Student02, ...)
     
     Returns:
-        str: 생성된 익명 ID
+        str: 생성된 새 익명 ID
     """
     try:
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
@@ -268,9 +304,12 @@ def generate_anonymous_id():
         
         # 다음 번호로 ID 생성
         next_number = last_number + 1
-        return f"Student{next_number:02d}"  # Student01, Student02, ...
+        new_id = f"Student{next_number:02d}"  # Student01, Student02, ...
+        print(f"✨ Generated new ID: {new_id}")
+        return new_id
         
     except Exception as e:
+        print(f"Error generating new ID: {e}")
         # 오류 시 타임스탬프 기반 ID
         return f"Student{datetime.now().strftime('%m%d%H%M')}"
 
@@ -311,8 +350,24 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'GDPR_Compliant',
                     'Learning_Duration',  # 새로 추가
                     'Speaking_Confidence',  # 새로 추가
+                    'Session_Count',  # 참여한 세션 수
+                    'Last_Session',  # 마지막 참여 세션
                     'Notes'
                 ])
+        
+        # 기존 엔트리 확인 (닉네임으로)
+        existing_entry = None
+        all_rows = []
+        
+        if os.path.exists(mapping_file):
+            with open(mapping_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                all_rows = list(reader)
+                
+                for row in reader:
+                    if row.get('Nickname', '').strip().lower() == nickname.lower():
+                        existing_entry = row
+                        break
         
         # 데이터 보관 만료일 계산
         retention_until = (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')
@@ -335,26 +390,56 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                 'speaking_confidence': ''
             }
         
-        # 매핑 정보 추가 (배경 정보 포함)
-        with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                anonymous_id,
-                nickname,
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                retention_until,
-                'FALSE',
-                consent_details.get('consent_participation', True),
-                consent_details.get('consent_audio_ai', True),
-                consent_details.get('consent_data_storage', True),
-                consent_details.get('consent_privacy_rights', True),
-                consent_details.get('consent_final_confirm', True),
-                consent_details.get('consent_zoom_interview', False),
-                'TRUE',
-                background_details.get('learning_duration', ''),  # 새로 추가
-                background_details.get('speaking_confidence', ''),  # 새로 추가
-                ''
-            ])
+        if existing_entry:
+            # 기존 엔트리 업데이트 (세션 수 증가)
+            session_count = int(existing_entry.get('Session_Count', 0)) + 1
+            
+            # 모든 행을 다시 쓰면서 해당 행만 업데이트
+            with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
+                fieldnames = [
+                    'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
+                    'Deletion_Requested', 'Consent_Participation', 'Consent_Audio_AI',
+                    'Consent_Data_Storage', 'Consent_Privacy_Rights', 'Consent_Final_Confirm',
+                    'Consent_Zoom_Interview', 'GDPR_Compliant', 'Learning_Duration',
+                    'Speaking_Confidence', 'Session_Count', 'Last_Session', 'Notes'
+                ]
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                
+                for row in all_rows:
+                    if row.get('Nickname', '').strip().lower() == nickname.lower():
+                        # 기존 엔트리 업데이트
+                        row.update({
+                            'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'Session_Count': session_count,
+                            'Last_Session': CURRENT_SESSION,
+                            'Learning_Duration': background_details.get('learning_duration', row.get('Learning_Duration', '')),
+                            'Speaking_Confidence': background_details.get('speaking_confidence', row.get('Speaking_Confidence', ''))
+                        })
+                    writer.writerow(row)
+        else:
+            # 새 엔트리 추가
+            with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    anonymous_id,
+                    nickname,
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    retention_until,
+                    'FALSE',
+                    consent_details.get('consent_participation', True),
+                    consent_details.get('consent_audio_ai', True),
+                    consent_details.get('consent_data_storage', True),
+                    consent_details.get('consent_privacy_rights', True),
+                    consent_details.get('consent_final_confirm', True),
+                    consent_details.get('consent_zoom_interview', False),
+                    'TRUE',
+                    background_details.get('learning_duration', ''),  # 새로 추가
+                    background_details.get('speaking_confidence', ''),  # 새로 추가
+                    1,  # 첫 참여이므로 세션 수는 1
+                    CURRENT_SESSION,  # 현재 세션
+                    ''
+                ])
         
         return True
     except Exception as e:
@@ -615,16 +700,18 @@ def handle_nickname_input_with_consent():
 
 def _process_consent_completion(nickname, consent_details, background_details):
     """
-    동의 완료 처리 (Google Drive 자동 업로드 + 배경 정보 포함)
+    동의 완료 처리 (닉네임 매칭 시스템 + ZIP에서 GCS 업로드 처리)
     """
-    # 익명 ID 생성 및 매핑 저장 (배경 정보 포함)
-    anonymous_id = generate_anonymous_id()
+    # 🎯 닉네임 기반으로 기존 ID 찾거나 새로 생성
+    anonymous_id = find_or_create_anonymous_id(nickname)
+    
+    # 매핑 정보 저장 (배경 정보 포함)
     save_nickname_mapping(anonymous_id, nickname, consent_details, background_details)
     
     # 세션 상태에 배경 정보 저장
     save_background_to_session(background_details)
     
-    # 동의서 PDF 생성
+    # 동의서 PDF 생성 (ZIP에 포함될 예정)
     with st.spinner("📄 Preparing your session..."):
         pdf_filename, pdf_result = generate_consent_pdf(
             anonymous_id, 
@@ -635,26 +722,9 @@ def _process_consent_completion(nickname, consent_details, background_details):
         if pdf_filename:
             st.session_state.consent_pdf = pdf_filename
             
-            # === Google Drive 자동 업로드 ===
-            if GOOGLE_DRIVE_ENABLED:
-                with st.spinner("☁️ Uploading consent form to secure storage..."):
-                    file_id, upload_status = upload_to_google_drive(
-                        pdf_filename, 
-                        f"{anonymous_id}_consent.pdf", 
-                        GOOGLE_DRIVE_FOLDER_ID
-                    )
-                    
-                    if file_id:
-                        st.success("✅ Consent completed and securely stored!")
-                        st.info(f"📁 Consent form uploaded to Google Drive (ID: {file_id})")
-                        # 세션에 Drive 파일 ID 저장
-                        st.session_state.consent_drive_file_id = file_id
-                    else:
-                        st.success("✅ Consent completed successfully!")
-                        st.warning(f"⚠️ Cloud backup failed: {upload_status}")
-            else:
-                st.success("✅ Consent completed successfully!")
-                st.info("ℹ️ Google Drive not configured - PDF saved locally")
+            # ✅ GCS 업로드는 data_io.py의 ZIP 프로세스에서 처리
+            st.success("✅ Consent completed successfully!")
+            st.info("📦 Your consent form will be included in the secure data backup")
             
             # 사용자 다운로드 옵션은 여전히 제공
             display_consent_pdf_download(pdf_filename, anonymous_id)

@@ -1,6 +1,6 @@
 """
 config.py
-실험 전역 설정 및 상수 정의 (Streamlit Cloud 배포용 최종 버전)
+실험 전역 설정 및 상수 정의 (GCS 서비스 계정 + ZIP 전용 - 최종)
 """
 
 import os
@@ -74,13 +74,18 @@ OPENAI_API_KEY = get_secret('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = get_secret('ELEVENLABS_API_KEY')
 ELEVEN_VOICE_ID = get_secret('ELEVEN_VOICE_ID')
 
-# === Google Drive 설정 (OAuth 방식) ===
-GOOGLE_DRIVE_ENABLED = get_secret('GOOGLE_DRIVE_ENABLED', 'False').lower() == 'true'
-GOOGLE_OAUTH_CREDENTIALS_JSON = get_secret('GOOGLE_OAUTH_CREDENTIALS_JSON')  # OAuth 인증 파일
-GOOGLE_DRIVE_FOLDER_ID = get_secret('GOOGLE_DRIVE_FOLDER_ID')
+# === Google Cloud Storage 설정 (서비스 계정 방식 - 학생 로그인 불필요) ===
+# 💡 ZIP 파일만 업로드하는 간소화된 구조
+GCS_ENABLED = get_secret('GCS_ENABLED', 'False').lower() == 'true'
+GCS_BUCKET_NAME = get_secret('GCS_BUCKET_NAME', 'korean-speaking-experiment')
+GCS_SERVICE_ACCOUNT = get_secret('gcp_service_account')  # JSON 형태의 서비스 계정 정보
 
-# 기존 서비스 계정 설정은 주석 처리 (필요시 복원 가능)
-# GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+# === 간소화된 GCS 폴더 구조 (ZIP 전용) ===
+# 💡 파일 업로드시 자동으로 폴더가 생성됩니다
+GCS_SIMPLE_STRUCTURE = {
+    1: "session1/",    # session1/Student01_timestamp.zip
+    2: "session2/"     # session2/Student01_timestamp.zip
+}
 
 # === Streamlit 페이지 설정 ===
 PAGE_CONFIG = {
@@ -149,10 +154,10 @@ AUDIO_QUALITY = {
     "max_recommended_duration": 120       # 최대 권장 시간
 }
 
-# === 데이터 보관 설정 ===
+# === 데이터 보관 설정 (GDPR 준수) ===
 DATA_RETENTION_DAYS = 730  # 2년
 
-# === 폴더 구조 ===
+# === 로컬 폴더 구조 (백업용) ===
 FOLDERS = {
     "data": "data",
     "logs": "logs",
@@ -373,6 +378,9 @@ LOG_FORMAT = {
 SESSION_METADATA = {
     "current_session": CURRENT_SESSION,
     "session_label": SESSION_LABELS.get(CURRENT_SESSION, "Session 1"),
-    "experiment_version": "3.2",  # 배포용 버전 업데이트
-    "last_updated": "2025-01-17"
+    "experiment_version": "5.0",  # ZIP 전용 + 닉네임 매칭 버전
+    "last_updated": "2025-01-17",
+    "storage_method": "GCS_ZIP_ONLY",  # ZIP 파일만 업로드
+    "auth_required": False,  # 학생 인증 불필요
+    "nickname_matching": True  # 닉네임 매칭 시스템 활성화
 }

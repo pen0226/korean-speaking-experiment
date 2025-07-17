@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (OAuth 방식 Google Drive 연동 최종 버전)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (중복 저장 방지 + ZIP 전용 + 닉네임 매칭 - 최종)
 """
 
 import os
@@ -13,9 +13,10 @@ from config import (
     FOLDERS, 
     DATA_RETENTION_DAYS, 
     EXPERIMENT_QUESTION,
-    GOOGLE_DRIVE_ENABLED,
-    GOOGLE_OAUTH_CREDENTIALS_JSON,  # OAuth 방식으로 변경
-    GOOGLE_DRIVE_FOLDER_ID,
+    GCS_ENABLED,
+    GCS_BUCKET_NAME,
+    GCS_SERVICE_ACCOUNT,
+    GCS_SIMPLE_STRUCTURE,
     LOG_FORMAT,
     CURRENT_SESSION,
     SESSION_LABELS
@@ -24,12 +25,20 @@ from config import (
 
 def save_session_data():
     """
-    세션 데이터를 CSV 및 Excel 형식으로 저장
+    세션 데이터를 CSV 및 Excel 형식으로 저장 (중복 저장 방지)
     
     Returns:
-        tuple: (csv_filename, excel_filename, audio_folder, saved_files, zip_filename)
+        tuple: (csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp)
     """
     try:
+        # 🎯 중복 저장 방지 로직
+        if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
+            if hasattr(st.session_state, 'saved_files'):
+                st.info("ℹ️ Data already saved, using existing files.")
+                # 기존 timestamp도 함께 반환
+                existing_timestamp = getattr(st.session_state, 'saved_timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
+                return st.session_state.saved_files + (existing_timestamp,)
+        
         # 필요한 폴더 생성
         for folder in FOLDERS.values():
             os.makedirs(folder, exist_ok=True)
@@ -49,14 +58,14 @@ def save_session_data():
         # 음성 파일들 저장
         audio_folder, saved_files = save_audio_files(timestamp)
         
-        # 백업 ZIP 생성
-        zip_filename = create_backup_zip(st.session_state.session_id, timestamp)
+        # 백업 ZIP 생성 (participant_info.txt 포함)
+        zip_filename = create_comprehensive_backup_zip(st.session_state.session_id, timestamp)
         
-        return csv_filename, excel_filename, audio_folder, saved_files, zip_filename
+        return csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp
     
     except Exception as e:
         st.error(f"❌ Error saving session data: {str(e)}")
-        return None, None, None, [], None
+        return None, None, None, [], None, None
 
 
 def build_session_data(timestamp):
@@ -73,9 +82,10 @@ def build_session_data(timestamp):
         'session_id': st.session_state.session_id,
         'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),
         'session_label': getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1")),
+        'original_nickname': getattr(st.session_state, 'original_nickname', ''),  # 닉네임 추가
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         
-        # === 배경 정보 (새로 추가) ===
+        # === 배경 정보 ===
         'learning_duration': getattr(st.session_state, 'learning_duration', ''),
         'speaking_confidence': getattr(st.session_state, 'speaking_confidence', ''),
         
@@ -91,7 +101,6 @@ def build_session_data(timestamp):
         'gdpr_compliant': getattr(st.session_state, 'gdpr_compliant', False),
         'consent_pdf_generated': getattr(st.session_state, 'consent_pdf', '') != '',
         'consent_pdf_filename': getattr(st.session_state, 'consent_pdf', ''),
-        'consent_drive_file_id': getattr(st.session_state, 'consent_drive_file_id', ''),
         
         # === 실험 데이터 ===
         'question': EXPERIMENT_QUESTION,
@@ -144,7 +153,11 @@ def build_session_data(timestamp):
         # === 데이터 관리 정보 ===
         'data_retention_until': (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d'),
         'deletion_requested': False,
-        'last_updated': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        'last_updated': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        
+        # === 저장 타이밍 정보 추가 ===
+        'saved_at_step': 'second_recording_complete',  # 언제 저장되었는지 기록
+        'save_trigger': 'auto_after_second_recording'  # 저장 트리거 기록
     }
 
 
@@ -281,9 +294,75 @@ def save_audio_files(timestamp):
         return None, []
 
 
-def create_backup_zip(session_id, timestamp):
+def create_participant_info_file(session_id, timestamp):
     """
-    세션 데이터를 ZIP으로 백업
+    참여자 정보 파일 생성 (ZIP에 포함될 텍스트 파일)
+    
+    Args:
+        session_id: 세션 ID
+        timestamp: 타임스탬프
+        
+    Returns:
+        str: 생성된 파일 경로
+    """
+    try:
+        info_filename = os.path.join(FOLDERS["data"], f"{session_id}_participant_info.txt")
+        
+        # 참여자 정보 수집
+        original_nickname = getattr(st.session_state, 'original_nickname', 'Unknown')
+        session_label = getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1"))
+        learning_duration = getattr(st.session_state, 'learning_duration', 'Not specified')
+        speaking_confidence = getattr(st.session_state, 'speaking_confidence', 'Not specified')
+        
+        # 정보 파일 내용 생성
+        info_content = f"""=== PARTICIPANT INFORMATION ===
+Anonymous ID: {session_id}
+Original Nickname: {original_nickname}
+Session: {session_label} (Session {CURRENT_SESSION})
+Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Save Trigger: Auto-save after second recording completion
+
+=== BACKGROUND INFORMATION ===
+Learning Duration: {learning_duration}
+Speaking Confidence: {speaking_confidence}
+
+=== EXPERIMENT DETAILS ===
+Question: {EXPERIMENT_QUESTION}
+First Recording Duration: {getattr(st.session_state, 'audio_duration_1', 0):.1f} seconds
+Second Recording Duration: {getattr(st.session_state, 'audio_duration_2', 0):.1f} seconds
+Interview Readiness Score: {st.session_state.feedback.get('interview_readiness_score', 'N/A')}/10
+
+=== CONSENT INFORMATION ===
+Consent Given: {getattr(st.session_state, 'consent_given', False)}
+Consent Timestamp: {getattr(st.session_state, 'consent_timestamp', 'N/A')}
+GDPR Compliant: {getattr(st.session_state, 'gdpr_compliant', False)}
+Zoom Interview Consent: {getattr(st.session_state, 'consent_zoom_interview', False)}
+
+=== DATA MANAGEMENT ===
+Data Retention Until: {(datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')}
+Storage Method: GCS ZIP Archive (Auto-save after 2nd recording)
+Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+=== FOR RESEARCHER ===
+This file contains the link between the anonymous ID and the original nickname.
+Data was automatically saved after second recording completion.
+Contact: pen0226@gmail.com for any data requests or questions.
+"""
+        
+        # 파일 저장
+        with open(info_filename, 'w', encoding='utf-8') as f:
+            f.write(info_content)
+        
+        return info_filename
+    
+    except Exception as e:
+        print(f"Error creating participant info file: {e}")
+        return None
+
+
+def create_comprehensive_backup_zip(session_id, timestamp):
+    """
+    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (participant_info.txt 포함)
     
     Args:
         session_id: 세션 ID
@@ -297,10 +376,16 @@ def create_backup_zip(session_id, timestamp):
         session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
         zip_filename = os.path.join(
             FOLDERS["data"], 
-            f"backup_session{session_num}_{session_id}_{timestamp}.zip"
+            f"{session_id}_{timestamp}.zip"
         )
         
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            
+            # 🎯 참여자 정보 파일 생성 및 추가
+            participant_info_file = create_participant_info_file(session_id, timestamp)
+            if participant_info_file and os.path.exists(participant_info_file):
+                zipf.write(participant_info_file, "participant_info.txt")
+            
             # CSV 파일 추가
             csv_file = os.path.join(FOLDERS["data"], f"korean_session{session_num}_{session_id}_{timestamp}.csv")
             if os.path.exists(csv_file):
@@ -322,126 +407,126 @@ def create_backup_zip(session_id, timestamp):
                 for file in os.listdir(audio_folder):
                     file_path = os.path.join(audio_folder, file)
                     zipf.write(file_path, f"audio/{file}")
+            
+            # 📝 ZIP 내용 요약 파일 추가
+            readme_content = f"""=== ZIP CONTENTS SUMMARY ===
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Participant: {session_id} (Session {session_num})
+Save Trigger: Auto-save after second recording completion
+
+Files included:
+- participant_info.txt: Participant details and nickname mapping
+- session_data_{timestamp}.csv: Complete session data in CSV format
+- session_data_{timestamp}.xlsx: Complete session data in Excel format  
+- consent_form_{session_id}.pdf: Signed consent form
+- audio/: All recorded audio files (student + model pronunciations)
+
+IMPORTANT: Data was automatically saved after second recording completion.
+This ensures no data loss even if survey is not completed.
+
+Contact researcher: pen0226@gmail.com
+"""
+            
+            readme_path = os.path.join(FOLDERS["data"], f"{session_id}_readme.txt")
+            with open(readme_path, 'w', encoding='utf-8') as f:
+                f.write(readme_content)
+            zipf.write(readme_path, "README.txt")
+        
+        # 임시 파일들 정리
+        temp_files = [participant_info_file, readme_path]
+        for temp_file in temp_files:
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass
         
         return zip_filename
     except Exception as e:
-        st.error(f"❌ Error creating backup ZIP: {e}")
+        st.error(f"❌ Error creating comprehensive backup ZIP: {e}")
         return None
 
 
-def get_google_drive_credentials():
+# === Google Cloud Storage 함수들 (ZIP 전용) ===
+
+def get_gcs_client():
     """
-    OAuth 방식으로 Google Drive 인증 정보 가져오기
+    GCS 클라이언트 초기화
     
     Returns:
-        tuple: (Credentials, status_message)
+        tuple: (client, bucket, status_message)
     """
     try:
-        from google.auth.transport.requests import Request
-        from google.oauth2.credentials import Credentials
-        from google_auth_oauthlib.flow import InstalledAppFlow
+        from google.cloud import storage
+        import json
         
-        # OAuth 스코프 설정 (전체 드라이브 접근 권한)
-        SCOPES = ['https://www.googleapis.com/auth/drive']
+        if not GCS_ENABLED:
+            return None, None, "GCS upload is disabled in configuration"
         
-        creds = None
-        token_file = 'token.json'
+        if not GCS_SERVICE_ACCOUNT:
+            return None, None, "GCS service account not configured"
         
-        # 기존 토큰 파일 확인
-        if os.path.exists(token_file):
-            creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+        # 서비스 계정 정보를 딕셔너리로 변환
+        if isinstance(GCS_SERVICE_ACCOUNT, dict):
+            credentials_dict = dict(GCS_SERVICE_ACCOUNT)
+        else:
+            credentials_dict = json.loads(GCS_SERVICE_ACCOUNT)
         
-        # 토큰이 없거나 만료된 경우 새로 인증
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                print("🔄 토큰 갱신 중...")
-                creds.refresh(Request())
-            else:
-                if not GOOGLE_OAUTH_CREDENTIALS_JSON or not os.path.exists(GOOGLE_OAUTH_CREDENTIALS_JSON):
-                    return None, "OAuth credentials file not found"
-                
-                print("🌐 브라우저에서 Google 인증을 진행해주세요...")
-                flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_OAUTH_CREDENTIALS_JSON, SCOPES)
-                creds = flow.run_local_server(port=0)
-                print("✅ 인증 완료!")
-            
-            # 토큰 저장 (다음에 재사용)
-            with open(token_file, 'w') as token:
-                token.write(creds.to_json())
-            print("💾 인증 토큰 저장됨")
+        # GCS 클라이언트 초기화
+        client = storage.Client.from_service_account_info(credentials_dict)
         
-        return creds, "Success"
+        # 버킷 객체 생성
+        bucket = client.bucket(GCS_BUCKET_NAME)
+        
+        return client, bucket, "Success"
         
     except ImportError as e:
-        return None, f"Missing required libraries: {str(e)}. Run: pip install google-auth-oauthlib"
+        return None, None, f"Missing required libraries: {str(e)}. Run: pip install google-cloud-storage"
     except Exception as e:
-        return None, f"Authentication failed: {str(e)}"
+        return None, None, f"GCS client initialization failed: {str(e)}"
 
 
-def upload_to_google_drive(file_path, filename, folder_id=None):
+def upload_to_gcs(local_path, blob_name):
     """
-    OAuth 방식으로 Google Drive에 파일 업로드
+    GCS에 파일 업로드
     
     Args:
-        file_path: 업로드할 파일 경로
-        filename: Drive에서 사용할 파일명
-        folder_id: 대상 폴더 ID
+        local_path: 업로드할 로컬 파일 경로
+        blob_name: GCS에서 사용할 파일명 (경로 포함)
         
     Returns:
-        tuple: (file_id, status_message)
+        tuple: (blob_url, status_message)
     """
     try:
-        if not GOOGLE_DRIVE_ENABLED:
-            return None, "Google Drive upload not configured"
+        client, bucket, status = get_gcs_client()
+        if not client:
+            return None, f"GCS client error: {status}"
         
-        # OAuth 인증 정보 가져오기
-        creds, auth_message = get_google_drive_credentials()
-        if not creds:
-            return None, f"Authentication failed: {auth_message}"
+        # 파일 존재 확인
+        if not os.path.exists(local_path):
+            return None, f"File not found: {local_path}"
         
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
-        from googleapiclient.errors import HttpError
+        # 블롭 생성 및 업로드
+        blob = bucket.blob(blob_name)
+        blob.upload_from_filename(local_path)
         
-        # Drive API 서비스 빌드
-        service = build('drive', 'v3', credentials=creds)
+        # 공개 URL 생성 (필요한 경우)
+        blob_url = f"gs://{GCS_BUCKET_NAME}/{blob_name}"
         
-        # 파일 메타데이터 설정
-        file_metadata = {'name': filename}
-        if folder_id:
-            file_metadata['parents'] = [folder_id]
+        return blob_url, f"Successfully uploaded: {blob_name}"
         
-        # 파일 업로드
-        media = MediaFileUpload(file_path)
-        file = service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id,name'
-        ).execute()
-        
-        file_id = file.get('id')
-        file_name = file.get('name')
-        
-        return file_id, f"Successfully uploaded: {file_name} (ID: {file_id})"
-        
-    except ImportError as e:
-        return None, f"Missing required libraries: {str(e)}"
-    except HttpError as e:
-        return None, f"Google API error: {str(e)}"
-    except FileNotFoundError:
-        return None, f"File not found: {file_path}"
     except Exception as e:
         return None, f"Upload failed: {str(e)}"
 
 
-def auto_backup_to_drive(csv_filename, excel_filename, zip_filename, session_id, timestamp):
+def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, timestamp):
     """
-    실험 데이터를 Google Drive에 자동 백업 (OAuth 방식)
+    ZIP 파일만 GCS에 자동 백업 + nickname_mapping.csv 백업
     
     Args:
-        csv_filename: CSV 파일 경로
-        excel_filename: Excel 파일 경로
-        zip_filename: ZIP 파일 경로
+        csv_filename: CSV 파일 경로 (사용 안 함)
+        excel_filename: Excel 파일 경로 (사용 안 함)
+        zip_filename: ZIP 파일 경로 (메인 업로드)
         session_id: 세션 ID
         timestamp: 타임스탬프
         
@@ -451,99 +536,79 @@ def auto_backup_to_drive(csv_filename, excel_filename, zip_filename, session_id,
     uploaded_files = []
     errors = []
     
-    if not GOOGLE_DRIVE_ENABLED:
-        errors.append("Google Drive upload is disabled in configuration")
+    if not GCS_ENABLED:
+        errors.append("GCS upload is disabled in configuration")
         return uploaded_files, errors
     
-    # 세션 번호를 Drive 파일명에 포함
+    # 세션 번호와 간단한 폴더 구조 설정
     session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
-    session_label = SESSION_LABELS.get(session_num, f"Session {session_num}")
+    session_folder = GCS_SIMPLE_STRUCTURE.get(session_num, GCS_SIMPLE_STRUCTURE[1])
     
-    files_to_upload = []
-    
-    # 업로드할 파일 목록 준비
-    if csv_filename and os.path.exists(csv_filename):
-        drive_filename = f"{session_label}_{session_id}_{timestamp}.csv"
-        files_to_upload.append((csv_filename, drive_filename))
-    
-    if excel_filename and os.path.exists(excel_filename):
-        drive_filename = f"{session_label}_{session_id}_{timestamp}.xlsx"
-        files_to_upload.append((excel_filename, drive_filename))
-    
+    # 🎯 ZIP 파일만 업로드
     if zip_filename and os.path.exists(zip_filename):
-        drive_filename = f"backup_{session_label}_{session_id}_{timestamp}.zip"
-        files_to_upload.append((zip_filename, drive_filename))
-    
-    # 동의서 PDF도 업로드 (있는 경우)
-    consent_pdf = os.path.join(FOLDERS["data"], f"{session_id}_consent.pdf")
-    if os.path.exists(consent_pdf):
-        drive_filename = f"{session_label}_{session_id}_consent.pdf"
-        files_to_upload.append((consent_pdf, drive_filename))
-    
-    # 파일들 업로드 실행
-    for file_path, drive_filename in files_to_upload:
         try:
-            file_id, result = upload_to_google_drive(
-                file_path, 
-                drive_filename, 
-                GOOGLE_DRIVE_FOLDER_ID
-            )
+            # 간단한 블롭 이름: session1/Student01_20250117_123456.zip
+            blob_name = f"{session_folder}{session_id}_{timestamp}.zip"
             
-            if file_id:
-                uploaded_files.append(drive_filename)
-                # 동의서 파일 ID 저장 (향후 참조용)
-                if "consent" in drive_filename:
-                    st.session_state.consent_drive_file_id = file_id
+            blob_url, result_msg = upload_to_gcs(zip_filename, blob_name)
+            
+            if blob_url:
+                uploaded_files.append(blob_name)
+                print(f"✅ ZIP uploaded: {blob_name}")
             else:
-                errors.append(f"{drive_filename}: {result}")
+                errors.append(f"ZIP upload failed: {result_msg}")
                 
         except Exception as e:
-            errors.append(f"{drive_filename}: Unexpected error - {str(e)}")
+            errors.append(f"ZIP upload error: {str(e)}")
+    else:
+        errors.append("ZIP file not found for upload")
+    
+    # 🎯 nickname_mapping.csv GCS 백업 (전체 매핑 테이블)
+    mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
+    if os.path.exists(mapping_file):
+        try:
+            # 최상위 레벨에 매핑 파일 저장
+            mapping_blob_name = "nickname_mapping.csv"
+            
+            blob_url, result_msg = upload_to_gcs(mapping_file, mapping_blob_name)
+            
+            if blob_url:
+                uploaded_files.append(mapping_blob_name)
+                print(f"✅ Mapping file updated: {mapping_blob_name}")
+            else:
+                errors.append(f"Mapping file upload failed: {result_msg}")
+                
+        except Exception as e:
+            errors.append(f"Mapping file upload error: {str(e)}")
     
     return uploaded_files, errors
 
 
-def test_google_drive_connection():
+def test_gcs_connection():
     """
-    OAuth 기반 Google Drive 연결 테스트
+    GCS 연결 테스트
     
     Returns:
         tuple: (success, message)
     """
     try:
-        if not GOOGLE_DRIVE_ENABLED:
-            return False, "Google Drive upload is disabled in configuration"
+        client, bucket, status = get_gcs_client()
+        if not client:
+            return False, f"GCS connection failed: {status}"
         
-        # OAuth 인증 정보 가져오기
-        creds, auth_message = get_google_drive_credentials()
-        if not creds:
-            return False, f"Authentication failed: {auth_message}"
-        
-        from googleapiclient.discovery import build
-        
-        # Drive API 서비스 빌드
-        service = build('drive', 'v3', credentials=creds)
-        
-        # 폴더 존재 확인
-        if GOOGLE_DRIVE_FOLDER_ID:
-            folder = service.files().get(
-                fileId=GOOGLE_DRIVE_FOLDER_ID, 
-                fields='id,name'
-            ).execute()
-            folder_name = folder.get('name', 'Unknown')
-            return True, f"✅ Connected successfully to folder: {folder_name}"
+        # 버킷 존재 확인
+        if bucket.exists():
+            return True, f"✅ Connected successfully to bucket: {GCS_BUCKET_NAME}"
         else:
-            return True, "✅ Connection successful, but no target folder specified"
+            return False, f"❌ Bucket not found: {GCS_BUCKET_NAME}"
         
-    except ImportError as e:
-        return False, f"Missing libraries: {str(e)}"
     except Exception as e:
-        return False, f"Connection failed: {str(e)}"
+        return False, f"Connection test failed: {str(e)}"
 
 
 def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=False):
     """
-    Google Drive 업로드 결과를 로그 파일에 기록
+    GCS 업로드 결과를 로그 파일에 기록
     
     Args:
         session_id: 세션 ID
@@ -569,18 +634,23 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
         # 세션 정보 포함
         session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
         session_label = getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1"))
+        original_nickname = getattr(st.session_state, 'original_nickname', 'Unknown')
         
         # 업로드 상태 결정
         upload_status = "SUCCESS" if uploaded_files and not errors else "PARTIAL" if uploaded_files else "FAILED"
         
-        # 로그 엔트리 생성 (OAuth 방식 표시)
+        # 로그 엔트리 생성 (ZIP 전용 방식 + 저장 타이밍 정보 표시)
         log_entry = f"""
 [{datetime.now().strftime(LOG_FORMAT['timestamp_format'])}] SESSION: {session_label} - {session_id}_{timestamp}
+Nickname: {original_nickname}
 Status: {upload_status}
-Google Drive Enabled: {GOOGLE_DRIVE_ENABLED} (OAuth method)
+Save Trigger: Auto-save after second recording completion
+GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP only)
+Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
+Data Safety: ✅ Secured before survey step
 {'='*80}
 """
         
@@ -596,18 +666,19 @@ Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 
 def display_download_buttons(csv_filename, excel_filename, zip_filename):
     """
-    연구자용 다운로드 버튼들 표시
+    연구자용 다운로드 버튼들 표시 (ZIP 중심으로 수정)
     
     Args:
         csv_filename: CSV 파일 경로
         excel_filename: Excel 파일 경로  
         zip_filename: ZIP 파일 경로
     """
-    if GOOGLE_DRIVE_ENABLED:
-        st.info("📤 Data should be automatically uploaded to Google Drive (OAuth). Use these downloads as backup only.")
+    if GCS_ENABLED:
+        st.info("📤 ZIP file should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
     else:
-        st.warning("⚠️ Google Drive upload is disabled. Use these download buttons to save your data.")
+        st.warning("⚠️ GCS upload is disabled. Use these download buttons to save your data.")
     
+    # ZIP을 중심으로 표시
     col1, col2, col3 = st.columns(3)
     
     # 세션 정보를 다운로드 파일명에 포함
@@ -615,13 +686,31 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
     timestamp_str = datetime.now().strftime('%Y%m%d_%H%M%S')
     
     with col1:
+        # 📦 ZIP 완전 백업 다운로드 (메인)
+        if zip_filename and os.path.exists(zip_filename):
+            try:
+                with open(zip_filename, 'rb') as f:
+                    zip_data = f.read()
+                st.download_button(
+                    label="📦 Complete Backup ZIP",
+                    data=zip_data,
+                    file_name=f"{st.session_state.session_id}_{timestamp_str}.zip",
+                    mime='application/zip',
+                    use_container_width=True
+                )
+            except:
+                st.info("ZIP unavailable")
+        else:
+            st.info("ZIP unavailable")
+    
+    with col2:
         # CSV 다운로드
         if csv_filename and os.path.exists(csv_filename):
             try:
                 with open(csv_filename, 'r', encoding='utf-8') as f:
                     csv_data = f.read()
                 st.download_button(
-                    label="📄 Backup CSV",
+                    label="📄 CSV Data",
                     data=csv_data,
                     file_name=f"session{session_num}_{st.session_state.session_id}_{timestamp_str}.csv",
                     mime='text/csv',
@@ -632,14 +721,14 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         else:
             st.info("CSV unavailable")
     
-    with col2:
+    with col3:
         # Excel 다운로드
         if excel_filename and os.path.exists(excel_filename):
             try:
                 with open(excel_filename, 'rb') as f:
                     excel_data = f.read()
                 st.download_button(
-                    label="📊 Backup Excel",
+                    label="📊 Excel Data",
                     data=excel_data,
                     file_name=f"session{session_num}_{st.session_state.session_id}_{timestamp_str}.xlsx",
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -649,29 +738,11 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
                 st.info("Excel unavailable")
         else:
             st.info("Excel unavailable")
-    
-    with col3:
-        # ZIP 완전 백업 다운로드
-        if zip_filename and os.path.exists(zip_filename):
-            try:
-                with open(zip_filename, 'rb') as f:
-                    zip_data = f.read()
-                st.download_button(
-                    label="📦 Backup ZIP",
-                    data=zip_data,
-                    file_name=f"backup_session{session_num}_{st.session_state.session_id}_{timestamp_str}.zip",
-                    mime='application/zip',
-                    use_container_width=True
-                )
-            except:
-                st.info("ZIP unavailable")
-        else:
-            st.info("ZIP unavailable")
 
 
 def display_session_details():
     """
-    연구자용 세션 상세 정보 표시 (배경 정보 포함)
+    연구자용 세션 상세 정보 표시 (닉네임 정보 포함 + GCS 상태)
     """
     st.markdown("**📋 Session Details:**")
     display_name = getattr(st.session_state, 'original_nickname', st.session_state.session_id)
@@ -680,8 +751,9 @@ def display_session_details():
     st.write(f"**Session:** {session_label}")
     st.write(f"**Question:** {EXPERIMENT_QUESTION}")
     st.write(f"**Completed:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    st.write(f"**Data Saved:** After second recording completion")
     
-    # === 배경 정보 표시 (새로 추가) ===
+    # === 배경 정보 표시 ===
     learning_duration = getattr(st.session_state, 'learning_duration', '')
     speaking_confidence = getattr(st.session_state, 'speaking_confidence', '')
     if learning_duration:
@@ -689,26 +761,25 @@ def display_session_details():
     if speaking_confidence:
         st.write(f"**Speaking Confidence:** {speaking_confidence}")
     
-    # === Google Drive 파일 추적 정보 추가 ===
-    if hasattr(st.session_state, 'consent_drive_file_id') and st.session_state.consent_drive_file_id:
-        st.write(f"**Consent Drive ID:** {st.session_state.consent_drive_file_id}")
-    
-    # === Google Drive 연동 상태 표시 (OAuth 방식) ===
-    st.markdown("**☁️ Google Drive Status (OAuth):**")
-    if GOOGLE_DRIVE_ENABLED:
-        st.success("✅ Google Drive upload is enabled (OAuth method)")
-        if GOOGLE_DRIVE_FOLDER_ID:
-            st.write(f"Target Folder ID: {GOOGLE_DRIVE_FOLDER_ID[:20]}...")
+    # === GCS 연동 상태 표시 (ZIP 전용) ===
+    st.markdown("**☁️ Google Cloud Storage Status:**")
+    if GCS_ENABLED:
+        st.success("✅ GCS upload is enabled (Service Account method - ZIP only)")
+        if GCS_BUCKET_NAME:
+            st.write(f"Bucket: {GCS_BUCKET_NAME}")
+            st.write(f"Storage method: ZIP archives + nickname mapping")
+            st.write(f"Save timing: Auto-save after 2nd recording")
         else:
-            st.warning("⚠️ No target folder specified")
+            st.warning("⚠️ No bucket specified")
         
-        # OAuth 토큰 상태 확인
-        if os.path.exists('token.json'):
-            st.write("🔑 OAuth token: Available")
+        # 연결 테스트
+        success, message = test_gcs_connection()
+        if success:
+            st.write("🔗 Connection: ✅ Active")
         else:
-            st.write("🔑 OAuth token: Will be requested on first upload")
+            st.write(f"🔗 Connection: ❌ {message}")
     else:
-        st.warning("❌ Google Drive upload is disabled")
+        st.warning("❌ GCS upload is disabled")
 
 
 def display_data_quality_info():
@@ -754,6 +825,12 @@ def display_data_quality_info():
             issues = len(improvement.get('remaining_issues', []))
             st.write(f"Improvements: {improvements}")
             st.write(f"Remaining issues: {issues}")
+        
+        # 저장 상태 표시
+        if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
+            st.write("💾 **Data Status:** ✅ Safely saved")
+        else:
+            st.write("💾 **Data Status:** ⚠️ Not yet saved")
 
 
 def get_quality_description(duration):
@@ -797,3 +874,32 @@ def cleanup_old_files(days_old=7):
                             print(f"Cleaned up old file: {filename}")
     except Exception as e:
         print(f"Cleanup failed: {e}")
+
+
+def retry_gcs_upload():
+    """
+    GCS 업로드 재시도 (선택적 기능)
+    
+    Returns:
+        tuple: (success, message)
+    """
+    if not hasattr(st.session_state, 'saved_files') or not st.session_state.saved_files[4]:
+        return False, "No local files to upload"
+    
+    try:
+        zip_filename = st.session_state.saved_files[4]
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        uploaded_files, errors = auto_backup_to_gcs(
+            None, None, zip_filename,
+            st.session_state.session_id,
+            timestamp
+        )
+        
+        if uploaded_files and not errors:
+            return True, "Upload successful"
+        else:
+            return False, f"Upload failed: {'; '.join(errors)}"
+            
+    except Exception as e:
+        return False, f"Retry failed: {str(e)}"

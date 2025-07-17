@@ -1,19 +1,19 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (설문 완료 확인 시스템 개선 최종 버전)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (2차 녹음 후 즉시 저장 버전)
 """
 
 import streamlit as st
 from datetime import datetime
 import re
 
-# 모듈 imports (배경 정보 추가)
+# 모듈 imports (GCS 버전으로 수정)
 from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
 from consent import handle_nickname_input_with_consent
-from data_io import save_session_data, auto_backup_to_drive, log_upload_status, display_download_buttons, display_session_details, display_data_quality_info
+from data_io import save_session_data, auto_backup_to_gcs, log_upload_status, display_download_buttons, display_session_details, display_data_quality_info
 from utils import (
     show_progress_indicator, display_question, record_audio,
     display_transcription_with_highlights, display_model_sentence_with_highlights,
@@ -39,7 +39,7 @@ def initialize_session_state():
         st.session_state.model_audio = {}
         st.session_state.gpt_debug_info = {}
         
-        # 배경 정보 초기화 (새로 추가)
+        # 배경 정보 초기화
         st.session_state.learning_duration = ""
         st.session_state.speaking_confidence = ""
 
@@ -327,7 +327,7 @@ def handle_second_recording_step():
 
 
 def process_second_recording():
-    """두 번째 녹음 처리"""
+    """두 번째 녹음 처리 + 즉시 데이터 저장"""
     with st.spinner("🎙️ Processing your improved recording..."):
         # STT 처리
         transcription, duration, success = process_audio_input(
@@ -352,6 +352,22 @@ def process_second_recording():
                     
                     # 개선도 요약 표시
                     display_improvement_summary(improvement_data)
+            
+            # 🎯 즉시 데이터 저장 및 백업
+            st.markdown("---")
+            with st.spinner("💾 Saving your experiment data..."):
+                save_result = save_and_backup_data()
+                
+                if save_result and save_result[0]:  # 저장 성공
+                    st.session_state.data_saved = True
+                    st.session_state.saved_files = save_result
+                    st.success("✅ Your experiment data has been safely saved!")
+                    st.info("📋 Next: Please complete the survey to help our research.")
+                else:
+                    st.error("❌ Data save failed. Please try again or contact the researcher.")
+                    if st.button("🔄 Retry Save"):
+                        st.rerun()
+                    return  # 저장 실패시 다음 단계로 진행 안 함
             
             st.session_state.step = 'survey'
             st.rerun()
@@ -383,14 +399,17 @@ def display_improvement_summary(improvement_data):
 
 
 def handle_survey_step():
-    """설문조사 단계 처리 (설문 완료 확인 시스템 개선된 최종 버전)"""
+    """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 5: Required Survey")
     
-    # 데이터 자동 저장
-    if not hasattr(st.session_state, 'data_saved'):
-        save_and_backup_data()
+    # 데이터 저장 상태 확인 및 안내
+    if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
+        st.success("✅ Your experiment data has been safely saved!")
+        st.info("📋 The survey below is optional but helps improve our research.")
+    else:
+        st.warning("⚠️ Data may not be saved. Please contact the researcher if you see this message.")
     
     # 설문조사 안내
     st.markdown("---")
@@ -430,7 +449,7 @@ def handle_survey_step():
             unsafe_allow_html=True
         )
     
-    # ===== 🎯 새로 추가: 설문 완료 확인 시스템 =====
+    # ===== 설문 완료 확인 시스템 =====
     st.markdown("---")
     st.markdown("### ✅ After Completing the Survey")
     st.markdown("*Please complete the survey above first, then proceed below:*")
@@ -454,29 +473,45 @@ def handle_survey_step():
 
 
 def save_and_backup_data():
-    """데이터 저장 및 백업"""
+    """데이터 저장 및 백업 (중복 저장 방지 포함)"""
+    # 중복 저장 방지
+    if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
+        if hasattr(st.session_state, 'saved_files'):
+            return st.session_state.saved_files
+    
+    # 새로운 저장 수행
     result = save_session_data()
     if result[0]:  # csv_filename exists
-        st.session_state.data_saved = True
-        st.session_state.saved_files = result
+        # timestamp를 포함한 결과 언패킹
+        csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp = result
         
-        # Google Drive 자동 업로드
-        csv_filename, excel_filename, audio_folder, saved_files, zip_filename = result
-        with st.spinner("💾 Finalizing your session..."):
-            uploaded_files, errors = auto_backup_to_drive(
-                csv_filename, excel_filename, zip_filename, 
-                st.session_state.session_id, 
-                datetime.now().strftime('%Y%m%d_%H%M%S')
-            )
-            
-            # 로그 기록
-            log_upload_status(
-                st.session_state.session_id,
-                datetime.now().strftime('%Y%m%d_%H%M%S'),
-                uploaded_files,
-                errors,
-                False
-            )
+        # 세션에 timestamp 저장 (중복 저장 방지용)
+        st.session_state.saved_timestamp = timestamp
+        
+        # GCS 자동 업로드 (같은 timestamp 사용)
+        uploaded_files, errors = auto_backup_to_gcs(
+            csv_filename, excel_filename, zip_filename, 
+            st.session_state.session_id, 
+            timestamp  # 새로 생성하지 않고 기존 timestamp 사용
+        )
+        
+        # 로그 기록
+        log_upload_status(
+            st.session_state.session_id,
+            timestamp,  # 같은 timestamp 사용
+            uploaded_files,
+            errors,
+            False
+        )
+        
+        # 업로드 결과 표시
+        if errors:
+            st.warning(f"⚠️ Cloud backup had issues: {'; '.join(errors[:2])}")
+            st.info("💾 Your data is saved locally and can be downloaded below.")
+        else:
+            st.success("☁️ Data successfully backed up to cloud storage!")
+    
+    return result
 
 
 def handle_completion_step():
@@ -508,31 +543,33 @@ def handle_completion_step():
 
 def display_optional_progress_view():
     """선택적 진행상황 표시"""
-    if hasattr(st.session_state, 'saved_files') and st.session_state.saved_files[0]:
-        with st.expander("📊 View Your Progress (Optional)", expanded=False):
-            # 오디오 비교
-            display_audio_comparison(
-                st.session_state.get('first_audio'),
-                st.session_state.get('second_audio'),
-                getattr(st.session_state, 'audio_duration_1', 0),
-                getattr(st.session_state, 'audio_duration_2', 0)
-            )
-            
-            # 전사 텍스트 표시
-            col1, col2 = st.columns(2)
-            with col1:
-                st.code(st.session_state.transcription_1, language=None)
-            with col2:
-                st.code(st.session_state.transcription_2, language=None)
-            
-            # 개선도 분석
-            if hasattr(st.session_state, 'improvement_assessment'):
-                st.markdown("---")
-                st.markdown("### 📈 STT-Based Improvement Analysis")
+    if hasattr(st.session_state, 'saved_files') and st.session_state.saved_files:
+        # saved_files의 첫 번째 요소(csv_filename)가 존재하는지 확인
+        if len(st.session_state.saved_files) > 0 and st.session_state.saved_files[0]:
+            with st.expander("📊 View Your Progress (Optional)", expanded=False):
+                # 오디오 비교
+                display_audio_comparison(
+                    st.session_state.get('first_audio'),
+                    st.session_state.get('second_audio'),
+                    getattr(st.session_state, 'audio_duration_1', 0),
+                    getattr(st.session_state, 'audio_duration_2', 0)
+                )
                 
-                improvement = st.session_state.improvement_assessment
-                display_improvement_metrics(improvement)
-                display_improvement_details(improvement)
+                # 전사 텍스트 표시
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.code(st.session_state.transcription_1, language=None)
+                with col2:
+                    st.code(st.session_state.transcription_2, language=None)
+                
+                # 개선도 분석
+                if hasattr(st.session_state, 'improvement_assessment'):
+                    st.markdown("---")
+                    st.markdown("### 📈 STT-Based Improvement Analysis")
+                    
+                    improvement = st.session_state.improvement_assessment
+                    display_improvement_metrics(improvement)
+                    display_improvement_details(improvement)
 
 
 def display_researcher_mode():
@@ -541,12 +578,17 @@ def display_researcher_mode():
     if debug_mode:
         with st.expander("🔬 Researcher: Data Management", expanded=False):
             if hasattr(st.session_state, 'saved_files'):
-                csv_filename, excel_filename, audio_folder, saved_files, zip_filename = st.session_state.saved_files
+                # timestamp가 추가되었으므로 언패킹 수정
+                if len(st.session_state.saved_files) >= 6:
+                    csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp = st.session_state.saved_files
+                else:
+                    # 이전 버전 호환성을 위한 fallback
+                    csv_filename, excel_filename, audio_folder, saved_files, zip_filename = st.session_state.saved_files[:5]
                 
                 # 다운로드 버튼들
                 display_download_buttons(csv_filename, excel_filename, zip_filename)
                 
-                # 세션 상세 정보 (배경 정보 포함)
+                # 세션 상세 정보 (배경 정보 + GCS 상태 포함)
                 display_session_details()
                 
                 # 데이터 품질 정보
