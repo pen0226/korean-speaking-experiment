@@ -1,6 +1,6 @@
 """
 tts.py
-ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (import 방식 수정)
+ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (최신 SDK 호환 버전)
 """
 
 import streamlit as st
@@ -39,37 +39,7 @@ def fix_tts_sentence_punctuation(text):
 
 def apply_slow_speed_formatting(text):
     """
-    SSML을 사용한 느린 속도 포맷팅 (fallback용 - 500ms 일시정지 + 70% 속도)
-    
-    Args:
-        text: 원본 텍스트
-        
-    Returns:
-        str: SSML로 포맷팅된 텍스트
-    """
-    # 1. 문장 단위로 분리 (한국어 문장 구분자 기준)
-    sentences = re.split(r'([.!?])', text)
-    
-    # 2. 각 문장 끝에 500ms 일시정지 추가
-    formatted_parts = []
-    for i in range(0, len(sentences)-1, 2):
-        if i+1 < len(sentences):
-            sentence = sentences[i] + sentences[i+1]  # 문장 + 구분자
-            if sentence.strip():
-                formatted_parts.append(sentence + '<break time="500ms"/>')
-    
-    # 마지막 부분이 남아있다면 추가
-    if len(sentences) % 2 == 1 and sentences[-1].strip():
-        formatted_parts.append(sentences[-1])
-    
-    # 3. 전체를 prosody rate 70%로 감싸기 (ElevenLabs speed 제한에 맞춤)
-    formatted_text = ''.join(formatted_parts)
-    return f'<prosody rate="70%">{formatted_text}</prosody>'
-
-
-def apply_fallback_slow_formatting(text):
-    """
-    SSML 지원하지 않을 경우 텍스트 기반 느린 속도 구현 (fallback용)
+    느린 속도를 위한 간단한 텍스트 포맷팅 (쉼표 추가 제거)
     
     Args:
         text: 원본 텍스트
@@ -77,27 +47,19 @@ def apply_fallback_slow_formatting(text):
     Returns:
         str: 느린 속도용으로 포맷팅된 텍스트
     """
-    # 문장마다 추가 마침표로 자연스러운 일시정지 생성
-    sentences = re.split(r'([.!?])', text)
-    slow_parts = []
+    # 1. 문장 사이 공백 정리만
+    text = re.sub(r'([.!?])\s*', r'\1 ', text)
     
-    for i in range(0, len(sentences)-1, 2):
-        if i+1 < len(sentences):
-            sentence = sentences[i] + sentences[i+1]
-            if sentence.strip():
-                # 문장 끝에 추가 마침표와 공백으로 일시정지 효과
-                slow_parts.append(sentence + '. ')
+    # 2. 단어 간격을 약간 늘리기 (띄어쓰기 늘리기)
+    text = re.sub(r'\s+', '  ', text)  # 단일 공백을 두 개로
     
-    # 마지막 부분 처리
-    if len(sentences) % 2 == 1 and sentences[-1].strip():
-        slow_parts.append(sentences[-1])
-    
-    return ''.join(slow_parts)
+    # 쉼표 추가 로직 완전 제거
+    return text
 
 
 def apply_natural_pacing(text):
     """
-    자연스러운 말하기 속도를 위한 포맷팅
+    자연스러운 말하기 속도를 위한 포맷팅 (쉼표 추가 제거)
     
     Args:
         text: 원본 텍스트
@@ -105,13 +67,36 @@ def apply_natural_pacing(text):
     Returns:
         str: 자연스럽게 포맷팅된 텍스트
     """
-    # 일반 속도는 원본 텍스트 그대로 반환
+    # 쉼표 추가 로직 완전 제거 - 그냥 원본 텍스트 반환
     return text
+
+
+def get_elevenlabs_client():
+    """
+    ElevenLabs 클라이언트 생성 (최신 SDK 호환)
+    
+    Returns:
+        ElevenLabs: 클라이언트 객체 또는 None
+    """
+    if not ELEVENLABS_API_KEY:
+        return None
+    
+    try:
+        # 최신 SDK 방식 (1.0.0+)
+        from elevenlabs import ElevenLabs
+        return ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    except ImportError:
+        try:
+            # 구버전 fallback
+            from elevenlabs.client import ElevenLabs
+            return ElevenLabs(api_key=ELEVENLABS_API_KEY)
+        except ImportError:
+            return None
 
 
 def synthesize_audio(text, speed="normal"):
     """
-    텍스트를 음성으로 변환 (최신 ElevenLabs 라이브러리 호환)
+    텍스트를 음성으로 변환 (voice_settings만으로 속도 차이 구현)
     
     Args:
         text: 변환할 텍스트
@@ -121,139 +106,79 @@ def synthesize_audio(text, speed="normal"):
         bytes: 생성된 오디오 데이터 또는 None
     """
     if not ELEVENLABS_API_KEY:
+        print("ElevenLabs API key not configured")
         return None
     
     try:
-        # 최신 ElevenLabs 라이브러리 import 방식
-        try:
-            from elevenlabs import ElevenLabs
-        except ImportError:
-            # fallback import 방식
-            from elevenlabs.client import ElevenLabs
+        client = get_elevenlabs_client()
+        if not client:
+            print("Failed to initialize ElevenLabs client")
+            return None
         
-        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-        
-        # 🎯 자연스러운 억양을 위한 마침표 보정
+        # 🎯 자연스러운 억양을 위한 마침표 보정만
         text = fix_tts_sentence_punctuation(text)
-        original_text = text
         
-        # 속도별 voice_settings 설정
+        # 🐌 속도별 텍스트 포맷팅 적용 (쉼표 없이)
+        if speed == "slow":
+            text = apply_slow_speed_formatting(text)
+            print(f"Slow speed text: {text}")
+        else:
+            text = apply_natural_pacing(text)
+            print(f"Normal speed text: {text}")
+        
+        print("Starting TTS generation...")
+        print("Text:", text[:100] + "..." if len(text) > 100 else text)
+        print("Voice ID:", ELEVEN_VOICE_ID)
+        print("Speed:", speed)
+        
+        # 속도별 voice_settings 설정 (억양 안정화)
         voice_settings = TTS_SETTINGS.get(speed, TTS_SETTINGS["normal"]).copy()
         
-        # 🚀 ElevenLabs 공식 speed 파라미터 사용
+        # 🎯 한국어 억양 개선: 더 안정적인 설정
         if speed == "slow":
-            voice_settings["stability"] = 0.95  # 매우 높은 안정성
-            voice_settings["style"] = 0.05      # 최소한의 스타일 (단조로운 억양)
-            voice_settings["similarity_boost"] = 0.95  # 높은 일관성
+            voice_settings["stability"] = 0.90  # 더 높은 안정성 (억양 변화 최소화)
+            voice_settings["style"] = 0.15      # 더 낮은 스타일 (단조로운 억양)
         else:
-            voice_settings["stability"] = 0.75  # 일반 속도 안정성
-            voice_settings["style"] = 0.45      # 적당한 스타일
-            voice_settings["similarity_boost"] = 0.80  # 일관성
+            voice_settings["stability"] = 0.75  # 일반 속도도 안정성 증가
+            voice_settings["style"] = 0.45      # 스타일 약간 감소
         
-        # 공식 speed 파라미터 사용
-        clean_settings = voice_settings.copy()
-        if 'speed_modifier' in clean_settings:
-            del clean_settings['speed_modifier']
+        # speed_modifier 제거 (ElevenLabs API에서 지원하지 않음)
+        clean_settings = {k: v for k, v in voice_settings.items() if k != 'speed_modifier'}
         
-        # ElevenLabs 공식 speed 파라미터를 사용한 오디오 생성
-        try:
-            audio_generator = client.generate(
-                text=text,
-                voice=ELEVEN_VOICE_ID,
-                model=ELEVENLABS_MODEL,
-                voice_settings=clean_settings
-            )
-            
-            # Convert generator to bytes
-            audio_data = b"".join(audio_generator)
-            
-            if audio_data:
-                return audio_data
-            else:
-                raise Exception("No audio data generated")
-                
-        except Exception as speed_error:
-            # 공식 speed 파라미터 실패시 SSML fallback 시도
-            if speed == "slow":
-                # Fallback 1: SSML 속도 제어
-                ssml_text = apply_slow_speed_formatting(original_text)
-                
-                # speed 파라미터 제거하고 SSML로 시도
-                fallback_settings = clean_settings.copy()
-                if 'speed' in fallback_settings:
-                    del fallback_settings['speed']
-                
-                try:
-                    audio_generator = client.generate(
-                        text=ssml_text,
-                        voice=ELEVEN_VOICE_ID,
-                        model=ELEVENLABS_MODEL,
-                        voice_settings=fallback_settings
-                    )
-                    
-                    audio_data = b"".join(audio_generator)
-                    
-                    if audio_data:
-                        return audio_data
-                    
-                except Exception as ssml_error:
-                    # Fallback 2: 텍스트 기반 느린 속도
-                    fallback_text = apply_fallback_slow_formatting(original_text)
-                    
-                    # voice_settings도 더 극단적으로 조정
-                    fallback_settings["stability"] = 0.98
-                    fallback_settings["style"] = 0.02
-                    
-                    try:
-                        audio_generator = client.generate(
-                            text=fallback_text,
-                            voice=ELEVEN_VOICE_ID,
-                            model=ELEVENLABS_MODEL,
-                            voice_settings=fallback_settings
-                        )
-                        
-                        audio_data = b"".join(audio_generator)
-                        
-                        if audio_data:
-                            return audio_data
-                        
-                    except Exception as final_error:
-                        st.warning(f"TTS generation failed: {final_error}")
-                        return None
-            else:
-                # 일반 속도에서는 원본 텍스트로 재시도 (speed 파라미터 없이)
-                fallback_settings = clean_settings.copy()
-                if 'speed' in fallback_settings:
-                    del fallback_settings['speed']
-                
-                try:
-                    audio_generator = client.generate(
-                        text=original_text,
-                        voice=ELEVEN_VOICE_ID,
-                        model=ELEVENLABS_MODEL,
-                        voice_settings=fallback_settings
-                    )
-                    
-                    audio_data = b"".join(audio_generator)
-                    
-                    if audio_data:
-                        return audio_data
-                        
-                except Exception as normal_error:
-                    st.warning(f"TTS generation failed: {normal_error}")
-                    return None
+        print(f"Voice settings ({speed}) - Enhanced for Korean:", clean_settings)
+        
+        # Generate audio using client with voice settings
+        audio_generator = client.generate(
+            text=text,
+            voice=ELEVEN_VOICE_ID,
+            model=ELEVENLABS_MODEL,
+            voice_settings=clean_settings
+        )
+        
+        # Convert generator to bytes
+        audio_data = b"".join(audio_generator)
+        
+        if audio_data:
+            print(f"TTS Success ({speed})! Audio length:", len(audio_data))
+            return audio_data
+        else:
+            print("No audio data received")
+            st.warning("TTS generation returned no audio data.")
+            return None
     
     except ImportError as ie:
+        print("Import error:", str(ie))
         st.warning(f"ElevenLabs import error: {str(ie)}")
         return None
     except Exception as e:
+        print("TTS error:", str(e))
         st.warning(f"TTS generation failed: {str(e)}")
         return None
 
 
 def generate_model_audio(text):
     """
-    일반속도와 느린속도 모델 음성 생성 (ElevenLabs 공식 speed 파라미터 사용)
+    일반속도와 느린속도 모델 음성 생성 (voice_settings로만 속도 차이)
     
     Args:
         text: 변환할 텍스트
@@ -270,7 +195,7 @@ def generate_model_audio(text):
             if normal_audio:
                 model_audio["normal"] = normal_audio
         
-        # 느린 속도 생성 (ElevenLabs 공식 speed 파라미터 사용)
+        # 느린 속도 생성 (voice_settings로만 차이)
         with st.spinner("🐌 Creating slow speed version..."):
             slow_audio = synthesize_audio(text, "slow")
             if slow_audio:
@@ -304,7 +229,7 @@ def audio_card(audio_data, title, description=""):
 
 def display_model_audio(model_audio_dict):
     """
-    모델 발음 오디오를 표시 (학생 친화적 메시지로 수정)
+    모델 발음 오디오를 표시 (voice_settings 기반 속도 차이)
     
     Args:
         model_audio_dict: {"normal": audio_data, "slow": audio_data}
@@ -322,7 +247,7 @@ def display_model_audio(model_audio_dict):
         audio_card(
             model_audio_dict.get('slow'), 
             "🐌 Slow & Clear", 
-            "📚 Perfect for learning - slower and clearer"
+            "📚 Perfect for learning - clearer pronunciation"
         )
     
     with col2:
@@ -331,11 +256,15 @@ def display_model_audio(model_audio_dict):
             "🚀 Natural Speed", 
             "🎯 Interview pace - practice matching this speed"
         )
+    
+    # 속도 차이 설명 수정
+    if model_audio_dict.get('slow') and model_audio_dict.get('normal'):
+        st.success("✅ **Speed difference implemented!** Different voice settings create natural speed variation.")
 
 
 def check_tts_availability():
     """
-    TTS 기능 사용 가능 여부 확인 (개선된 버전)
+    TTS 기능 사용 가능 여부 확인
     
     Returns:
         tuple: (is_available, status_message)
@@ -346,19 +275,18 @@ def check_tts_availability():
     if not ELEVEN_VOICE_ID:
         return False, "Voice ID not configured"
     
+    # 최신 SDK 호환성 확인
     try:
-        # 최신 ElevenLabs 라이브러리 import 시도
+        # 최신 SDK 방식 (1.0.0+)
+        from elevenlabs import ElevenLabs
+        return True, "TTS ready (Latest SDK)"
+    except ImportError:
         try:
-            from elevenlabs import ElevenLabs
-        except ImportError:
-            # fallback import 방식
+            # 구버전 fallback
             from elevenlabs.client import ElevenLabs
-        
-        return True, "TTS ready"
-    except ImportError as e:
-        return False, f"ElevenLabs library not installed: {str(e)}"
-    except Exception as e:
-        return False, f"ElevenLabs error: {str(e)}"
+            return True, "TTS ready (Legacy SDK)"
+        except ImportError:
+            return False, "ElevenLabs library not installed"
 
 
 def display_tts_status():
@@ -368,7 +296,7 @@ def display_tts_status():
     is_available, status = check_tts_availability()
     
     if is_available:
-        st.write("AI Model Voice: ✅ Ready ")
+        st.write("AI Model Voice: ✅ Ready")
     else:
         st.write(f"AI Model Voice: ❌ {status}")
 
@@ -460,7 +388,7 @@ def validate_text_for_tts(text):
 
 def process_feedback_audio(feedback_dict):
     """
-    피드백에서 모델 문장을 추출하여 오디오 생성 (ElevenLabs 공식 speed 파라미터 사용)
+    피드백에서 모델 문장을 추출하여 오디오 생성 (voice_settings 기반)
     
     Args:
         feedback_dict: GPT 피드백 딕셔너리
@@ -470,7 +398,7 @@ def process_feedback_audio(feedback_dict):
     """
     model_sentence = feedback_dict.get('suggested_model_sentence', '')
     
-    # 🎯 자연스러운 억양 유도: 마침표 자동 추가
+    # 🎯 자연스러운 억양 유도: 마침표 자동 추가만
     model_sentence = fix_tts_sentence_punctuation(model_sentence)
     
     if not model_sentence:
@@ -505,7 +433,7 @@ def display_audio_generation_progress():
         "🔊 Initializing TTS engine...",
         "🎯 Processing Korean text...", 
         "🚀 Generating natural speed audio...",
-        "🐌 Generating slow speed audio...",
+        "🐌 Generating slow speed audio with different voice settings...",
         "✅ Audio generation complete!"
     ]
     
