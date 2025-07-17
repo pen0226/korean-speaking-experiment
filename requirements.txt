@@ -9,7 +9,7 @@ streamlit-mic-recorder==0.0.8
 
 # === AI API 서비스 (필수) ===
 openai==1.12.0
-elevenlabs==0.2.27
+elevenlabs==1.0.0
 
 # === 토큰 최적화 제거 (문자 수 기반 처리로 대체) ===
 # tiktoken==0.6.0  # 제거: Streamlit 에러 방지

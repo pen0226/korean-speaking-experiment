@@ -1,6 +1,6 @@
 """
 tts.py
-ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (최종 클린 버전)
+ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (import 방식 수정)
 """
 
 import streamlit as st
@@ -111,7 +111,7 @@ def apply_natural_pacing(text):
 
 def synthesize_audio(text, speed="normal"):
     """
-    텍스트를 음성으로 변환 (ElevenLabs 공식 speed 파라미터 사용)
+    텍스트를 음성으로 변환 (최신 ElevenLabs 라이브러리 호환)
     
     Args:
         text: 변환할 텍스트
@@ -124,7 +124,12 @@ def synthesize_audio(text, speed="normal"):
         return None
     
     try:
-        from elevenlabs.client import ElevenLabs
+        # 최신 ElevenLabs 라이브러리 import 방식
+        try:
+            from elevenlabs import ElevenLabs
+        except ImportError:
+            # fallback import 방식
+            from elevenlabs.client import ElevenLabs
         
         client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
         
@@ -330,7 +335,7 @@ def display_model_audio(model_audio_dict):
 
 def check_tts_availability():
     """
-    TTS 기능 사용 가능 여부 확인
+    TTS 기능 사용 가능 여부 확인 (개선된 버전)
     
     Returns:
         tuple: (is_available, status_message)
@@ -342,10 +347,18 @@ def check_tts_availability():
         return False, "Voice ID not configured"
     
     try:
-        from elevenlabs.client import ElevenLabs
+        # 최신 ElevenLabs 라이브러리 import 시도
+        try:
+            from elevenlabs import ElevenLabs
+        except ImportError:
+            # fallback import 방식
+            from elevenlabs.client import ElevenLabs
+        
         return True, "TTS ready"
-    except ImportError:
-        return False, "ElevenLabs library not installed"
+    except ImportError as e:
+        return False, f"ElevenLabs library not installed: {str(e)}"
+    except Exception as e:
+        return False, f"ElevenLabs error: {str(e)}"
 
 
 def display_tts_status():
