@@ -1,6 +1,6 @@
 """
 stt.py
-OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (Legacy SDK 호환 - Streamlit Cloud 완벽 지원)
+OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (로컬 환경 감지 수정 버전)
 """
 
 import tempfile
@@ -9,31 +9,113 @@ import streamlit as st
 from config import OPENAI_API_KEY
 
 
-def get_openai_client():
+def detect_openai_version():
     """
-    OpenAI 클라이언트 초기화 (Legacy SDK 호환 - Streamlit Cloud 완벽 지원)
+    OpenAI SDK 버전 감지
     
     Returns:
-        OpenAI: 클라이언트 객체 또는 None
+        str: "v1" (modern) 또는 "v0" (legacy)
+    """
+    try:
+        import openai
+        # v1.0.0+ 에서는 openai.OpenAI 클래스가 존재
+        if hasattr(openai, 'OpenAI'):
+            return "v1"
+        else:
+            return "v0"
+    except ImportError:
+        return None
+
+
+def is_streamlit_cloud():
+    """
+    Streamlit Cloud 환경인지 정확히 감지 (수정 버전)
+    
+    Returns:
+        bool: Streamlit Cloud 여부
+    """
+    try:
+        # 🔥 더 정확한 Streamlit Cloud 감지
+        cloud_indicators = [
+            # 환경변수 기반 감지
+            os.environ.get('STREAMLIT_CLOUD') == 'true',
+            'streamlit.app' in os.environ.get('HOSTNAME', ''),
+            'share.streamlit.io' in os.environ.get('HOSTNAME', ''),
+            
+            # secrets 실제 존재 여부 확인 (중요!)
+            hasattr(st, 'secrets') and _check_secrets_available()
+        ]
+        
+        # 모든 조건 중 하나라도 충족되면 클라우드
+        return any(cloud_indicators)
+    except:
+        return False
+
+
+def _check_secrets_available():
+    """
+    st.secrets가 실제로 사용 가능한지 확인
+    
+    Returns:
+        bool: secrets 사용 가능 여부
+    """
+    try:
+        # secrets에 실제로 접근해보기
+        _ = len(st.secrets)
+        return True
+    except:
+        # secrets 접근 실패 = 로컬 환경
+        return False
+
+
+def get_openai_client():
+    """
+    OpenAI 클라이언트 초기화 (환경 감지 수정)
+    
+    Returns:
+        client: OpenAI 클라이언트 객체 또는 None
     """
     if not OPENAI_API_KEY:
         return None
     
-    try:
-        # 🔥 Legacy SDK 방식 (openai==1.3.5 호환)
-        import openai
-        
-        # Legacy 방식: 전역 API 키 설정
-        openai.api_key = OPENAI_API_KEY
-        
-        # Legacy SDK에서는 클라이언트 객체가 아닌 모듈 자체를 반환
-        return openai
-        
-    except ImportError:
-        st.error("❌ OpenAI library not installed")
-        return None
-    except Exception as e:
-        st.error(f"❌ OpenAI client initialization error: {str(e)}")
+    version = detect_openai_version()
+    
+    if version == "v1":
+        # 🔥 Modern SDK (v1.0.0+) 방식
+        try:
+            from openai import OpenAI
+            
+            # 🔥 수정된 환경 감지
+            is_cloud = is_streamlit_cloud()
+            
+            if is_cloud:
+                # Streamlit Cloud: proxies 문제 대응
+                try:
+                    return OpenAI(api_key=OPENAI_API_KEY)
+                except TypeError as e:
+                    if "proxies" in str(e):
+                        # proxies 문제 발생시 환경변수 방식으로 재시도
+                        import openai
+                        openai.api_key = OPENAI_API_KEY
+                        return openai
+                    raise e
+            else:
+                # 로컬 환경: 정상적인 클라이언트 생성
+                return OpenAI(api_key=OPENAI_API_KEY)
+                
+        except ImportError:
+            return None
+    
+    elif version == "v0":
+        # 🔥 Legacy SDK (v0.x) 방식
+        try:
+            import openai
+            openai.api_key = OPENAI_API_KEY
+            return openai
+        except ImportError:
+            return None
+    
+    else:
         return None
 
 
@@ -83,9 +165,71 @@ def load_whisper():
     return None
 
 
+def transcribe_audio_modern(client, temp_path, file_extension, original_filename):
+    """
+    Modern SDK (v1.0.0+)를 사용한 전사
+    
+    Args:
+        client: OpenAI 클라이언트
+        temp_path: 임시 파일 경로
+        file_extension: 파일 확장자
+        original_filename: 원본 파일명
+        
+    Returns:
+        tuple: (transcription_text, duration)
+    """
+    with open(temp_path, "rb") as audio_file:
+        filename = original_filename or f"audio{file_extension}"
+        
+        # Modern SDK API 호출
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=(filename, audio_file, f"audio/{file_extension[1:]}"),
+            language="ko",
+            response_format="verbose_json"
+        )
+    
+    # 텍스트 및 duration 추출
+    transcription_text = transcription.text.strip()
+    duration = getattr(transcription, 'duration', None)
+    
+    return transcription_text, duration
+
+
+def transcribe_audio_legacy(client, temp_path):
+    """
+    Legacy SDK (v0.x)를 사용한 전사
+    
+    Args:
+        client: OpenAI 클라이언트 (모듈)
+        temp_path: 임시 파일 경로
+        
+    Returns:
+        tuple: (transcription_text, duration)
+    """
+    with open(temp_path, "rb") as audio_file:
+        # Legacy SDK API 호출
+        transcription = client.Audio.transcribe(
+            model="whisper-1",
+            file=audio_file,
+            language="ko",
+            response_format="verbose_json"
+        )
+    
+    # 텍스트 및 duration 추출
+    if isinstance(transcription, dict):
+        transcription_text = transcription.get('text', '').strip()
+        duration = transcription.get('duration', None)
+    else:
+        transcription_text = str(transcription).strip()
+        duration = None
+    
+    return transcription_text, duration
+
+
 def transcribe_audio(audio_bytes, file_extension=".wav", source_type="recording", original_filename=None):
     """
-    OpenAI API Whisper를 사용한 오디오 바이트 텍스트 변환 (Legacy SDK 호환)
+    OpenAI API Whisper를 사용한 오디오 바이트 텍스트 변환 (환경 감지 수정)
     
     Args:
         audio_bytes: 오디오 파일의 바이트 데이터
@@ -109,45 +253,35 @@ def transcribe_audio(audio_bytes, file_extension=".wav", source_type="recording"
         temp_path = tmp.name
     
     try:
-        # 🔥 Legacy SDK 클라이언트 초기화
-        openai = get_openai_client()
-        if not openai:
+        # 🔥 환경 감지 및 클라이언트 초기화
+        client = get_openai_client()
+        if not client:
             st.error("❌ Failed to initialize OpenAI client")
             return "", 0.0
         
-        # 🔥 Legacy SDK API 호출 방식 (openai==1.3.5)
-        with open(temp_path, "rb") as audio_file:
-            
-            try:
-                # Legacy SDK 방식: openai.Audio.transcribe()
-                transcription = openai.Audio.transcribe(
-                    model="whisper-1",
-                    file=audio_file,
-                    language="ko",
-                    response_format="verbose_json"
-                )
-                
-            except Exception as legacy_error:
-                print(f"Legacy method failed: {legacy_error}")
-                
-                # 더 기본적인 Legacy 방식 시도
-                audio_file.seek(0)  # 파일 포인터 리셋
-                
-                transcription = openai.Audio.transcribe(
-                    model="whisper-1",
-                    file=audio_file,
-                    language="ko"
-                )
+        # 🔥 환경 정보 출력 (디버그용)
+        is_cloud = is_streamlit_cloud()
+        version = detect_openai_version()
         
-        # 텍스트 추출 (Legacy SDK 응답 처리)
-        if isinstance(transcription, dict):
-            transcription_text = transcription.get('text', '').strip()
-            duration = transcription.get('duration', None)
+        print(f"🔍 Environment: {'Streamlit Cloud' if is_cloud else 'Local'}")
+        print(f"🔍 OpenAI SDK: v{version}")
+        print(f"🔍 API Key: {'✅' if OPENAI_API_KEY else '❌'}")
+        
+        # SDK 버전에 따른 API 호출
+        if version == "v1":
+            # Modern SDK 사용
+            transcription_text, duration = transcribe_audio_modern(
+                client, temp_path, file_extension, original_filename
+            )
+        elif version == "v0":
+            # Legacy SDK 사용
+            transcription_text, duration = transcribe_audio_legacy(
+                client, temp_path
+            )
         else:
-            transcription_text = str(transcription).strip()
-            duration = None
+            raise Exception("Unsupported OpenAI SDK version")
         
-        # 음성 길이 계산
+        # duration이 없으면 추정값 사용
         if duration is None:
             duration = estimate_audio_duration(audio_bytes)
         
@@ -156,10 +290,16 @@ def transcribe_audio(audio_bytes, file_extension=".wav", source_type="recording"
     except Exception as e:
         error_msg = str(e)
         
-        # 🔥 상세한 에러 처리 (Streamlit Cloud 특화)
-        if "api_key" in error_msg.lower():
+        # 🔥 상세한 에러 처리
+        if "secrets" in error_msg.lower():
+            st.error("❌ Configuration error detected")
+            st.info("💡 Please check your .env file contains OPENAI_API_KEY")
+        elif "proxies" in error_msg.lower():
+            st.error("❌ Streamlit Cloud compatibility issue detected")
+            st.info("💡 This is a known issue. Please try again.")
+        elif "api_key" in error_msg.lower():
             st.error("❌ Invalid OpenAI API key")
-            st.info("💡 Please check your API key in Streamlit Cloud Secrets")
+            st.info("💡 Please check your API key configuration")
         elif "quota" in error_msg.lower():
             st.error("❌ OpenAI API quota exceeded")
             st.info("💡 Please check your OpenAI account usage")
@@ -171,7 +311,6 @@ def transcribe_audio(audio_bytes, file_extension=".wav", source_type="recording"
             st.info("💡 Supported formats: WAV, MP3, M4A, FLAC, OGG, WEBM")
         else:
             st.error(f"❌ Transcription error: {error_msg}")
-            st.info("💡 This appears to be a temporary issue. Please try again.")
             
         return "", 0.0
     finally:
@@ -303,7 +442,7 @@ def validate_audio_file(uploaded_file):
 
 def process_audio_input(audio_data, source_type="recording"):
     """
-    오디오 입력을 처리하고 전사 (Legacy SDK 호환)
+    오디오 입력을 처리하고 전사 (환경 감지 수정)
     
     Args:
         audio_data: 오디오 데이터 (녹음 또는 업로드)
@@ -332,8 +471,12 @@ def process_audio_input(audio_data, source_type="recording"):
             original_filename = "recording.wav"
             file_ext = ".wav"
         
-        # 🔥 Legacy SDK 전사 수행
-        with st.spinner("🎙️ Converting speech to text using OpenAI Whisper (Legacy SDK - Streamlit optimized)..."):
+        # 🔥 환경 정보 표시
+        is_cloud = is_streamlit_cloud()
+        version = detect_openai_version()
+        env_info = f"{'Streamlit Cloud' if is_cloud else 'Local'} + OpenAI SDK v{version}"
+        
+        with st.spinner(f"🎙️ Converting speech to text using {env_info}..."):
             transcription, duration = transcribe_audio(
                 audio_bytes, 
                 file_extension=file_ext,
@@ -352,13 +495,12 @@ def process_audio_input(audio_data, source_type="recording"):
     except Exception as e:
         error_msg = str(e)
         st.error(f"❌ Audio processing error: {error_msg}")
-        st.info("💡 Please try again. If the issue persists, contact support.")
         return "", 0.0, False
 
 
 def check_whisper_availability():
     """
-    Whisper API 사용 가능 여부 확인 (Legacy SDK)
+    Whisper API 사용 가능 여부 확인 (환경 감지 수정)
     
     Returns:
         tuple: (is_available, status_message)
@@ -367,9 +509,13 @@ def check_whisper_availability():
         return False, "OpenAI API key not configured"
     
     try:
-        openai = get_openai_client()
-        if openai:
-            return True, "OpenAI API Whisper ready (Legacy SDK - Streamlit compatible)"
+        client = get_openai_client()
+        version = detect_openai_version()
+        is_cloud = is_streamlit_cloud()
+        
+        if client and version:
+            env_info = f"{'Cloud' if is_cloud else 'Local'} + SDK v{version}"
+            return True, f"OpenAI API Whisper ready ({env_info})"
         else:
             return False, "Failed to initialize OpenAI client"
     except Exception as e:
@@ -378,26 +524,28 @@ def check_whisper_availability():
 
 def display_whisper_status():
     """
-    Whisper API 상태를 사이드바에 표시 (Legacy SDK 정보 포함)
+    Whisper API 상태를 사이드바에 표시 (환경 정보 포함)
     """
     is_available, status = check_whisper_availability()
     
     if is_available:
-        st.write("Speech Recognition: ✅ Ready (Legacy SDK)")
+        st.write(f"Speech Recognition: ✅ Ready ({status})")
     else:
         st.write(f"Speech Recognition: ❌ {status}")
 
 
 def test_whisper_api():
     """
-    Whisper API 연결 테스트 (Legacy SDK)
+    Whisper API 연결 테스트 (환경 감지 수정)
     
     Returns:
         bool: 테스트 성공 여부
     """
     try:
-        openai = get_openai_client()
-        if openai:
+        client = get_openai_client()
+        version = detect_openai_version()
+        
+        if client and version:
             return True
         else:
             return False

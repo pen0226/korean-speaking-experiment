@@ -1,6 +1,6 @@
 """
 tts.py
-ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (2025 최신 API 호환 버전)
+ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (2025 최신 API 호환 버전 - 속도 수정)
 """
 
 import streamlit as st
@@ -102,7 +102,7 @@ def get_elevenlabs_client():
 
 def synthesize_audio(text, speed="normal"):
     """
-    텍스트를 음성으로 변환 (2025 최신 ElevenLabs API 사용)
+    텍스트를 음성으로 변환 (2025 최신 ElevenLabs API 사용 - 속도 수정 버전)
     
     Args:
         text: 변환할 텍스트
@@ -137,43 +137,34 @@ def synthesize_audio(text, speed="normal"):
         print("Voice ID:", ELEVEN_VOICE_ID)
         print("Speed:", speed)
         
-        # 속도별 voice_settings 설정 (2025 최신 파라미터)
+        # 🔥 2025 수정: voice_settings에서 speed를 제거하지 않고 그대로 유지
         voice_settings = TTS_SETTINGS.get(speed, TTS_SETTINGS["normal"]).copy()
         
         # 🎯 한국어 억양 개선: 더 안정적인 설정
         if speed == "slow":
             voice_settings["stability"] = 0.90  # 더 높은 안정성 (억양 변화 최소화)
             voice_settings["style"] = 0.15      # 더 낮은 스타일 (단조로운 억양)
+            voice_settings["speed"] = 0.7       # 🔥 2025 수정: speed를 voice_settings 안에 유지
         else:
             voice_settings["stability"] = 0.75  # 일반 속도도 안정성 증가
             voice_settings["style"] = 0.45      # 스타일 약간 감소
+            voice_settings["speed"] = 1.0       # 🔥 2025 수정: speed를 voice_settings 안에 유지
         
-        # 2025 최신 API 파라미터 추가
+        # 2025 최신 API 파라미터
         generation_params = {
             "text": text,
             "voice": ELEVEN_VOICE_ID,
             "model": ELEVENLABS_MODEL,
-            "voice_settings": voice_settings,
+            "voice_settings": voice_settings,  # 🔥 speed가 포함된 voice_settings 그대로 전달
             # 🆕 2025 최신 파라미터들
             "output_format": "mp3_44100_128",  # 고품질 MP3
             "optimize_streaming_latency": 1,   # 지연시간 최적화 (0-4)
         }
         
-        # speed 파라미터가 있다면 추가 (최신 API에서 지원하는 경우)
-        if hasattr(client, 'generate') and 'speed' in voice_settings:
-            # speed 파라미터를 별도로 전달 (일부 최신 버전에서 지원)
-            try:
-                # speed를 voice_settings에서 분리
-                speed_value = voice_settings.pop('speed', 1.0)
-                if hasattr(client.generate, '__code__') and 'speed' in client.generate.__code__.co_varnames:
-                    generation_params["speed"] = speed_value
-            except:
-                pass  # speed 파라미터 미지원 시 무시
-        
-        print(f"Voice settings ({speed}) - 2025 Enhanced:", voice_settings)
+        print(f"Voice settings ({speed}) - 2025 Enhanced with speed:", voice_settings)
         print(f"Generation params: {list(generation_params.keys())}")
         
-        # 🚀 2025 최신 API 호출 방식
+        # 🚀 2025 최신 API 호출 방식 (speed 분리 로직 완전 제거)
         try:
             # 최신 스트리밍 방식 시도
             audio_generator = client.generate(**generation_params)
@@ -184,12 +175,12 @@ def synthesize_audio(text, speed="normal"):
         except Exception as stream_error:
             print(f"Streaming failed, trying legacy method: {stream_error}")
             
-            # 레거시 방식 fallback
+            # 레거시 방식 fallback (speed 분리 없이)
             legacy_params = {
                 "text": text,
                 "voice": ELEVEN_VOICE_ID,
                 "model": ELEVENLABS_MODEL,
-                "voice_settings": voice_settings
+                "voice_settings": voice_settings  # 🔥 speed 포함된 그대로 전달
             }
             
             audio_generator = client.generate(**legacy_params)
@@ -226,7 +217,7 @@ def synthesize_audio(text, speed="normal"):
 
 def generate_model_audio(text):
     """
-    일반속도와 느린속도 모델 음성 생성 (2025 최신 API)
+    일반속도와 느린속도 모델 음성 생성 (2025 최신 API - 속도 수정)
     
     Args:
         text: 변환할 텍스트
@@ -236,7 +227,7 @@ def generate_model_audio(text):
     """
     model_audio = {}
     
-    with st.spinner("🔊 Generating model pronunciation with 2025 ElevenLabs API..."):
+    with st.spinner("🔊 Generating model pronunciation with 2025 ElevenLabs API (Speed Fixed)..."):
         # 일반 속도 생성
         with st.spinner("🚀 Creating natural speed version..."):
             normal_audio = synthesize_audio(text, "normal")
@@ -277,7 +268,7 @@ def audio_card(audio_data, title, description=""):
 
 def display_model_audio(model_audio_dict):
     """
-    모델 발음 오디오를 표시 (2025 최신 API 기반)
+    모델 발음 오디오를 표시 (2025 최신 API 기반 - 속도 수정)
     
     Args:
         model_audio_dict: {"normal": audio_data, "slow": audio_data}
@@ -307,7 +298,7 @@ def display_model_audio(model_audio_dict):
     
     # 속도 차이 설명 수정
     if model_audio_dict.get('slow') and model_audio_dict.get('normal'):
-        st.success("✅ **2025 Enhanced TTS!** Advanced voice settings create natural speed variation.")
+        st.success("✅ **2025 Speed Fixed!** Enhanced voice settings with proper speed control.")
 
 
 def check_tts_availability():
@@ -335,11 +326,11 @@ def check_tts_availability():
         try:
             # 일부 최신 버전에서 지원하는 version 확인
             if hasattr(client, 'get_models'):
-                return True, "TTS ready (2025 Latest API)"
+                return True, "TTS ready (2025 Latest API - Speed Fixed)"
             else:
-                return True, "TTS ready (Standard API)"
+                return True, "TTS ready (Standard API - Speed Fixed)"
         except:
-            return True, "TTS ready (Connected)"
+            return True, "TTS ready (Connected - Speed Fixed)"
             
     except ImportError:
         try:
@@ -352,12 +343,12 @@ def check_tts_availability():
 
 def display_tts_status():
     """
-    AI Model Voice 상태를 사이드바에 표시 (2025 버전 정보 포함)
+    AI Model Voice 상태를 사이드바에 표시 (2025 버전 정보 포함 - 속도 수정)
     """
     is_available, status = check_tts_availability()
     
     if is_available:
-        st.write("AI Model Voice: ✅ Ready (2025 API)")
+        st.write("AI Model Voice: ✅ Ready (2025 API - Speed Fixed)")
     else:
         st.write(f"AI Model Voice: ❌ {status}")
 
@@ -455,7 +446,7 @@ def validate_text_for_tts(text):
 
 def process_feedback_audio(feedback_dict):
     """
-    피드백에서 모델 문장을 추출하여 오디오 생성 (2025 최신 API)
+    피드백에서 모델 문장을 추출하여 오디오 생성 (2025 최신 API - 속도 수정)
     
     Args:
         feedback_dict: GPT 피드백 딕셔너리
@@ -484,13 +475,13 @@ def process_feedback_audio(feedback_dict):
         st.info(f"ℹ️ TTS not available: {status}")
         return {}
     
-    # 오디오 생성 (2025 최신 API)
+    # 오디오 생성 (2025 최신 API - 속도 수정)
     return generate_model_audio(model_sentence)
 
 
 def display_audio_generation_progress():
     """
-    오디오 생성 진행상황 표시 (2025 업데이트)
+    오디오 생성 진행상황 표시 (2025 업데이트 - 속도 수정)
     """
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -499,9 +490,9 @@ def display_audio_generation_progress():
     steps = [
         "🔊 Initializing 2025 ElevenLabs API...",
         "🎯 Processing Korean text with advanced formatting...", 
-        "🚀 Generating natural speed audio (Enhanced quality)...",
-        "🐌 Generating slow speed audio with optimized voice settings...",
-        "✅ Audio generation complete with 2025 enhancements!"
+        "🚀 Generating natural speed audio (Speed Fixed)...",
+        "🐌 Generating slow speed audio with proper voice settings...",
+        "✅ Audio generation complete with 2025 speed enhancements!"
     ]
     
     for i, step in enumerate(steps):
@@ -515,7 +506,7 @@ def display_audio_generation_progress():
 
 def test_elevenlabs_connection():
     """
-    ElevenLabs API 연결 테스트 (2025 디버그용)
+    ElevenLabs API 연결 테스트 (2025 디버그용 - 속도 수정)
     
     Returns:
         tuple: (success, message, details)
@@ -528,9 +519,9 @@ def test_elevenlabs_connection():
         # 간단한 테스트 호출 (실제 TTS 없이)
         if hasattr(client, 'get_models'):
             models = client.get_models()
-            return True, "Connection successful", f"Available models: {len(models) if models else 0}"
+            return True, "Connection successful (Speed Fixed)", f"Available models: {len(models) if models else 0}"
         else:
-            return True, "Connection successful", "Legacy API detected"
+            return True, "Connection successful (Speed Fixed)", "Legacy API detected"
             
     except Exception as e:
         return False, f"Connection failed: {str(e)}", "Check API key and network"

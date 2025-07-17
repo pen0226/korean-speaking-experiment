@@ -1,6 +1,6 @@
 """
 config.py
-실험 전역 설정 및 상수 정의 (Streamlit Cloud 최적화 + GCS 서비스 계정 + ZIP 전용 - 최종)
+실험 전역 설정 및 상수 정의 (로컬 .env + Streamlit Cloud secrets 완벽 지원)
 """
 
 import os
@@ -10,37 +10,65 @@ from dotenv import load_dotenv
 # 환경변수 로드 (로컬 개발용)
 load_dotenv()
 
-# === Streamlit Cloud Secrets 처리 ===
-def get_secret(key, default=None):
-    """Streamlit Cloud secrets 또는 환경변수에서 값 가져오기"""
+# === 환경 감지 함수 ===
+def is_streamlit_cloud():
+    """Streamlit Cloud 환경인지 감지"""
     try:
-        # Streamlit Cloud의 secrets 먼저 확인
-        if hasattr(st, 'secrets') and key in st.secrets:
-            return st.secrets[key]
+        # Streamlit Cloud 특유의 환경변수들 확인
+        cloud_indicators = [
+            'STREAMLIT_CLOUD' in os.environ,
+            'HOSTNAME' in os.environ and 'streamlit' in os.environ.get('HOSTNAME', '').lower(),
+            hasattr(st, 'secrets') and len(st.secrets) > 0
+        ]
+        return any(cloud_indicators)
     except:
-        pass
+        return False
+
+
+# === 이중 환경 Secrets 처리 ===
+def get_secret(key, default=None):
+    """
+    로컬(.env) + Streamlit Cloud(secrets) 완벽 지원
     
-    # 환경변수에서 확인 (로컬 개발용)
+    동작 방식:
+    - 로컬: .env 파일에서 읽기
+    - Streamlit Cloud: st.secrets에서 읽기
+    """
+    
+    # 🔥 환경 감지 후 적절한 방법 사용
+    if is_streamlit_cloud():
+        # Streamlit Cloud 환경
+        try:
+            if hasattr(st, 'secrets') and key in st.secrets:
+                return st.secrets[key]
+        except Exception as e:
+            print(f"Streamlit secrets error for {key}: {e}")
+    
+    # 로컬 환경 또는 fallback
     return os.getenv(key, default)
 
 
 def get_safe_openai_client():
-    """Streamlit Cloud 호환 OpenAI 클라이언트 생성 (프록시 문제 해결)"""
+    """안전한 OpenAI 클라이언트 생성 (로컬/클라우드 자동 최적화)"""
     try:
         from openai import OpenAI
         api_key = get_secret('OPENAI_API_KEY')
         if api_key:
-            # 🔥 Streamlit Cloud 호환: 기본 설정만 사용
-            try:
+            if is_streamlit_cloud():
+                # Streamlit Cloud: proxies 문제 대응
+                try:
+                    return OpenAI(api_key=api_key)
+                except TypeError as e:
+                    if "proxies" in str(e):
+                        # proxies 파라미터 오류 시 환경변수 방식으로 재시도
+                        import openai
+                        openai.api_key = api_key
+                        return openai
+                    else:
+                        raise e
+            else:
+                # 로컬 환경: 정상적인 클라이언트 생성
                 return OpenAI(api_key=api_key)
-            except TypeError as e:
-                if "proxies" in str(e):
-                    # proxies 파라미터 오류 시 기본 클라이언트로 재시도
-                    import openai
-                    openai.api_key = api_key
-                    return openai
-                else:
-                    raise e
         else:
             return None
     except ImportError:
@@ -55,7 +83,6 @@ def get_safe_openai_client():
         except ImportError:
             return None
     except Exception as e:
-        # Streamlit Cloud 환경에서 발생할 수 있는 기타 오류 처리
         print(f"OpenAI client initialization error: {e}")
         return None
 
@@ -106,7 +133,7 @@ ELEVENLABS_MODEL = "eleven_multilingual_v2"
 GPT_FEEDBACK_MAX_TOKENS = 800  # 안전한 토큰 수 제한
 GPT_FEEDBACK_MAX_CHARS = 1000  # fallback용 문자 수 제한
 
-# === API 키 설정 (Streamlit Cloud 배포용) ===
+# === API 키 설정 (이중 환경 완벽 지원) ===
 OPENAI_API_KEY = get_secret('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = get_secret('ELEVENLABS_API_KEY')
 ELEVEN_VOICE_ID = get_secret('ELEVEN_VOICE_ID')
@@ -391,7 +418,7 @@ FALLBACK_IMPROVEMENT_DATA = {
     "encouragement_message": "Every practice session makes you better! Keep going!"
 }
 
-# === 파일 확장자 설정 (Streamlit Cloud 호환) ===
+# === 파일 확장자 설정 (이중 환경 호환) ===
 SUPPORTED_AUDIO_FORMATS = ["wav", "mp3", "m4a", "flac", "ogg", "webm"]  # 확장된 지원
 
 # === UI 색상 테마 ===
@@ -411,38 +438,36 @@ LOG_FORMAT = {
     "filename_format": "upload_log_%Y%m%d.txt"
 }
 
-# === 세션 메타데이터 설정 (Streamlit Cloud 최적화) ===
+# === 세션 메타데이터 설정 (이중 환경 지원) ===
 SESSION_METADATA = {
     "current_session": CURRENT_SESSION,
     "session_label": SESSION_LABELS.get(CURRENT_SESSION, "Session 1"),
-    "experiment_version": "5.1",  # Streamlit Cloud 최적화 버전
+    "experiment_version": "5.2",  # 이중 환경 완벽 지원 버전
     "last_updated": "2025-01-17",
     "storage_method": "GCS_ZIP_ONLY",  # ZIP 파일만 업로드
     "auth_required": False,  # 학생 인증 불필요
     "nickname_matching": True,  # 닉네임 매칭 시스템 활성화
-    "streamlit_cloud_optimized": True,  # Streamlit Cloud 최적화 플래그
+    "dual_environment": True,  # 로컬/클라우드 이중 환경 지원
+    "config_method": "local_env_cloud_secrets",  # 설정 방식 명시
     "openai_api_compatible": True,  # OpenAI API 호환성 확인
     "audio_formats_extended": True  # 확장된 오디오 형식 지원
 }
 
-# === Streamlit Cloud 환경 감지 ===
-def is_streamlit_cloud():
-    """Streamlit Cloud 환경인지 감지"""
-    try:
-        # Streamlit Cloud 특유의 환경변수들 확인
-        cloud_indicators = [
-            'STREAMLIT_CLOUD',
-            'HOSTNAME' in os.environ and 'streamlit' in os.environ.get('HOSTNAME', '').lower(),
-            hasattr(st, 'secrets') and st.secrets
-        ]
-        return any(cloud_indicators)
-    except:
-        return False
-
 # === 환경별 설정 ===
 ENVIRONMENT = {
     "is_cloud": is_streamlit_cloud(),
+    "config_source": "streamlit_secrets" if is_streamlit_cloud() else "local_env",
     "api_timeout": 30 if is_streamlit_cloud() else 60,  # Cloud에서는 타임아웃 단축
     "max_retries": 3 if is_streamlit_cloud() else 2,    # Cloud에서는 재시도 증가
     "debug_mode": not is_streamlit_cloud()              # 로컬에서만 디버그 모드
 }
+
+# === 환경 정보 출력 (개발용) ===
+if not is_streamlit_cloud():
+    print(f"🏠 Local Environment Detected")
+    print(f"📝 Config Source: .env file")
+    print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
+else:
+    print(f"☁️ Streamlit Cloud Environment Detected")
+    print(f"📝 Config Source: st.secrets")
+    print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
