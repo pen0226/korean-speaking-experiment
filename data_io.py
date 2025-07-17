@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (Excel 변환 제거 - 간소화 버전)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (GCS TOML 호환 - 최종 수정 버전)
 """
 
 import os
@@ -433,11 +433,11 @@ Contact researcher: pen0226@gmail.com
         return None
 
 
-# === Google Cloud Storage 함수들 (ZIP 전용) ===
+# === Google Cloud Storage 함수들 (TOML 호환 - 수정됨) ===
 
 def get_gcs_client():
     """
-    GCS 클라이언트 초기화
+    GCS 클라이언트 초기화 (TOML/JSON 호환)
     
     Returns:
         tuple: (client, bucket, status_message)
@@ -452,11 +452,25 @@ def get_gcs_client():
         if not GCS_SERVICE_ACCOUNT:
             return None, None, "GCS service account not configured"
         
-        # 서비스 계정 정보를 딕셔너리로 변환
-        if isinstance(GCS_SERVICE_ACCOUNT, dict):
-            credentials_dict = dict(GCS_SERVICE_ACCOUNT)
-        else:
-            credentials_dict = json.loads(GCS_SERVICE_ACCOUNT)
+        # 🔥 TOML과 JSON 모두 처리 가능한 방식
+        try:
+            # Case 1: TOML에서 딕셔너리로 읽힌 경우 (Streamlit Secrets)
+            if isinstance(GCS_SERVICE_ACCOUNT, dict):
+                credentials_dict = dict(GCS_SERVICE_ACCOUNT)  # AttrDict를 일반 dict로 변환
+                print(f"✅ Using TOML format service account (Project: {credentials_dict.get('project_id', 'Unknown')})")
+            
+            # Case 2: JSON 문자열인 경우 (기존 방식)
+            elif isinstance(GCS_SERVICE_ACCOUNT, str):
+                credentials_dict = json.loads(GCS_SERVICE_ACCOUNT)
+                print(f"✅ Using JSON format service account (Project: {credentials_dict.get('project_id', 'Unknown')})")
+            
+            else:
+                return None, None, f"Unexpected service account type: {type(GCS_SERVICE_ACCOUNT)}"
+                
+        except json.JSONDecodeError:
+            return None, None, "Invalid JSON format in service account"
+        except Exception as parse_error:
+            return None, None, f"Service account parsing error: {str(parse_error)}"
         
         # GCS 클라이언트 초기화
         client = storage.Client.from_service_account_info(credentials_dict)
@@ -572,7 +586,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
 
 def test_gcs_connection():
     """
-    GCS 연결 테스트
+    GCS 연결 테스트 (TOML/JSON 호환)
     
     Returns:
         tuple: (success, message)
@@ -584,7 +598,21 @@ def test_gcs_connection():
         
         # 버킷 존재 확인
         if bucket.exists():
-            return True, f"✅ Connected successfully to bucket: {GCS_BUCKET_NAME}"
+            # 프로젝트 ID 추가 정보
+            project_id = "Unknown"
+            if isinstance(GCS_SERVICE_ACCOUNT, dict):
+                project_id = GCS_SERVICE_ACCOUNT.get('project_id', 'Unknown')
+                format_type = "TOML format"
+            else:
+                import json
+                try:
+                    service_info = json.loads(GCS_SERVICE_ACCOUNT)
+                    project_id = service_info.get('project_id', 'Unknown')
+                    format_type = "JSON format"
+                except:
+                    format_type = "Unknown format"
+            
+            return True, f"✅ Connected successfully to bucket: {GCS_BUCKET_NAME} (Project: {project_id} - {format_type})"
         else:
             return False, f"❌ Bucket not found: {GCS_BUCKET_NAME}"
         
@@ -631,7 +659,7 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
 Nickname: {original_nickname}
 Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
-GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP only)
+GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP only - TOML/JSON compatible)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
