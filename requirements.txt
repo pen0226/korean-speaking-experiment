@@ -1,39 +1,37 @@
 # =====================================================
-# AI 기반 한국어 말하기 피드백 시스템 - 필요 패키지 (최종 버전)
-# Korean Speaking AI Feedback System - Required Packages (Final)
+# AI 기반 한국어 말하기 피드백 시스템 - 필요 패키지 (GCS 서비스 계정 버전)
+# Korean Speaking AI Feedback System - Required Packages (GCS Service Account)
 # =====================================================
 
 # === 핵심 웹 애플리케이션 프레임워크 ===
-streamlit>=1.28.0                # 메인 웹 애플리케이션 프레임워크
-streamlit-mic-recorder>=0.0.5     # 브라우저 내 음성 녹음 기능
+streamlit>=1.28.0 # 메인 웹 애플리케이션 프레임워크
+streamlit-mic-recorder>=0.0.5 # 브라우저 내 음성 녹음 기능
 
 # === AI 모델 및 API 서비스 ===
-openai>=1.0.0                     # GPT-4o 피드백 생성 + Whisper STT
-elevenlabs>=0.2.26               # 한국어 TTS 음성 생성
-whisper>=1.1.10                  # 로컬 Whisper STT (OpenAI 대안)
-tiktoken>=0.5.0                  # GPT 토큰 계산 (긴 텍스트 처리용)
+openai>=1.0.0 # GPT-4o 피드백 생성 + Whisper STT
+elevenlabs>=0.2.26 # 한국어 TTS 음성 생성
+whisper>=1.1.10 # 로컬 Whisper STT (OpenAI 대안)
+tiktoken>=0.5.0 # GPT 토큰 계산 (긴 텍스트 처리용)
 
 # === PyTorch (Whisper 의존성) ===
-torch>=2.0.0                     # Whisper 모델 실행용
-torchaudio>=2.0.0               # 오디오 처리용
+torch>=2.0.0 # Whisper 모델 실행용
+torchaudio>=2.0.0 # 오디오 처리용
 
 # === 데이터 처리 및 분석 ===
-pandas>=2.0.0                    # CSV/Excel 데이터 처리 및 분석
-numpy>=1.24.0                   # 수치 계산 및 배열 처리
+pandas>=2.0.0 # CSV/Excel 데이터 처리 및 분석
+numpy>=1.24.0 # 수치 계산 및 배열 처리
 
 # === 파일 입출력 및 환경 관리 ===
-openpyxl>=3.1.0                 # Excel 파일 생성 및 처리
-python-dotenv>=1.0.0            # .env 환경변수 관리
-requests>=2.31.0                # HTTP 요청 (API 호출용)
+openpyxl>=3.1.0 # Excel 파일 생성 및 처리
+python-dotenv>=1.0.0 # .env 환경변수 관리
+requests>=2.31.0 # HTTP 요청 (API 호출용)
 
 # === PDF 생성 (연구 동의서) ===
-reportlab>=4.0.0                # 동의서 PDF 자동 생성
+reportlab>=4.0.0 # 동의서 PDF 자동 생성
 
-# === Google Drive 백업 시스템 (OAuth 방식) ===
-google-auth>=2.0.0              # Google 인증 기본 라이브러리
-google-auth-oauthlib>=1.0.0     # OAuth 2.0 인증 플로우
-google-auth-httplib2>=0.2.0     # HTTP 전송 어댑터
-google-api-python-client>=2.0.0 # Google Drive API 클라이언트
+# === Google Cloud Storage 백업 시스템 (서비스 계정 방식) ===
+google-auth>=2.0.0 # Google 인증 기본 라이브러리
+google-cloud-storage>=2.10.0 # Google Cloud Storage 클라이언트
 
 # =====================================================
 # 설치 명령어:
@@ -43,11 +41,14 @@ google-api-python-client>=2.0.0 # Google Drive API 클라이언트
 # 1. Python 3.8+ 권장
 # 2. .env 파일에 API 키 설정 필요:
 #    - OPENAI_API_KEY
-#    - ELEVENLABS_API_KEY  
+#    - ELEVENLABS_API_KEY
 #    - ELEVEN_VOICE_ID
-# 3. Google Drive 연동 시 OAuth credentials.json 필요
+# 3. GCS 서비스 계정 설정 (Streamlit Cloud Secrets):
+#    - gcp_service_account (JSON 형태)
+#    - GCS_BUCKET_NAME
+#    - GCS_ENABLED=true
 #
 # 선택적 설치:
-# - Google Drive 백업 불필요시 google-* 패키지 제외 가능
+# - GCS 백업 불필요시 google-* 패키지 제외 가능
 # - 로컬 Whisper 불필요시 whisper, torch, torchaudio 제외 가능
 # =====================================================
