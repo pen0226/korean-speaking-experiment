@@ -8,7 +8,7 @@ from datetime import datetime
 import re
 
 # 모듈 imports (GCS 버전으로 수정)
-from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO, test_gcs_connection
+from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
@@ -589,6 +589,7 @@ def display_researcher_mode():
             
             with col1:
                 if st.button("🔍 Test GCS Connection"):
+                    from config import test_gcs_connection
                     success, message = test_gcs_connection()
                     if success:
                         st.success(f"✅ {message}")
@@ -648,6 +649,7 @@ def main():
         st.markdown("#### 🔧 System Status")
         
         # GCS 상태 표시
+        from config import test_gcs_connection
         gcs_success, gcs_message = test_gcs_connection()
         if gcs_success:
             st.write("☁️ Cloud Storage: ✅ Ready")
