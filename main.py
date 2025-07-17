@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (2차 녹음 후 즉시 저장 버전)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (GCS 디버그 옵션 추가 최종 버전)
 """
 
 import streamlit as st
@@ -8,7 +8,7 @@ from datetime import datetime
 import re
 
 # 모듈 imports (GCS 버전으로 수정)
-from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO
+from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO, test_gcs_connection
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
@@ -579,10 +579,35 @@ def display_optional_progress_view():
 
 
 def display_researcher_mode():
-    """연구자 모드 표시 (배경 정보 포함)"""
+    """연구자 모드 표시 (배경 정보 + GCS 디버그 옵션 포함)"""
     debug_mode = st.sidebar.checkbox("🔬 Researcher Mode", help="For research data access")
     if debug_mode:
         with st.expander("🔬 Researcher: Data Management", expanded=False):
+            # 🔥 GCS 연결 테스트 버튼 추가
+            st.markdown("#### 🔍 System Diagnostics")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🔍 Test GCS Connection"):
+                    success, message = test_gcs_connection()
+                    if success:
+                        st.success(f"✅ {message}")
+                    else:
+                        st.error(f"❌ {message}")
+            
+            with col2:
+                from tts import test_elevenlabs_connection
+                if st.button("🔊 Test TTS Connection"):
+                    success, message, details = test_elevenlabs_connection()
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.info(f"📋 {details}")
+                    else:
+                        st.error(f"❌ {message}")
+                        st.warning(f"⚠️ {details}")
+            
+            st.markdown("---")
+            
             if hasattr(st.session_state, 'saved_files'):
                 # timestamp가 추가되었으므로 언패킹 수정
                 if len(st.session_state.saved_files) >= 6:
@@ -614,8 +639,30 @@ def main():
     # 세션 상태 초기화 (배경 정보 포함)
     initialize_session_state()
     
-    # 사이드바 설정
+    # 사이드바 설정 (GCS 상태 자동 표시 포함)
     setup_sidebar()
+    
+    # 🔥 사이드바에 GCS 상태 표시 추가
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("#### 🔧 System Status")
+        
+        # GCS 상태 표시
+        gcs_success, gcs_message = test_gcs_connection()
+        if gcs_success:
+            st.write("☁️ Cloud Storage: ✅ Ready")
+        else:
+            st.write("☁️ Cloud Storage: ❌ Issue")
+            if st.button("🔍 Check Details"):
+                st.error(f"❌ {gcs_message}")
+        
+        # TTS 상태 표시 (간단 버전)
+        from tts import check_tts_availability
+        tts_available, _ = check_tts_availability()
+        if tts_available:
+            st.write("🔊 AI Voice: ✅ Ready")
+        else:
+            st.write("🔊 AI Voice: ❌ Issue")
     
     # 단계별 처리
     current_step = st.session_state.step
