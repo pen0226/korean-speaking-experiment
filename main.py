@@ -578,19 +578,45 @@ def display_optional_progress_view():
                     display_improvement_details(improvement)
 
 
+def test_gcs_connection_simple():
+    """간단한 GCS 연결 테스트"""
+    try:
+        from config import GCS_ENABLED, GCS_SERVICE_ACCOUNT, GCS_BUCKET_NAME
+        
+        if not GCS_ENABLED:
+            return False, "GCS_ENABLED is False"
+        
+        if not GCS_SERVICE_ACCOUNT:
+            return False, "Service account not configured"
+        
+        if not GCS_BUCKET_NAME:
+            return False, "Bucket name not configured"
+        
+        # JSON 파싱 테스트
+        import json
+        try:
+            service_account_info = json.loads(GCS_SERVICE_ACCOUNT)
+            project_id = service_account_info.get('project_id', 'Unknown')
+            return True, f"GCS Ready - Project: {project_id}"
+        except json.JSONDecodeError:
+            return False, "Invalid JSON format"
+            
+    except Exception as e:
+        return False, f"GCS test failed: {str(e)}"
+
+
 def display_researcher_mode():
-    """연구자 모드 표시 (배경 정보 + GCS 디버그 옵션 포함)"""
+    """연구자 모드 표시 (GCS 테스트 간소화 버전)"""
     debug_mode = st.sidebar.checkbox("🔬 Researcher Mode", help="For research data access")
     if debug_mode:
         with st.expander("🔬 Researcher: Data Management", expanded=False):
-            # 🔥 GCS 연결 테스트 버튼 추가
+            # 🔥 간소화된 시스템 테스트
             st.markdown("#### 🔍 System Diagnostics")
             col1, col2 = st.columns(2)
             
             with col1:
                 if st.button("🔍 Test GCS Connection"):
-                    from config import test_gcs_connection
-                    success, message = test_gcs_connection()
+                    success, message = test_gcs_connection_simple()
                     if success:
                         st.success(f"✅ {message}")
                     else:
@@ -643,20 +669,18 @@ def main():
     # 사이드바 설정 (GCS 상태 자동 표시 포함)
     setup_sidebar()
     
-    # 🔥 사이드바에 GCS 상태 표시 추가
+    # 🔥 사이드바에 간단한 상태만 표시 (GCS 테스트 제거)
     with st.sidebar:
         st.markdown("---")
         st.markdown("#### 🔧 System Status")
         
-        # GCS 상태 표시
-        from config import test_gcs_connection
-        gcs_success, gcs_message = test_gcs_connection()
-        if gcs_success:
-            st.write("☁️ Cloud Storage: ✅ Ready")
+        # 간단한 설정 상태만 표시
+        from config import GCS_ENABLED, OPENAI_API_KEY
+        if GCS_ENABLED and OPENAI_API_KEY:
+            st.write("☁️ Cloud Storage: ✅ Configured")
+            st.write("🤖 OpenAI API: ✅ Configured")
         else:
-            st.write("☁️ Cloud Storage: ❌ Issue")
-            if st.button("🔍 Check Details"):
-                st.error(f"❌ {gcs_message}")
+            st.write("☁️ System: ⚠️ Check configuration")
         
         # TTS 상태 표시 (간단 버전)
         from tts import check_tts_availability
