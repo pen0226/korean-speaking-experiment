@@ -362,14 +362,14 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (1분 목표)
+    간소화된 녹음 인터페이스 (1분 목표) - 업로드 파일 타입 감지 개선
     
     Args:
         key: 컴포넌트 키
         label: 라벨 텍스트
         
     Returns:
-        dict: 오디오 데이터 또는 None
+        tuple: (audio_data, source_type) - audio_data와 타입 정보 반환
     """
     # 간단한 안내 메시지
     st.info("🎙️ Record your answer (aim for at least 1 minute) or upload an audio file")
@@ -387,7 +387,7 @@ def record_audio(key, label):
     if audio:
         st.success("✅ Recording captured successfully.")
         st.audio(audio['bytes'])
-        return audio
+        return audio, "recording"
     
     # 파일 업로드 옵션
     uploaded_file = st.file_uploader(
@@ -399,11 +399,10 @@ def record_audio(key, label):
     if uploaded_file:
         st.success("✅ Audio file uploaded successfully.")
         st.audio(uploaded_file.read())
-        uploaded_file.seek(0)
-        audio = {'bytes': uploaded_file.read()}
-        return audio
+        uploaded_file.seek(0)  # 포인터 리셋
+        return uploaded_file, "upload"
     
-    return None
+    return None, None
 
 
 def display_transcription_with_highlights(transcription, feedback, title="What You Said", audio_data=None):
@@ -421,7 +420,14 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
     # 음성 재생 부분
     if audio_data:
         st.markdown("**🎤 Listen to your recording**")
-        st.audio(audio_data['bytes'])
+        if hasattr(audio_data, 'read'):
+            # 업로드된 파일인 경우
+            audio_data.seek(0)
+            st.audio(audio_data.read())
+            audio_data.seek(0)
+        else:
+            # 녹음된 파일인 경우
+            st.audio(audio_data['bytes'])
     
     # 하이라이트된 학생 답안 표시
     st.markdown("#### 📝 Your Answer")
@@ -772,7 +778,14 @@ def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0
             duration_status = get_duration_status(duration1)
             st.caption(f"Duration: {duration1:.1f}s ({duration_status})")
         if first_audio:
-            st.audio(first_audio['bytes'])
+            if hasattr(first_audio, 'read'):
+                # 업로드된 파일인 경우
+                first_audio.seek(0)
+                st.audio(first_audio.read())
+                first_audio.seek(0)
+            else:
+                # 녹음된 파일인 경우
+                st.audio(first_audio['bytes'])
     
     with col2:
         st.markdown("#### 🎤 Second Attempt")
@@ -780,7 +793,14 @@ def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0
             duration_status = get_duration_status(duration2)
             st.caption(f"Duration: {duration2:.1f}s ({duration_status})")
         if second_audio:
-            st.audio(second_audio['bytes'])
+            if hasattr(second_audio, 'read'):
+                # 업로드된 파일인 경우
+                second_audio.seek(0)
+                st.audio(second_audio.read())
+                second_audio.seek(0)
+            else:
+                # 녹음된 파일인 경우
+                st.audio(second_audio['bytes'])
 
 
 def get_duration_status(duration):

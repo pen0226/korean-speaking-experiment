@@ -1,6 +1,6 @@
 """
 stt.py
-OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (proxies 에러 해결 버전)
+OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (파일 형식 및 API 호출 개선 버전)
 """
 
 import tempfile
@@ -34,6 +34,44 @@ def get_openai_client():
             return None
 
 
+def get_file_extension_and_mime(audio_data, source_type):
+    """
+    오디오 데이터의 파일 확장자와 MIME 타입 결정
+    
+    Args:
+        audio_data: 오디오 데이터
+        source_type: "recording" 또는 "upload"
+        
+    Returns:
+        tuple: (file_extension, mime_type)
+    """
+    if source_type == "upload" and hasattr(audio_data, 'name'):
+        # 업로드된 파일의 원본 확장자 추출
+        file_ext = os.path.splitext(audio_data.name)[1].lower()
+        if not file_ext:
+            file_ext = ".wav"  # 확장자가 없으면 기본값
+    else:
+        # 마이크 녹음은 기본적으로 wav
+        file_ext = ".wav"
+    
+    # MIME 타입 매핑
+    mime_types = {
+        ".wav": "audio/wav",
+        ".mp3": "audio/mp3",
+        ".m4a": "audio/m4a", 
+        ".flac": "audio/flac",
+        ".ogg": "audio/ogg",
+        ".webm": "audio/webm",
+        ".mp4": "audio/mp4",
+        ".mpeg": "audio/mpeg",
+        ".mpga": "audio/mpeg",
+        ".oga": "audio/ogg"
+    }
+    
+    mime_type = mime_types.get(file_ext, "audio/wav")
+    return file_ext, mime_type
+
+
 def load_whisper():
     """
     API 방식에서는 모델 로딩이 불필요
@@ -42,12 +80,15 @@ def load_whisper():
     return None
 
 
-def transcribe_audio(audio_bytes):
+def transcribe_audio(audio_bytes, file_extension=".wav", source_type="recording", original_filename=None):
     """
-    OpenAI API Whisper를 사용한 오디오 바이트 텍스트 변환
+    OpenAI API Whisper를 사용한 오디오 바이트 텍스트 변환 (개선된 버전)
     
     Args:
         audio_bytes: 오디오 파일의 바이트 데이터
+        file_extension: 파일 확장자
+        source_type: "recording" 또는 "upload"
+        original_filename: 원본 파일명 (업로드 시)
         
     Returns:
         tuple: (transcription_text, duration_seconds)
@@ -59,8 +100,8 @@ def transcribe_audio(audio_bytes):
         st.error("❌ OpenAI API key is required for speech transcription!")
         return "", 0.0
     
-    # 임시 파일 생성
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+    # 원본 확장자를 유지하여 임시 파일 생성
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp:
         tmp.write(audio_bytes)
         temp_path = tmp.name
     
@@ -71,12 +112,28 @@ def transcribe_audio(audio_bytes):
             st.error("❌ Failed to initialize OpenAI client")
             return "", 0.0
         
-        # API를 통한 음성 인식 수행
+        # MIME 타입 결정
+        _, mime_type = get_file_extension_and_mime(None, source_type)
+        if file_extension:
+            mime_types = {
+                ".wav": "audio/wav",
+                ".mp3": "audio/mp3", 
+                ".m4a": "audio/m4a",
+                ".flac": "audio/flac",
+                ".ogg": "audio/ogg",
+                ".webm": "audio/webm"
+            }
+            mime_type = mime_types.get(file_extension, "audio/wav")
+        
+        # API를 통한 음성 인식 수행 (개선된 방식)
         with open(temp_path, "rb") as audio_file:
-            # OpenAI Whisper API 호출
+            # 파일명과 MIME 타입을 명시적으로 전달
+            filename = original_filename or f"audio{file_extension}"
+            
+            # OpenAI Whisper API 호출 (튜플 형태로 파일 정보 전달)
             transcription = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=audio_file,
+                file=(filename, audio_file, mime_type),
                 language="ko",
                 response_format="verbose_json"  # timestamp 정보 포함
             )
@@ -93,7 +150,16 @@ def transcribe_audio(audio_bytes):
         return transcription_text, duration
         
     except Exception as e:
-        st.error(f"❌ Transcription error: {str(e)}")
+        error_msg = str(e)
+        # 상세한 에러 메시지 제공
+        if "Invalid file format" in error_msg:
+            st.error(f"❌ File format error: {original_filename or 'audio file'}")
+            st.info("💡 Try converting to MP3 or WAV format and upload again")
+        elif "File not supported" in error_msg:
+            st.error(f"❌ File not supported: {file_extension}")
+            st.info("💡 Supported formats: WAV, MP3, M4A, FLAC, OGG, WEBM")
+        else:
+            st.error(f"❌ Transcription error: {error_msg}")
         return "", 0.0
     finally:
         # 임시 파일 삭제
@@ -193,7 +259,7 @@ def display_audio_quality_feedback(duration):
 
 def validate_audio_file(uploaded_file):
     """
-    업로드된 오디오 파일 유효성 검사
+    업로드된 오디오 파일 유효성 검사 (간단한 검증)
     
     Args:
         uploaded_file: Streamlit 업로드 파일 객체
@@ -201,26 +267,31 @@ def validate_audio_file(uploaded_file):
     Returns:
         tuple: (is_valid, error_message)
     """
-    from config import SUPPORTED_AUDIO_FORMATS
+    # OpenAI Whisper API 지원 형식 (확장된 목록)
+    SUPPORTED_FORMATS = ["wav", "mp3", "m4a", "flac", "ogg", "webm", "mp4", "mpeg", "mpga", "oga"]
     
     if uploaded_file is None:
         return False, "No file uploaded"
     
     # 파일 확장자 확인
     file_extension = uploaded_file.name.split('.')[-1].lower()
-    if file_extension not in SUPPORTED_AUDIO_FORMATS:
-        return False, f"Unsupported format. Use: {', '.join(SUPPORTED_AUDIO_FORMATS)}"
+    if file_extension not in SUPPORTED_FORMATS:
+        return False, f"❌ Unsupported format '{file_extension}'. Supported: {', '.join(SUPPORTED_FORMATS)}"
     
     # 파일 크기 확인 (OpenAI API 제한: 25MB)
     if uploaded_file.size > 25 * 1024 * 1024:
-        return False, "File too large. Maximum size: 25MB (OpenAI API limit)"
+        return False, "❌ File too large. Maximum size: 25MB (OpenAI API limit)"
     
-    return True, "Valid file"
+    # 기본적인 파일 크기 검증 (너무 작은 파일 제외)
+    if uploaded_file.size < 1024:  # 1KB 미만
+        return False, "❌ File too small. Please upload a valid audio file"
+    
+    return True, "✅ Valid audio file"
 
 
 def process_audio_input(audio_data, source_type="recording"):
     """
-    오디오 입력을 처리하고 전사 (OpenAI API 방식)
+    오디오 입력을 처리하고 전사 (OpenAI API 방식, 개선된 버전)
     
     Args:
         audio_data: 오디오 데이터 (녹음 또는 업로드)
@@ -237,15 +308,26 @@ def process_audio_input(audio_data, source_type="recording"):
                 st.error(error_msg)
                 return "", 0.0, False
             
+            # 원본 파일 정보 추출
+            original_filename = audio_data.name
+            file_ext = os.path.splitext(original_filename)[1].lower()
+            
             audio_bytes = audio_data.read()
             audio_data.seek(0)  # 포인터 리셋
         else:
             # 녹음된 오디오 처리
             audio_bytes = audio_data['bytes']
+            original_filename = "recording.wav"
+            file_ext = ".wav"
         
-        # OpenAI API 전사 수행
+        # OpenAI API 전사 수행 (개선된 버전)
         with st.spinner("🎙️ Converting speech to text using OpenAI Whisper..."):
-            transcription, duration = transcribe_audio(audio_bytes)
+            transcription, duration = transcribe_audio(
+                audio_bytes, 
+                file_extension=file_ext,
+                source_type=source_type,
+                original_filename=original_filename
+            )
         
         if transcription:
             st.success(f"✅ Transcribed: {transcription}")

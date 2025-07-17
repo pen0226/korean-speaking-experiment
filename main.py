@@ -72,11 +72,13 @@ def handle_first_recording_step():
     # 첫 번째 오디오 상태 초기화
     if "first_audio" not in st.session_state:
         st.session_state.first_audio = None
+        st.session_state.first_audio_type = None
     
-    # 녹음 인터페이스
-    audio = record_audio("first_recording", "Record your answer:")
-    if audio:
-        st.session_state.first_audio = audio
+    # 녹음 인터페이스 (수정된 버전)
+    audio_data, source_type = record_audio("first_recording", "Record your answer:")
+    if audio_data and source_type:
+        st.session_state.first_audio = audio_data
+        st.session_state.first_audio_type = source_type
     
     # 처리 버튼
     if st.session_state.first_audio:
@@ -88,9 +90,10 @@ def handle_first_recording_step():
 def process_first_recording():
     """첫 번째 녹음 처리"""
     with st.spinner("🎙️ Processing your recording..."):
-        # STT 처리
+        # STT 처리 (source_type 전달)
+        source_type = getattr(st.session_state, 'first_audio_type', 'recording')
         transcription, duration, success = process_audio_input(
-            st.session_state.first_audio, "recording"
+            st.session_state.first_audio, source_type
         )
         
         if success:
@@ -313,11 +316,13 @@ def handle_second_recording_step():
     # 두 번째 오디오 상태 초기화
     if "second_audio" not in st.session_state:
         st.session_state.second_audio = None
+        st.session_state.second_audio_type = None
     
-    # 녹음 인터페이스
-    audio = record_audio("second_recording", "Record your improved answer:")
-    if audio:
-        st.session_state.second_audio = audio
+    # 녹음 인터페이스 (수정된 버전)
+    audio_data, source_type = record_audio("second_recording", "Record your improved answer:")
+    if audio_data and source_type:
+        st.session_state.second_audio = audio_data
+        st.session_state.second_audio_type = source_type
     
     # 처리 버튼
     if st.session_state.second_audio:
@@ -329,9 +334,10 @@ def handle_second_recording_step():
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장"""
     with st.spinner("🎙️ Processing your improved recording..."):
-        # STT 처리
+        # STT 처리 (source_type 전달)
+        source_type = getattr(st.session_state, 'second_audio_type', 'recording')
         transcription, duration, success = process_audio_input(
-            st.session_state.second_audio, "recording"
+            st.session_state.second_audio, source_type
         )
         
         if success:

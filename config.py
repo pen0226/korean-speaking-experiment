@@ -23,6 +23,22 @@ def get_secret(key, default=None):
     # 환경변수에서 확인 (로컬 개발용)
     return os.getenv(key, default)
 
+
+def get_safe_openai_client():
+    """안전한 OpenAI 클라이언트 생성 (stt.py에서 사용)"""
+    try:
+        from openai import OpenAI
+        api_key = get_secret('OPENAI_API_KEY')
+        if api_key:
+            return OpenAI(api_key=api_key)
+        else:
+            return None
+    except ImportError:
+        return None
+    except Exception:
+        return None
+
+
 # === 세션 설정 ===
 CURRENT_SESSION = 1  # 1차 세션: 1, 2차 세션: 2로 변경
 SESSION_LABELS = {
