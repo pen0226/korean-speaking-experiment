@@ -1,75 +1,61 @@
 # =====================================================
-# AI 기반 한국어 말하기 피드백 시스템 - 2025 최신 버전
-# Korean Speaking AI Feedback System - 2025 Latest (No Excel + tiktoken)
+# AI 기반 한국어 말하기 피드백 시스템 - 간소화 버전 (Excel + tiktoken 제거)
+# Korean Speaking AI Feedback System - Simplified Version (No Excel + tiktoken)
 # =====================================================
 
 # === 핵심 웹 프레임워크 (필수) ===
-streamlit==1.39.0  # 🆕 2025년 최신 버전 (성능 개선)
+streamlit==1.31.1
 streamlit-mic-recorder==0.0.8
 
-# === AI API 서비스 (2025 최신) ===
-openai==1.51.2  # 🆕 2025년 최신 (새로운 모델 지원 + 성능 개선)
-elevenlabs==1.8.0  # 🆕 2025년 최신 (output_format, optimize_streaming_latency 지원)
+# === AI API 서비스 (Streamlit Cloud 호환) ===
+openai==1.35.0  # 🔥 Streamlit Cloud 안정 버전
+elevenlabs==1.8.0
 
 # === 토큰 최적화 제거 (문자 수 기반 처리로 대체) ===
-# tiktoken==0.6.0  # 제거: Streamlit 에러 방지 + 용량 절약
+# tiktoken==0.6.0  # 제거: Streamlit 에러 방지
 
 # === PDF 생성 (동의서) ===
-reportlab==4.2.5  # 🆕 2025년 최신 (보안 패치)
+reportlab==4.1.0
 
-# === Google Cloud Storage 백업 시스템 (2025 최신) ===
-google-auth==2.35.0  # 🆕 2025년 최신 (보안 강화)
-google-cloud-storage==2.18.2  # 🆕 2025년 최신 (성능 개선)
+# === Google Cloud Storage 백업 시스템 (필수) ===
+google-auth==2.28.2
+google-cloud-storage==2.14.0
 
 # === 환경변수 (로컬 개발용) ===
 python-dotenv==1.0.1
 
 # =====================================================
-# 🚀 2025년 업데이트 내용:
-#
-# ✅ 최신 버전 업데이트:
-# - Streamlit 1.31.1 → 1.39.0 (성능 개선, 새 기능)
-# - OpenAI 1.12.0 → 1.51.2 (GPT-4o 개선, 새 모델 지원)
-# - ElevenLabs 1.0.0 → 1.8.0 (최신 API 파라미터 지원)
-# - ReportLab 4.1.0 → 4.2.5 (보안 패치)
-# - Google 라이브러리들 최신화 (보안 + 성능)
+# 🚀 간소화된 기능 (Excel 변환 제거로 용량 절약):
 #
 # ✅ 모든 핵심 기능 유지:
-# - 음성 녹음 및 인식 (Whisper API - 최신)
-# - AI 피드백 생성 (GPT-4o - 향상됨)
-# - 음성 합성 (ElevenLabs TTS - 2025 최신 API)
-# - Google Cloud Storage 자동 백업 (보안 강화)
-# - PDF 동의서 생성 (개선됨)
-# - 긴 텍스트 처리: 문자 수 기반 (안정화)
+# - 음성 녹음 및 인식 (Whisper API)
+# - AI 피드백 생성 (GPT-4o)
+# - 음성 합성 (ElevenLabs TTS)
+# - Google Cloud Storage 자동 백업
+# - PDF 동의서 생성
+# - 긴 텍스트 처리: 문자 수 기반 (토큰 기반 대신)
 # - 로컬 개발 환경 지원
 #
-# ❌ 제거된 기능 (계속 유지):
+# ❌ 제거된 기능:
 # - Excel 파일 변환 (pandas, openpyxl 제거)
 # - 토큰 기반 텍스트 처리 (tiktoken 제거)
 # - 연구자는 CSV 파일만 다운로드 (Excel에서 쉽게 열 수 있음)
+# - 문자 수 기반 텍스트 처리 (기능적으로 동일)
 #
-# 📊 용량 비교 (2025 업데이트):
-# - 이전 (2024): ~150MB (pandas + tiktoken 포함)
-# - 현재 (2025): ~80-90MB (약 40-45% 감소)
+# 📊 용량 비교:
+# - 이전: ~150MB (pandas + tiktoken 포함)
+# - 현재: ~75-85MB (약 45% 감소)
 # - 배포 시간: 2-3분 → 약 1분
-# - 부팅 시간: 더 빨라짐 (최신 Streamlit)
 #
-# 🔧 2025년 개선 효과:
-# - 연구자: CSV 파일을 Excel에서 열어서 사용 (동일)
-# - 학생: 더 빠르고 안정적인 경험 (개선됨)
-# - 자동 백업: 더 안전하고 빠른 GCS 업로드 (개선됨)
-# - AI 피드백: 더 정확하고 빠른 생성 (개선됨)
-# - TTS: 더 자연스러운 음성 + 새 기능 (대폭 개선됨)
+# 🔧 영향:
+# - 연구자: CSV 파일을 Excel에서 열어서 사용
+# - 학생: 완전히 동일한 경험
+# - 자동 백업: 완전히 동일한 기능
+# - 긴 텍스트 처리: 문자 수 기반 (기능적으로 동일)
 #
-# 🆕 2025년 새로운 기능 지원:
-# - ElevenLabs: output_format, optimize_streaming_latency
-# - OpenAI: 새로운 모델 지원, 향상된 성능
-# - Streamlit: 새로운 UI 컴포넌트, 더 빠른 렌더링
-# - GCS: 향상된 보안, 더 빠른 업로드
-#
-# Streamlit Cloud Secrets 설정 (동일):
+# Streamlit Cloud Secrets 설정:
 # - OPENAI_API_KEY
-# - ELEVENLABS_API_KEY  
+# - ELEVENLABS_API_KEY
 # - ELEVEN_VOICE_ID
 # - gcp_service_account (JSON)
 # - GCS_BUCKET_NAME
