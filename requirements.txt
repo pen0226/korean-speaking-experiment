@@ -3,50 +3,51 @@
 # Korean Speaking AI Feedback System - Streamlit Cloud Optimized
 # =====================================================
 
-# === 핵심 웹 애플리케이션 프레임워크 ===
-streamlit>=1.28.0,<2.0.0 # 메인 웹 애플리케이션 프레임워크
-streamlit-mic-recorder>=0.0.5 # 브라우저 내 음성 녹음 기능
-
-# === AI 모델 및 API 서비스 ===
-openai>=1.0.0,<2.0.0 # GPT-4o 피드백 생성 + Whisper API STT
-elevenlabs>=0.2.26,<1.0.0 # 한국어 TTS 음성 생성
-tiktoken>=0.5.0,<1.0.0 # GPT 토큰 계산 (긴 텍스트 처리용)
-
-# === Whisper 로컬 모델 (Streamlit Cloud 최적화) ===
-# 🔥 PyTorch CPU 버전 (더 가벼움)
+# === PyTorch CPU 버전 (Streamlit Cloud 최적화) ===
 --index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0,<3.0.0
 torchaudio>=2.0.0,<3.0.0
-# 🔥 OpenAI Whisper (버전 고정)
+
+# === 핵심 웹 애플리케이션 프레임워크 ===
+streamlit>=1.28.0,<2.0.0
+streamlit-mic-recorder>=0.0.5
+
+# === AI 모델 및 API 서비스 ===
+openai>=1.0.0,<2.0.0
+elevenlabs>=0.2.26,<1.0.0
+tiktoken>=0.5.0,<1.0.0
+
+# === Whisper 로컬 모델 (버전 고정) ===
 openai-whisper==20231117
 
 # === 데이터 처리 및 분석 ===
-pandas>=2.0.0,<3.0.0 # CSV/Excel 데이터 처리 및 분석
-numpy>=1.24.0,<2.0.0 # 수치 계산 및 배열 처리
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<2.0.0
 
 # === 파일 입출력 및 환경 관리 ===
-openpyxl>=3.1.0,<4.0.0 # Excel 파일 생성 및 처리
-python-dotenv>=1.0.0,<2.0.0 # .env 환경변수 관리
-requests>=2.31.0,<3.0.0 # HTTP 요청 (API 호출용)
+openpyxl>=3.1.0,<4.0.0
+python-dotenv>=1.0.0,<2.0.0
+requests>=2.31.0,<3.0.0
 
 # === PDF 생성 (연구 동의서) ===
-reportlab>=4.0.0,<5.0.0 # 동의서 PDF 자동 생성
+reportlab>=4.0.0,<5.0.0
 
-# === Google Cloud Storage 백업 시스템 (서비스 계정 방식) ===
-google-auth>=2.0.0,<3.0.0 # Google 인증 기본 라이브러리
-google-cloud-storage>=2.10.0,<3.0.0 # Google Cloud Storage 클라이언트
+# === Google Cloud Storage 백업 시스템 ===
+google-auth>=2.0.0,<3.0.0
+google-cloud-storage>=2.10.0,<3.0.0
 
 # =====================================================
 # 🚀 Streamlit Cloud 배포 최적화:
 #
-# 1. PyTorch CPU 버전 사용 (용량 절약)
+# 1. --index-url을 맨 위에 배치 (PyTorch CPU 버전)
 # 2. 패키지 버전 범위 제한 (안정성 확보)  
 # 3. OpenAI Whisper 특정 버전 고정
 #
-# 설치 명령어:
-# pip install -r requirements.txt
+# 설치 순서:
+# 1. PyTorch CPU 버전 먼저 설치
+# 2. 나머지 패키지들 순차 설치
 #
-# 환경 설정 (Streamlit Cloud Secrets):
+# Streamlit Cloud Secrets 설정:
 # - OPENAI_API_KEY
 # - ELEVENLABS_API_KEY  
 # - ELEVEN_VOICE_ID
@@ -54,7 +55,7 @@ google-cloud-storage>=2.10.0,<3.0.0 # Google Cloud Storage 클라이언트
 # - GCS_BUCKET_NAME
 # - GCS_ENABLED=true
 #
-# 💡 만약 여전히 Whisper 문제가 발생하면:
-# 1. 로컬 whisper 라인들을 주석 처리
-# 2. OpenAI API Whisper만 사용 (stt.py에서 API 호출)
+# 💡 문제 해결:
+# - Whisper 여전히 실패하면 → OpenAI API Whisper만 사용
+# - 메모리 부족하면 → 로컬 whisper 제거, API만 사용
 # =====================================================
