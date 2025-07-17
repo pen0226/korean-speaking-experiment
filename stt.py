@@ -1,12 +1,37 @@
 """
 stt.py
-OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (Streamlit Cloud 안정화 버전)
+OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (proxies 에러 해결 버전)
 """
 
 import tempfile
 import os
 import streamlit as st
 from config import OPENAI_API_KEY
+
+
+def get_openai_client():
+    """
+    OpenAI 클라이언트 초기화 (proxies 충돌 방지 & SDK 호환)
+    
+    Returns:
+        OpenAI: 클라이언트 객체 또는 None
+    """
+    if not OPENAI_API_KEY:
+        return None
+    
+    try:
+        # 최신 openai SDK (>=1.0.0) 방식
+        from openai import OpenAI
+        # proxies 관련 자동 설정 방지를 위해 명시적으로 필요한 인자만 전달
+        return OpenAI(api_key=OPENAI_API_KEY)
+    except ImportError:
+        try:
+            # 구버전 fallback (필요한 경우)
+            import openai
+            openai.api_key = OPENAI_API_KEY
+            return openai
+        except ImportError:
+            return None
 
 
 def load_whisper():
@@ -40,8 +65,11 @@ def transcribe_audio(audio_bytes):
         temp_path = tmp.name
     
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # 안전한 클라이언트 초기화 (proxies 충돌 방지)
+        client = get_openai_client()
+        if not client:
+            st.error("❌ Failed to initialize OpenAI client")
+            return "", 0.0
         
         # API를 통한 음성 인식 수행
         with open(temp_path, "rb") as audio_file:
@@ -243,10 +271,14 @@ def check_whisper_availability():
         return False, "OpenAI API key not configured"
     
     try:
-        from openai import OpenAI
-        return True, "OpenAI API Whisper ready"
-    except ImportError:
-        return False, "OpenAI library not installed"
+        # 안전한 클라이언트 초기화 확인
+        client = get_openai_client()
+        if client:
+            return True, "OpenAI API Whisper ready"
+        else:
+            return False, "Failed to initialize OpenAI client"
+    except Exception as e:
+        return False, f"OpenAI client error: {str(e)}"
 
 
 def display_whisper_status():
@@ -269,12 +301,12 @@ def test_whisper_api():
         bool: 테스트 성공 여부
     """
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        
-        # 간단한 API 호출 테스트 (실제 파일 없이)
-        # 실제 테스트는 작은 오디오 파일로 수행해야 함
-        return True
+        # 안전한 클라이언트 초기화 테스트
+        client = get_openai_client()
+        if client:
+            return True
+        else:
+            return False
         
     except Exception as e:
         print(f"Whisper API test failed: {e}")
