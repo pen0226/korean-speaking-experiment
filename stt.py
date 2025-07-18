@@ -1,6 +1,6 @@
 """
 stt.py
-OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (로컬 환경 감지 수정 버전)
+OpenAI API Whisper를 이용한 음성-텍스트 변환 모듈 (파일명 접근 수정 버전)
 """
 
 import tempfile
@@ -130,9 +130,17 @@ def get_file_extension_and_mime(audio_data, source_type):
     Returns:
         tuple: (file_extension, mime_type)
     """
-    if source_type == "upload" and hasattr(audio_data, 'name'):
+    if source_type == "upload":
+        # 🔥 업로드 파일 파일명 접근 수정
+        if isinstance(audio_data, dict):
+            # main.py에서 변환된 딕셔너리 형태
+            filename = audio_data.get('name', 'uploaded_file')
+        else:
+            # 원본 UploadedFile 객체
+            filename = getattr(audio_data, 'name', 'uploaded_file')
+        
         # 업로드된 파일의 원본 확장자 추출
-        file_ext = os.path.splitext(audio_data.name)[1].lower()
+        file_ext = os.path.splitext(filename)[1].lower()
         if not file_ext:
             file_ext = ".wav"  # 확장자가 없으면 기본값
     else:
@@ -413,7 +421,7 @@ def validate_audio_file(uploaded_file):
     업로드된 오디오 파일 유효성 검사
     
     Args:
-        uploaded_file: Streamlit 업로드 파일 객체
+        uploaded_file: Streamlit 업로드 파일 객체 또는 딕셔너리
         
     Returns:
         tuple: (is_valid, error_message)
@@ -424,17 +432,27 @@ def validate_audio_file(uploaded_file):
     if uploaded_file is None:
         return False, "No file uploaded"
     
+    # 🔥 파일명 접근 수정
+    if isinstance(uploaded_file, dict):
+        # main.py에서 변환된 딕셔너리 형태
+        filename = uploaded_file.get('name', 'uploaded_file')
+        file_size = len(uploaded_file.get('bytes', b''))
+    else:
+        # 원본 UploadedFile 객체
+        filename = getattr(uploaded_file, 'name', 'uploaded_file')
+        file_size = getattr(uploaded_file, 'size', 0)
+    
     # 파일 확장자 확인
-    file_extension = uploaded_file.name.split('.')[-1].lower()
+    file_extension = filename.split('.')[-1].lower()
     if file_extension not in SUPPORTED_FORMATS:
         return False, f"❌ Unsupported format '{file_extension}'. Supported: {', '.join(SUPPORTED_FORMATS)}"
     
     # 파일 크기 확인 (OpenAI API 제한: 25MB)
-    if uploaded_file.size > 25 * 1024 * 1024:
+    if file_size > 25 * 1024 * 1024:
         return False, "❌ File too large. Maximum size: 25MB (OpenAI API limit)"
     
     # 기본적인 파일 크기 검증
-    if uploaded_file.size < 1024:  # 1KB 미만
+    if file_size < 1024:  # 1KB 미만
         return False, "❌ File too small. Please upload a valid audio file"
     
     return True, "✅ Valid audio file"
@@ -442,10 +460,10 @@ def validate_audio_file(uploaded_file):
 
 def process_audio_input(audio_data, source_type="recording"):
     """
-    오디오 입력을 처리하고 전사 (환경 감지 수정)
+    오디오 입력을 처리하고 전사 (파일명 접근 수정)
     
     Args:
-        audio_data: 오디오 데이터 (녹음 또는 업로드)
+        audio_data: 오디오 데이터 (녹음 또는 업로드 - 딕셔너리 또는 원본 객체)
         source_type: 입력 소스 타입 ("recording" 또는 "upload")
         
     Returns:
@@ -459,12 +477,18 @@ def process_audio_input(audio_data, source_type="recording"):
                 st.error(error_msg)
                 return "", 0.0, False
             
-            # 원본 파일 정보 추출
-            original_filename = audio_data.name
-            file_ext = os.path.splitext(original_filename)[1].lower()
+            # 🔥 파일명 접근 수정 - 딕셔너리와 원본 객체 모두 처리
+            if isinstance(audio_data, dict):
+                # main.py에서 변환된 딕셔너리 형태
+                original_filename = audio_data.get('name', 'uploaded_file')
+                audio_bytes = audio_data.get('bytes', b'')
+            else:
+                # 원본 UploadedFile 객체 (혹시 변환 안 된 경우)
+                original_filename = getattr(audio_data, 'name', 'uploaded_file')
+                audio_bytes = audio_data.read()
+                audio_data.seek(0)  # 포인터 리셋
             
-            audio_bytes = audio_data.read()
-            audio_data.seek(0)  # 포인터 리셋
+            file_ext = os.path.splitext(original_filename)[1].lower()
         else:
             # 녹음된 오디오 처리
             audio_bytes = audio_data['bytes']
