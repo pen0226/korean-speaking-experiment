@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (GCS 디버그 옵션 추가 최종 버전)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (오디오 형식 통일 수정 버전)
 """
 
 import streamlit as st
@@ -90,6 +90,12 @@ def handle_first_recording_step():
 def process_first_recording():
     """첫 번째 녹음 처리"""
     with st.spinner("🎙️ Processing your recording..."):
+        # 🔥 업로드 파일이면 바이트로 변환해서 형식 통일
+        if st.session_state.first_audio_type == "upload":
+            st.session_state.first_audio.seek(0)
+            audio_bytes = st.session_state.first_audio.read()
+            st.session_state.first_audio = {"bytes": audio_bytes}
+        
         # STT 처리 (source_type 전달)
         source_type = getattr(st.session_state, 'first_audio_type', 'recording')
         transcription, duration, success = process_audio_input(
@@ -334,6 +340,12 @@ def handle_second_recording_step():
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장"""
     with st.spinner("🎙️ Processing your improved recording..."):
+        # 🔥 업로드 파일이면 바이트로 변환해서 형식 통일
+        if st.session_state.second_audio_type == "upload":
+            st.session_state.second_audio.seek(0)
+            audio_bytes = st.session_state.second_audio.read()
+            st.session_state.second_audio = {"bytes": audio_bytes}
+        
         # STT 처리 (source_type 전달)
         source_type = getattr(st.session_state, 'second_audio_type', 'recording')
         transcription, duration, success = process_audio_input(
