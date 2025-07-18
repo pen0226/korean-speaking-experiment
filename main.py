@@ -90,11 +90,15 @@ def handle_first_recording_step():
 def process_first_recording():
     """첫 번째 녹음 처리"""
     with st.spinner("🎙️ Processing your recording..."):
-        # 🔥 업로드 파일이면 바이트로 변환해서 형식 통일
+        # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.first_audio_type == "upload":
+            original_filename = st.session_state.first_audio.name  # 파일명 미리 저장
             st.session_state.first_audio.seek(0)
             audio_bytes = st.session_state.first_audio.read()
-            st.session_state.first_audio = {"bytes": audio_bytes}
+            st.session_state.first_audio = {
+                "bytes": audio_bytes,
+                "name": original_filename  # 파일명도 함께 저장
+            }
         
         # STT 처리 (source_type 전달)
         source_type = getattr(st.session_state, 'first_audio_type', 'recording')
@@ -340,11 +344,15 @@ def handle_second_recording_step():
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장"""
     with st.spinner("🎙️ Processing your improved recording..."):
-        # 🔥 업로드 파일이면 바이트로 변환해서 형식 통일
+        # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.second_audio_type == "upload":
+            original_filename = st.session_state.second_audio.name  # 파일명 미리 저장
             st.session_state.second_audio.seek(0)
             audio_bytes = st.session_state.second_audio.read()
-            st.session_state.second_audio = {"bytes": audio_bytes}
+            st.session_state.second_audio = {
+                "bytes": audio_bytes,
+                "name": original_filename  # 파일명도 함께 저장
+            }
         
         # STT 처리 (source_type 전달)
         source_type = getattr(st.session_state, 'second_audio_type', 'recording')
