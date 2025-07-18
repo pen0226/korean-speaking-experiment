@@ -231,16 +231,16 @@ FOLDERS = {
 # === TTS 설정 (ElevenLabs 2025 최신 API 호환) ===
 TTS_SETTINGS = {
     "normal": {
-        "stability": 0.65,        # 억양 안정성
+        "stability": 0.75,        # 억양 안정성
         "similarity_boost": 0.80, # 목소리 일관성 강화
-        "style": 0.35,            # 감정 표현 감소로 자연스러운 억양
+        "style": 0.15,            # 감정 표현 감소로 자연스러운 억양
         "use_speaker_boost": False,
         "speed": 1.0              # 🔥 ElevenLabs 공식 speed 파라미터 - 일반 속도 (100%)
     },
     "slow": {
-        "stability": 0.90,        # 매우 높은 안정성으로 억양 변화 최소화
-        "similarity_boost": 0.90, # 더 높은 유사성으로 일관된 억양
-        "style": 0.10,            # 매우 낮은 스타일로 단조로운 억양
+        "stability": 0.85,        # 매우 높은 안정성으로 억양 변화 최소화
+        "similarity_boost": 0.80, # 더 높은 유사성으로 일관된 억양
+        "style": 0.20,            # 매우 낮은 스타일로 단조로운 억양
         "use_speaker_boost": False,
         "speed": 0.7              # 🔥 ElevenLabs 공식 speed 파라미터 - 느린 속도 (70%) [API 제한: 0.7~1.2]
     }
@@ -507,12 +507,12 @@ if not is_streamlit_cloud():
     print(f"🏠 Local Environment Detected")
     print(f"📝 Config Source: .env file")
     print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
-    print(f"☁️ GCS: {'✅ Configured' if GCS_ENABLED else '❌ Disabled'}")
+    print(f"☁️ GCS: {'✅ Ready' if GCS_ENABLED else '❌ Disabled'}")
 else:
     print(f"☁️ Streamlit Cloud Environment Detected")
     print(f"📝 Config Source: st.secrets")
     print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
-    print(f"☁️ GCS: {'✅ Configured' if GCS_ENABLED else '❌ Disabled'}")
+    print(f"☁️ GCS: {'✅ Ready' if GCS_ENABLED else '❌ Disabled'}")
     
     # GCS 연결 상태 자동 테스트 (Cloud 환경에서)
     gcs_status, gcs_message = test_gcs_connection()

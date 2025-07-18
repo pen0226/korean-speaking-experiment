@@ -362,7 +362,7 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (1분 목표) - 업로드 파일 타입 감지 개선
+    간소화된 녹음 인터페이스 (1분 목표) - 노란색 박스로 변경
     
     Args:
         key: 컴포넌트 키
@@ -371,8 +371,8 @@ def record_audio(key, label):
     Returns:
         tuple: (audio_data, source_type) - audio_data와 타입 정보 반환
     """
-    # 간단한 안내 메시지
-    st.info("🎙️ Record your answer (aim for at least 1 minute) or upload an audio file")
+    # 노란색 안내 메시지 (학생들이 해야할 일이므로)
+    st.warning("🎙️ Click Start Recording or upload an audio file")
     
     # 마이크 녹음
     audio = mic_recorder(
@@ -416,10 +416,12 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
         audio_data: 오디오 데이터 (선택사항)
     """
     st.markdown(f"#### {title}")
+    st.markdown("*Here's what you said — compare it with the model answer in the green box below.*")
     
     # 음성 재생 부분
     if audio_data:
         st.markdown("**🎤 Listen to your recording**")
+        st.markdown("")  # 오디오 플레이어 위쪽 여백
         if hasattr(audio_data, 'read'):
             # 업로드된 파일인 경우
             audio_data.seek(0)
@@ -428,9 +430,10 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
         else:
             # 녹음된 파일인 경우
             st.audio(audio_data['bytes'])
+        st.markdown("")  # 오디오 플레이어 아래쪽 여백
     
     # 하이라이트된 학생 답안 표시
-    st.markdown("#### 📝 Your Answer")
+    st.markdown("**💬 Your Answer**")
     
     # 모델 문장과 비교해서 하이라이트 생성
     model_sentence = feedback.get('suggested_model_sentence', '')
@@ -444,7 +447,7 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
                 border: 2px solid #fca5a5;
                 border-radius: 8px;
                 padding: 20px;
-                margin: 15px 0;
+                margin: 3px 0 15px 0;
             '>
                 <div style='font-size: 16px; line-height: 1.6; color: #1f2937;'>
                     {highlighted_student}
@@ -505,17 +508,6 @@ def display_model_sentence_with_highlights(model_sentence, feedback, title="Sugg
                 </div>""",
                 unsafe_allow_html=True
             )
-
-
-def display_ai_model_voice_section(title="AI Model Voice"):
-    """
-    AI 모델 음성 섹션 타이틀 표시
-    
-    Args:
-        title: 섹션 제목
-    """
-    st.markdown(f"#### {title}")
-    st.markdown("*Listen to the model pronunciation at different speeds:*")
 
 
 def format_feedback_content(content):

@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (GCS TOML 호환 - 최종 수정 버전)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (연구용 점수 필드 추가)
 """
 
 import os
@@ -70,7 +70,7 @@ def save_session_data():
 
 def build_session_data(timestamp):
     """
-    세션 데이터 딕셔너리 구성 (배경 정보 포함)
+    세션 데이터 딕셔너리 구성 (연구용 점수 필드 추가)
     
     Args:
         timestamp: 타임스탬프
@@ -78,6 +78,24 @@ def build_session_data(timestamp):
     Returns:
         dict: 완성된 세션 데이터
     """
+    # 🎯 연구용 점수 데이터 추출
+    research_scores = getattr(st.session_state, 'research_scores', {})
+    
+    # 기본값 설정 (연구용 점수가 없는 경우)
+    default_research_scores = {
+        'accuracy_score': 0.0,
+        'fluency_score': 0.0,
+        'error_rate': 0.0,
+        'word_count': 0,
+        'duration_s': 0.0,
+        'error_count': 0
+    }
+    
+    # 연구용 점수가 있으면 사용, 없으면 기본값
+    for key, default_value in default_research_scores.items():
+        if key not in research_scores:
+            research_scores[key] = default_value
+
     return {
         'session_id': st.session_state.session_id,
         'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),
@@ -108,7 +126,16 @@ def build_session_data(timestamp):
         'transcription_2': st.session_state.transcription_2,
         'gpt_feedback_json': json.dumps(st.session_state.feedback, ensure_ascii=False),
         
-        # === 데이터 품질 분석 필드 ===
+        # === 🎯 연구용 점수 필드 (새로 추가) ===
+        'research_accuracy_score': research_scores.get('accuracy_score', 0.0),
+        'research_fluency_score': research_scores.get('fluency_score', 0.0),
+        'research_error_rate': research_scores.get('error_rate', 0.0),
+        'research_word_count': research_scores.get('word_count', 0),
+        'research_duration_s': research_scores.get('duration_s', 0.0),
+        'research_error_count': research_scores.get('error_count', 0),
+        'research_scores_json': json.dumps(research_scores, ensure_ascii=False),
+        
+        # === 데이터 품질 분석 필드 (기존) ===
         'audio_duration_1': getattr(st.session_state, 'audio_duration_1', 0.0),
         'audio_duration_2': getattr(st.session_state, 'audio_duration_2', 0.0),
         'audio_quality_check_1': get_audio_quality_label(getattr(st.session_state, 'audio_duration_1', 0)),
@@ -126,7 +153,7 @@ def build_session_data(timestamp):
         'overall_assessment': getattr(st.session_state, 'improvement_assessment', {}).get('overall_assessment', ''),
         'improvement_assessment_json': json.dumps(getattr(st.session_state, 'improvement_assessment', {}), ensure_ascii=False),
         
-        # === 실제 사용되는 피드백 필드들만 ===
+        # === 학생용 피드백 필드들 (기존) ===
         'suggested_model_sentence': st.session_state.feedback.get('suggested_model_sentence', ''),
         'suggested_model_sentence_english': st.session_state.feedback.get('suggested_model_sentence_english', ''),
         'fluency_comment': st.session_state.feedback.get('fluency_comment', ''),
@@ -146,6 +173,7 @@ def build_session_data(timestamp):
         # 디버그 정보
         'gpt_model_used': st.session_state.gpt_debug_info.get('model_used', ''),
         'gpt_attempts': st.session_state.gpt_debug_info.get('attempts', 0),
+        'dual_evaluation_used': st.session_state.gpt_debug_info.get('dual_evaluation', False),  # 🎯 이중 평가 시스템 사용 여부
         
         # 오디오 파일 정보 (세션 번호 포함)
         'audio_folder': f"{FOLDERS['audio_recordings']}/{getattr(st.session_state, 'session_number', CURRENT_SESSION)}_{st.session_state.session_id}_{timestamp}",
@@ -280,7 +308,7 @@ def save_audio_files(timestamp):
 
 def create_participant_info_file(session_id, timestamp):
     """
-    참여자 정보 파일 생성 (ZIP에 포함될 텍스트 파일)
+    참여자 정보 파일 생성 (ZIP에 포함될 텍스트 파일) - 연구용 점수 정보 추가
     
     Args:
         session_id: 세션 ID
@@ -298,6 +326,13 @@ def create_participant_info_file(session_id, timestamp):
         learning_duration = getattr(st.session_state, 'learning_duration', 'Not specified')
         speaking_confidence = getattr(st.session_state, 'speaking_confidence', 'Not specified')
         
+        # 🎯 연구용 점수 정보 추가
+        research_scores = getattr(st.session_state, 'research_scores', {})
+        accuracy_score = research_scores.get('accuracy_score', 'N/A')
+        fluency_score = research_scores.get('fluency_score', 'N/A')
+        error_rate = research_scores.get('error_rate', 'N/A')
+        word_count = research_scores.get('word_count', 'N/A')
+        
         # 정보 파일 내용 생성
         info_content = f"""=== PARTICIPANT INFORMATION ===
 Anonymous ID: {session_id}
@@ -314,7 +349,12 @@ Speaking Confidence: {speaking_confidence}
 Question: {EXPERIMENT_QUESTION}
 First Recording Duration: {getattr(st.session_state, 'audio_duration_1', 0):.1f} seconds
 Second Recording Duration: {getattr(st.session_state, 'audio_duration_2', 0):.1f} seconds
-Interview Readiness Score: {st.session_state.feedback.get('interview_readiness_score', 'N/A')}/10
+Student UI Score: {st.session_state.feedback.get('interview_readiness_score', 'N/A')}/10
+
+=== RESEARCH SCORES (논문용) ===
+Accuracy Score: {accuracy_score}/10 (Error rate: {error_rate}%)
+Fluency Score: {fluency_score}/10 (Word count: {word_count})
+Dual Evaluation System: {getattr(st.session_state, 'gpt_debug_info', {}).get('dual_evaluation', False)}
 
 === CONSENT INFORMATION ===
 Consent Given: {getattr(st.session_state, 'consent_given', False)}
@@ -330,6 +370,8 @@ Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 === FOR RESEARCHER ===
 This file contains the link between the anonymous ID and the original nickname.
 Data was automatically saved after second recording completion.
+Research scores are calculated using: Accuracy (error rate) + Fluency (word count).
+Student UI scores are generated by GPT for educational purposes.
 Contact: pen0226@gmail.com for any data requests or questions.
 """
         
@@ -365,7 +407,7 @@ def create_comprehensive_backup_zip(session_id, timestamp):
         
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             
-            # 🎯 참여자 정보 파일 생성 및 추가
+            # 🎯 참여자 정보 파일 생성 및 추가 (연구용 점수 포함)
             participant_info_file = create_participant_info_file(session_id, timestamp)
             if participant_info_file and os.path.exists(participant_info_file):
                 zipf.write(participant_info_file, "participant_info.txt")
@@ -392,17 +434,24 @@ def create_comprehensive_backup_zip(session_id, timestamp):
                     file_path = os.path.join(audio_folder, file)
                     zipf.write(file_path, f"audio/{file}")
             
-            # 📝 ZIP 내용 요약 파일 추가 (Excel 제거 반영)
+            # 📝 ZIP 내용 요약 파일 추가 (연구용 점수 정보 포함)
+            research_scores = getattr(st.session_state, 'research_scores', {})
             readme_content = f"""=== ZIP CONTENTS SUMMARY ===
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 Participant: {session_id} (Session {session_num})
 Save Trigger: Auto-save after second recording completion
 
 Files included:
-- participant_info.txt: Participant details and nickname mapping
-- session_data_{timestamp}.csv: Complete session data in CSV format
+- participant_info.txt: Participant details and nickname mapping + Research scores
+- session_data_{timestamp}.csv: Complete session data with dual evaluation scores
 - consent_form_{session_id}.pdf: Signed consent form
 - audio/: All recorded audio files (student + model pronunciations)
+
+DUAL EVALUATION SYSTEM:
+- Student UI Score: Educational feedback (GPT-generated)
+- Research Scores: Objective metrics for academic analysis
+  * Accuracy: {research_scores.get('accuracy_score', 'N/A')}/10 (based on error rate)
+  * Fluency: {research_scores.get('fluency_score', 'N/A')}/10 (based on word count)
 
 NOTE: Excel file generation has been removed for faster deployment.
 The CSV file can be opened directly in Excel for analysis.
@@ -622,7 +671,7 @@ def test_gcs_connection():
 
 def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=False):
     """
-    GCS 업로드 결과를 로그 파일에 기록
+    GCS 업로드 결과를 로그 파일에 기록 (연구용 점수 정보 포함)
     
     Args:
         session_id: 세션 ID
@@ -650,15 +699,22 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
         session_label = getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1"))
         original_nickname = getattr(st.session_state, 'original_nickname', 'Unknown')
         
+        # 🎯 연구용 점수 정보 추가
+        research_scores = getattr(st.session_state, 'research_scores', {})
+        accuracy_score = research_scores.get('accuracy_score', 'N/A')
+        fluency_score = research_scores.get('fluency_score', 'N/A')
+        dual_eval_used = getattr(st.session_state, 'gpt_debug_info', {}).get('dual_evaluation', False)
+        
         # 업로드 상태 결정
         upload_status = "SUCCESS" if uploaded_files and not errors else "PARTIAL" if uploaded_files else "FAILED"
         
-        # 로그 엔트리 생성 (ZIP 전용 방식 + 저장 타이밍 정보 표시)
+        # 로그 엔트리 생성 (연구용 점수 정보 포함)
         log_entry = f"""
 [{datetime.now().strftime(LOG_FORMAT['timestamp_format'])}] SESSION: {session_label} - {session_id}_{timestamp}
 Nickname: {original_nickname}
 Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
+Dual Evaluation: {dual_eval_used} (Research scores: Accuracy={accuracy_score}, Fluency={fluency_score})
 GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP only - TOML/JSON compatible)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
@@ -666,6 +722,7 @@ Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: ✅ Secured before survey step
 Excel conversion: ❌ Removed for faster deployment (CSV only)
+Research Data: ✅ Objective scores calculated and stored
 {'='*80}
 """
         
@@ -742,7 +799,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
 
 def display_session_details():
     """
-    연구자용 세션 상세 정보 표시 (닉네임 정보 포함 + GCS 상태)
+    연구자용 세션 상세 정보 표시 (닉네임 정보 + 연구용 점수 + GCS 상태 포함)
     """
     st.markdown("**📋 Session Details:**")
     display_name = getattr(st.session_state, 'original_nickname', st.session_state.session_id)
@@ -760,6 +817,21 @@ def display_session_details():
         st.write(f"**Learning Duration:** {learning_duration}")
     if speaking_confidence:
         st.write(f"**Speaking Confidence:** {speaking_confidence}")
+    
+    # === 🎯 연구용 점수 정보 표시 ===
+    research_scores = getattr(st.session_state, 'research_scores', {})
+    if research_scores:
+        st.markdown("**🔬 Research Scores (논문용):**")
+        accuracy = research_scores.get('accuracy_score', 'N/A')
+        fluency = research_scores.get('fluency_score', 'N/A')
+        error_rate = research_scores.get('error_rate', 'N/A')
+        word_count = research_scores.get('word_count', 'N/A')
+        st.write(f"Accuracy Score: {accuracy}/10 (Error rate: {error_rate}%)")
+        st.write(f"Fluency Score: {fluency}/10 (Word count: {word_count})")
+        dual_eval = getattr(st.session_state, 'gpt_debug_info', {}).get('dual_evaluation', False)
+        st.write(f"Dual Evaluation System: {'✅ Active' if dual_eval else '❌ Not used'}")
+    else:
+        st.write("**🔬 Research Scores:** ❌ Not calculated")
     
     # === GCS 연동 상태 표시 (ZIP 전용) ===
     st.markdown("**☁️ Google Cloud Storage Status:**")
@@ -784,9 +856,9 @@ def display_session_details():
 
 def display_data_quality_info():
     """
-    데이터 품질 정보 표시 (STT 루브릭 기반 - 60초 목표)
+    데이터 품질 정보 표시 (STT 루브릭 기반 - 60초 목표 + 연구용 점수 포함)
     """
-    st.markdown("**📊 Data Quality (STT Rubric-Based):**")
+    st.markdown("**📊 Data Quality (STT Rubric-Based + Research Scores):**")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -804,8 +876,15 @@ def display_data_quality_info():
             st.write(f"Vocab suggestions: {vocab_count}")
             st.write(f"Content ideas: {content_count}")
             
-            rubric_score = st.session_state.feedback.get('interview_readiness_score', 'N/A')
-            st.write(f"STT Rubric Score: {rubric_score}/10")
+            student_score = st.session_state.feedback.get('interview_readiness_score', 'N/A')
+            st.write(f"Student UI Score: {student_score}/10")
+        
+        # 🎯 연구용 점수 표시
+        research_scores = getattr(st.session_state, 'research_scores', {})
+        if research_scores:
+            st.write("**🔬 Research Scores:**")
+            st.write(f"Accuracy: {research_scores.get('accuracy_score', 'N/A')}/10")
+            st.write(f"Fluency: {research_scores.get('fluency_score', 'N/A')}/10")
     
     with col2:
         duration2 = getattr(st.session_state, 'audio_duration_2', 0)

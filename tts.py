@@ -142,8 +142,8 @@ def synthesize_audio(text, speed="normal"):
         
         # 🎯 한국어 억양 개선: 더 안정적인 설정
         if speed == "slow":
-            voice_settings["stability"] = 0.90  # 더 높은 안정성 (억양 변화 최소화)
-            voice_settings["style"] = 0.15      # 더 낮은 스타일 (단조로운 억양)
+            voice_settings["stability"] = 0.75  # 더 높은 안정성 (억양 변화 최소화)
+            voice_settings["style"] = 0.35      # 더 낮은 스타일 (단조로운 억양)
             voice_settings["speed"] = 0.7       # 🔥 2025 수정: speed를 voice_settings 안에 유지
         else:
             voice_settings["stability"] = 0.75  # 일반 속도도 안정성 증가
@@ -227,7 +227,7 @@ def generate_model_audio(text):
     """
     model_audio = {}
     
-    with st.spinner("🔊 Generating model pronunciation with 2025 ElevenLabs API (Speed Fixed)..."):
+    with st.spinner("🔊 Generating model pronunciation..."):
         # 일반 속도 생성
         with st.spinner("🚀 Creating natural speed version..."):
             normal_audio = synthesize_audio(text, "normal")
@@ -254,8 +254,8 @@ def audio_card(audio_data, title, description=""):
     """
     if audio_data:
         st.markdown(
-            f"""<div style='padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; margin: 10px 0; background-color: #ffffff;'>
-            <h5 style='margin: 0 0 10px 0; color: #374151;'>{title}</h5>
+            f"""<div style='padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; margin: 5px 0; background-color: #ffffff;'>
+            <h5 style='margin: 0 0 10px 0; color: #374151; font-size: 14px;'>{title}</h5>
             </div>""",
             unsafe_allow_html=True
         )
@@ -277,8 +277,8 @@ def display_model_audio(model_audio_dict):
         st.info("🔊 Model pronunciation (ElevenLabs API not configured)")
         return
     
-    st.markdown("#### 🎯 Model Pronunciation")
-    st.info("🎧 **Two different speeds** - Listen to both and practice speaking along!")
+    st.markdown("#### 🎯 AI Model Voice")
+    st.markdown("🎧 **Two different speeds** - *Listen to both and practice speaking along!*")
     
     col1, col2 = st.columns(2)
     
@@ -295,10 +295,6 @@ def display_model_audio(model_audio_dict):
             "🚀 Natural Speed", 
             "🎯 Interview pace - practice matching this speed"
         )
-    
-    # 속도 차이 설명 수정
-    if model_audio_dict.get('slow') and model_audio_dict.get('normal'):
-        st.success("✅ **2025 Speed Fixed!** Enhanced voice settings with proper speed control.")
 
 
 def check_tts_availability():
@@ -348,7 +344,7 @@ def display_tts_status():
     is_available, status = check_tts_availability()
     
     if is_available:
-        st.write("AI Model Voice: ✅ Ready (2025 API - Speed Fixed)")
+        st.write("AI Model Voice: ✅ Ready")
     else:
         st.write(f"AI Model Voice: ❌ {status}")
 
@@ -488,11 +484,11 @@ def display_audio_generation_progress():
     
     # 단계별 진행상황 시뮬레이션 (2025 API 반영)
     steps = [
-        "🔊 Initializing 2025 ElevenLabs API...",
+        "🔊 Initializing ...",
         "🎯 Processing Korean text with advanced formatting...", 
-        "🚀 Generating natural speed audio (Speed Fixed)...",
-        "🐌 Generating slow speed audio with proper voice settings...",
-        "✅ Audio generation complete with 2025 speed enhancements!"
+        "🚀 Generating natural speed audio ...",
+        "🐌 Generating slow speed audio ...",
+        "✅ Audio generation complete!"
     ]
     
     for i, step in enumerate(steps):

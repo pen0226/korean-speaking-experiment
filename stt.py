@@ -500,7 +500,7 @@ def process_audio_input(audio_data, source_type="recording"):
         version = detect_openai_version()
         env_info = f"{'Streamlit Cloud' if is_cloud else 'Local'} + OpenAI SDK v{version}"
         
-        with st.spinner(f"🎙️ Converting speech to text using {env_info}..."):
+        with st.spinner(f"🎙️ Converting speech to text ..."):
             transcription, duration = transcribe_audio(
                 audio_bytes, 
                 file_extension=file_ext,
@@ -539,7 +539,7 @@ def check_whisper_availability():
         
         if client and version:
             env_info = f"{'Cloud' if is_cloud else 'Local'} + SDK v{version}"
-            return True, f"OpenAI API Whisper ready ({env_info})"
+            return True, f"OpenAI API Whisper ready"
         else:
             return False, "Failed to initialize OpenAI client"
     except Exception as e:

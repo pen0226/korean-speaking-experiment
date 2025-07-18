@@ -120,7 +120,7 @@ def enhanced_consent_section():
         )
         
         consent_processing = st.checkbox(
-            "🎙️ **I allow voice recording & AI feedback (Whisper→GPT→ElevenLabs).**"
+            "🎙️ **I allow voice recording & AI feedback.**"
         )
         
         consent_data_rights = st.checkbox(
@@ -660,15 +660,13 @@ def handle_nickname_input_with_consent():
     """)
     
     # 친근한 안내
-    st.info("💡 **Important:** Use the **same nickname** for both Session 1 and Session 2! - this helps connect your two practice sessions!")
+    st.info("🔗 **Use the exact same nickname** in Session 1 & Session 2 — links your data.")
     
     nickname = st.text_input(
         "Your nickname:",
         placeholder="e.g., KoreanLearner123, MyNickname, Student_A, etc.",
-        help="Your nickname is just for linking your sessions. Your real identity stays private!"
+        help="Your nickname is just for linking your sessions. In our records, it becomes an anonymous ID like 'Student01'. Your real identity stays private!"
     )
-    
-    st.caption("🔒 Your nickname becomes an anonymous ID like 'Student01' in the records.")
     
     # 닉네임이 입력되지 않으면 배경 정보 섹션을 표시하지 않음
     if not nickname.strip():
