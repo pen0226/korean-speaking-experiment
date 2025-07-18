@@ -1,6 +1,6 @@
 """
 consent.py
-연구 참여 동의서 처리 및 PDF 생성 모듈 (최종 버전 - GDPR 준수 + 닉네임 매칭 시스템)
+연구 참여 동의서 처리 및 PDF 생성 모듈 (학생 친화적 버전 - GDPR 준수)
 """
 
 import streamlit as st
@@ -23,125 +23,148 @@ except ImportError:
 
 def enhanced_consent_section():
     """
-    강화된 동의 수집 섹션 (GDPR 준수)
+    학생 친화적 동의 수집 섹션 (GDPR 준수)
     
     Returns:
         tuple: (consent_completed, consent_details)
     """
     
-    with st.expander("📋 Research Information", expanded=True):
+    # 친근한 설명으로 시작
+    st.markdown("""
+    ### 🎯 What You'll Get From This Study
+    
+    **🎁 For You:**
+    - **Personalized feedback** on your Korean speaking
+    - **AI pronunciation model** to practice with
+    - **Preparation help** for your Language Education Center interview
+    - **Free practice session** - just like having a Korean tutor!
+    
+    **📚 For Research:**
+    - Help improve AI tools for Korean learners
+    - Contribute to a master's thesis research project
+    - Potential use in academic conference presentations
+    - Possible inclusion in scholarly journal publications
+    - Make language learning better for future students
+    """)
+    
+    # 탭으로 정보 구성 (덜 overwhelming하게)
+    tab1, tab2, tab3 = st.tabs(["🎮 What You'll Experience", "🔒 Your Privacy", "📞 Contact Info"])
+    
+    with tab1:
         st.markdown("""
-        **Research Overview:**
-        - **English**: This study is part of a research project at Ewha Womans University, including a master's thesis and potential academic publications
-        - **한국어**: 이 연구는 이화여자대학교 대학원의 석사논문 및 향후 학술 발표/소논문 게재를 포함한 연구 프로젝트의 일부입니다
-        - **Purpose**: To provide AI feedback that helps prepare for Korean Language Education Center placement interviews
-        - **목적**: 언어교육원 배치고사 말하기 인터뷰 준비에 도움이 되는 AI 피드백 제공
+        ### 🎮 Two Practice Sessions (each ~15-20 mins)
         
-        **Experimental Procedure:**
-        1. **Session 1 & 2**: Record two voice responses to Korean questions (≈1 minute each)
-           **세션 1 & 2**: 한국어 질문에 대한 음성 답변 2회 녹음 (각 약 1분)
-        2. Receive personalized AI feedback and pronunciation models
-           AI를 통한 개인화된 피드백 제공 및 발음 모델 제시  
-        3. **Optional**: 15-minute Zoom interview for deeper feedback analysis
-           **선택적**: 심층 피드백 분석을 위한 15분 Zoom 인터뷰
+        **Session 1: Self-Introduction Practice** 🙋‍♀️
+        1. **First recording**: Tell about yourself (name, major, hobbies, etc.)
+        2. **Get AI feedback**: Grammar tips + pronunciation examples  
+        3. **Second recording**: Try again with the feedback
+        4. **Quick survey**: How was the experience?
         
-        **AI Tools Used:**
-        - **OpenAI Whisper**: Speech-to-text conversion / 음성-텍스트 변환
-        - **OpenAI GPT-4o**: Korean analysis and educational feedback / 한국어 분석 및 교육적 피드백  
-        - **ElevenLabs TTS**: Speech synthesis for corrected sentences / 교정 문장 음성 생성
-        - All AI tools are processed via international servers / 모든 AI 도구는 국제 서버를 통해 처리됩니다
+        **Session 2: Different Topic Practice** 🗣️  
+        1. **First recording**: Answer a different Korean question
+        2. **Get AI feedback**: More personalized tips
+        3. **Second recording**: Practice with improvements
+        4. **Quick survey**: Compare your experience
         
-        **Data Processing and Storage:**
-        - **Storage**: Encrypted cloud storage (Google Cloud Storage) / 암호화된 클라우드 저장소 (구글 클라우드 스토리지)
-        - **Access**: Researcher access only / 연구자 단독 접근
-        - **Retention**: Up to 2 years post-completion, immediate deletion upon request / 논문 완성 후 최대 2년, 요청 시 즉시 삭제
-        - **Anonymization**: Nickname converted to anonymous ID (e.g., Student01) / 닉네임을 익명 ID로 변환 (예: Student01)
+        **Optional Follow-up Interview** 💻 
+        - 15-minute Zoom interview to discuss your experience with the AI feedback system
+        - Share your thoughts on what was helpful and areas for improvement
+        - Audio will be recorded for research purposes (video participation optional)
         
-        **Privacy Protection (GDPR Compliant):**
-        - Transparency: Full transparency of data processing / 모든 데이터 처리 과정 공개
-        - Purpose limitation: Limited to research and educational purposes / 연구 및 교육 목적으로만 사용
-        - Data minimization: Minimal data collection / 필요한 최소한의 데이터만 수집
-        - Accuracy: Right to correct inaccurate information / 부정확한 정보 수정 권리
-        - Storage limitation: Storage limitation to necessary period / 필요 기간만 보관
-        - Integrity: Secure encrypted storage / 안전한 암호화 저장
-        - Accountability: Accountability in all processing / 모든 처리 과정 기록
-        
-        **International Data Transfer Notice:**
-        - **Transfer to**: International AI service providers and Google Cloud Storage / 국제 AI 서비스 제공업체 및 구글 클라우드 스토리지
-        - **Purpose**: AI feedback functionality and secure data storage / AI 피드백 기능 및 안전한 데이터 저장
-        - **Protection**: Protection under respective privacy policies and international standards / 각 서비스의 개인정보 처리방침 및 국제 표준 적용
-        - **GDPR compliance**: Lawful processing for academic research / 학술 연구 목적의 적법한 처리
-        
-        **Participant Rights (GDPR Rights):**
-        - Right to access: Access collected data / 수집된 데이터 확인권
-        - Right to rectification: Correct inaccurate information / 부정확한 정보 수정권
-        - Right to erasure: Request data deletion anytime / 언제든 데이터 삭제 요청권
-        - Right to restriction: Request limitation of data processing / 데이터 처리 제한 요청권
-        - Right to portability: Request data transfer / 데이터 이동 요청권
-        - Right to object: Object to data processing / 데이터 처리에 대한 이의제기권
-        - Right to withdraw: Withdraw consent anytime / 언제든 동의 철회권
-        
-        **Risks and Benefits:**
-        - **Minimal risks**: Korean speaking anxiety, technical issues / 한국어 말하기 부담감, 기술적 문제
-        - **Direct benefit**: Personalized AI feedback for language education center placement preparation / 언어교육원 배치고사 준비를 위한 개인화된 AI 피드백
-        - **Research benefit**: Contributing to AI language learning development / AI 언어 학습 도구 발전에 기여
-        
-        **Contact Information:**
-        - **Researcher**: Jeongyeon Kim (pen0226@gmail.com)
-        - **Ewha Womans University Research Ethics Center**: research@ewha.ac.kr, 02-3277-7152
+        **AI Tools Used:** 🛠️
+        - **OpenAI Whisper**: Converts your speech to text
+        - **GPT-4**: Provides Korean grammar and vocabulary feedback  
+        - **ElevenLabs**: Creates pronunciation examples
         """)
     
-    # Simplified consent for minimal burden while meeting GDPR requirements
-    st.markdown("### 📝 Research Consent")
-    st.info("✅ Simple checkboxes for your consent | 간단한 체크만으로 동의하실 수 있습니다")
+    with tab2:
+        st.markdown("""
+        ### 🔒 Your Data is Kept Safe & You Stay In Control
+        
+        **🏠 How Your Data is Stored:**
+        - Encrypted Google Cloud Storage bucket 
+        - Your real name is never used - only nicknames → anonymous IDs
+        - Only the researcher can access your data
+        
+        **⏰ How Long It's Kept:**
+        - Maximum 2 years after the study ends
+        
+        **🌍 International Processing:**
+        - AI services process data internationally (standard for AI tools)
+        - Your data is protected under the same high security and privacy standards as Netflix, Spotify, and Google
+        
+        **✨ Your Rights (You're Always In Control!)**
+        - 📧 **Contact anytime** to view your data  
+        - ✏️ **Request corrections** if you spot any errors  
+        - 🗑️ **Withdraw at any time** — if before analysis starts, your data will be deleted; afterward, only anonymized results remain  
+        - 📤 **Request a copy of your data** after the study ends 
     
-    # Essential consent items only
-    st.markdown("**Essential Consent Items:**")
+        """)
     
-    consent_research = st.checkbox(
-        "🔬 **Research Participation Consent:**\n"
-        "I understand the research information and voluntarily agree to participate / "
-        "연구 정보를 이해하고 자발적으로 참여에 동의합니다"
-    )
+    with tab3:
+        st.markdown("""
+        ### 📞 Questions?
+        
+        **👩‍🎓 Researcher:**
+        - **Jeongyeon Kim** (Master's student at Ewha Womans University)
+        - **Email:** pen0226@gmail.com
+        
+        **🏛️ University Ethics Office:**
+        - **Ewha Womans University Research Ethics Center**
+        - **Email:** research@ewha.ac.kr
+        - **Phone:** 02-3277-7152
+        
+        """)
     
-    consent_recording = st.checkbox(
-        "🎙️ **Audio Recording & AI Processing Consent:**\n"
-        "I consent to audio recording and analysis via international AI services / "
-        "음성 녹음과 국제 AI 서비스를 통한 분석에 동의합니다"
-    )
+    # 간단하고 친근한 동의 체크박스
+    st.markdown("---")
+    st.markdown("""
+    ### 🤝 Ready to Start? Just Check These Boxes!
     
-    consent_data = st.checkbox(
-        "💾 **Data Storage & Research Use Consent:**\n"
-        "I consent to encrypted storage and the use of my anonymized data for academic research, including thesis writing, conference presentations, and academic publications / "
-        "암호화된 저장과 함께, 내 익명화된 데이터가 석사논문, 학술대회 발표, 학술지 게재 등의 학문적 연구에 사용되는 것에 동의합니다"
-    )
+    *Don't worry - these are just to make sure you understand what the study involves.*
+    """)
     
-    consent_rights = st.checkbox(
-        "🛡️ **Privacy Rights Understanding:**\n"
-        "I understand my right to withdraw and request data deletion anytime / "
-        "언제든 참여 중단 및 데이터 삭제 요청 권리가 있음을 이해합니다"
-    )
+    # 시각적으로 더 친근한 체크박스
+    col1, col2 = st.columns([1, 4])
     
-    consent_zoom = st.checkbox(
-        "🎥 **Optional Zoom Interview Consent (≈15 minutes):**  \n"
-        "I understand that after the main experiment I may participate in a ~15-minute Zoom interview about my experience using the AI feedback system (satisfaction, suggestions for improvement, etc.). This session will be audio-recorded and transcribed for research purposes only. All data will be anonymized. /  \n"
-        "실험 종료 후 약 15분간 Zoom 인터뷰를 통해 AI 피드백 시스템 사용 경험(만족도, 개선 제안 등)에 대해 인터뷰를 진행합니다. 인터뷰 내용은 음성만 녹음·전사되어 연구 목적으로만 사용되며, 모든 데이터는 익명 처리됩니다. 이에 동의합니다."
-    )
+    with col2:
+        consent_research = st.checkbox(
+            "🎯 **I want to participate in this Korean speaking practice!**\n"
+            "I understand this is research and I'm joining voluntarily."
+        )
+        
+        consent_recording = st.checkbox(
+            "🎙️ **Yes, you can record my voice and use AI to help me improve.**\n"
+            "I'm okay with AI analyzing my Korean speaking."
+        )
+        
+        consent_data = st.checkbox(
+            "📚 **You can use my anonymous data for academic research.**\n"
+            "I understand this will be used for: (1) a master's thesis, "
+            "(2) potential conference presentations, (3) possible academic journal articles, "
+            "and (4) improving Korean language learning tools."
+        )
+        
+        consent_rights = st.checkbox(
+            "🛡️ **I know I can change my mind anytime.**\n"
+            "I can stop participating or request data deletion whenever I want."
+        )
+        
     
-    # Check if all essential consents are given
-    all_consents = [consent_research, consent_recording, consent_data, consent_rights]
+    # 모든 필수 동의가 완료되었는지 확인
+    essential_consents = [consent_research, consent_recording, consent_data, consent_rights]
     
-    if all(all_consents):
-        # Simple final confirmation without signature
-        st.markdown("---")
+    if all(essential_consents):
+        
         final_consent = st.checkbox(
-            "✅ **Final Confirmation:** I confirm all the above and agree to participate in this research / "
-            "**최종 확인:** 위 모든 사항을 확인했으며 연구에 참여하겠습니다"
+            "✅ **Let's do this! I'm ready to start practicing Korean with AI feedback.**"
         )
         
         if final_consent:
             consent_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            st.success(f"🎉 Consent completed! ({consent_timestamp})")
+            
+            # 성공 메시지
+            st.success(f"🌟 Awesome! Welcome to your Korean practice session! ({consent_timestamp})")
             
             # 동의 정보 세션에 저장
             consent_details = {
@@ -150,7 +173,6 @@ def enhanced_consent_section():
                 'consent_data_storage': consent_data,
                 'consent_privacy_rights': consent_rights,
                 'consent_final_confirm': final_consent,
-                'consent_zoom_interview': consent_zoom,  # 새로 추가
                 'consent_timestamp': consent_timestamp
             }
             
@@ -159,40 +181,45 @@ def enhanced_consent_section():
             
             return True, consent_details
         else:
-            st.warning("⚠️ Please check the final confirmation")
+            st.info("👆 Just check the final box when you're ready to start!")
             return False, None
     else:
-        st.warning("⚠️ Please consent to all essential items")
+        st.info("📝 Please check all the boxes above to continue - they help follow research guidelines!")
         return False, None
 
 
 def collect_background_information():
     """
-    배경 정보 수집 섹션
+    친근한 배경 정보 수집 섹션
     
     Returns:
         tuple: (background_completed, background_details)
     """
-    st.markdown("### 📊 Background Information")
-    st.markdown("Please provide some background information about your Korean learning experience.")
+    st.markdown("""
+    ### 📊 Tell About Your Korean Learning Journey
     
-    # 학습 기간 질문 (필수)
-    st.markdown("**How long have you been learning Korean?** *(Required)*")
+    *This helps provide better feedback!*
+    """)
+    
+    # 학습 기간 질문 - 더 친근하게
+    st.markdown("**🕐 How long have you been learning Korean?**")
+    
     learning_duration = st.radio(
-        "Select your learning duration:",
+        "Pick the option that fits you best:",
         options=BACKGROUND_INFO["learning_duration_options"],
-        key="bg_learning_duration",  # 키 이름 변경
+        key="bg_learning_duration",
         label_visibility="collapsed"
     )
     
     st.markdown("---")
     
-    # 자신감 질문 (필수)
-    st.markdown("**How confident do you feel when speaking Korean right now?** *(Required - Please choose one)*")
+    # 자신감 질문 - 격려하는 톤으로
+    st.markdown("**🌟 How confident do you feel speaking Korean right now?**")
+    
     speaking_confidence = st.radio(
-        "Select your confidence level:",
+        "Choose what describes you best:",
         options=BACKGROUND_INFO["confidence_options"],
-        key="bg_speaking_confidence",  # 키 이름 변경
+        key="bg_speaking_confidence",
         label_visibility="collapsed"
     )
     
@@ -204,7 +231,7 @@ def collect_background_information():
         }
         return True, background_details
     else:
-        st.warning("⚠️ Please answer both questions to continue")
+        st.info("📝 Please answer both questions so the feedback can be personalized!")
         return False, None
 
 
@@ -222,7 +249,6 @@ def save_consent_to_session(consent_details):
     st.session_state.consent_data_storage = consent_details['consent_data_storage']
     st.session_state.consent_privacy_rights = consent_details['consent_privacy_rights']
     st.session_state.consent_final_confirmation = consent_details['consent_final_confirm']
-    st.session_state.consent_zoom_interview = consent_details['consent_zoom_interview']  # 새로 추가
     st.session_state.gdpr_compliant = True
 
 
@@ -346,12 +372,11 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'Consent_Data_Storage',
                     'Consent_Privacy_Rights',
                     'Consent_Final_Confirm',
-                    'Consent_Zoom_Interview',
                     'GDPR_Compliant',
-                    'Learning_Duration',  # 새로 추가
-                    'Speaking_Confidence',  # 새로 추가
-                    'Session_Count',  # 참여한 세션 수
-                    'Last_Session',  # 마지막 참여 세션
+                    'Learning_Duration',
+                    'Speaking_Confidence',
+                    'Session_Count',
+                    'Last_Session',
                     'Notes'
                 ])
         
@@ -380,7 +405,6 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                 'consent_data_storage': True,
                 'consent_privacy_rights': True,
                 'consent_final_confirm': True,
-                'consent_zoom_interview': False
             }
         
         # 배경 정보 처리
@@ -400,7 +424,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
                     'Deletion_Requested', 'Consent_Participation', 'Consent_Audio_AI',
                     'Consent_Data_Storage', 'Consent_Privacy_Rights', 'Consent_Final_Confirm',
-                    'Consent_Zoom_Interview', 'GDPR_Compliant', 'Learning_Duration',
+                    'GDPR_Compliant', 'Learning_Duration',
                     'Speaking_Confidence', 'Session_Count', 'Last_Session', 'Notes'
                 ]
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -432,10 +456,9 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     consent_details.get('consent_data_storage', True),
                     consent_details.get('consent_privacy_rights', True),
                     consent_details.get('consent_final_confirm', True),
-                    consent_details.get('consent_zoom_interview', False),
                     'TRUE',
-                    background_details.get('learning_duration', ''),  # 새로 추가
-                    background_details.get('speaking_confidence', ''),  # 새로 추가
+                    background_details.get('learning_duration', ''),
+                    background_details.get('speaking_confidence', ''),
                     1,  # 첫 참여이므로 세션 수는 1
                     CURRENT_SESSION,  # 현재 세션
                     ''
@@ -504,59 +527,59 @@ def generate_consent_pdf(anonymous_id, consent_details, consent_timestamp):
 def _build_pdf_content(anonymous_id, consent_details, consent_timestamp, 
                       title_style, header_style, styles):
     """
-    PDF 내용 구성 헬퍼 함수
+    PDF 내용 구성 헬퍼 함수 (영한 병기)
     """
     story = []
     
-    # 제목
+    # 제목 (영한 병기)
     story.append(Paragraph("Research Participation Consent Form", title_style))
+    story.append(Paragraph("연구 참여 동의서", title_style))
     story.append(Paragraph("AI-Based Korean Speaking Feedback System Study", title_style))
+    story.append(Paragraph("AI 기반 한국어 말하기 피드백 시스템 연구", title_style))
     story.append(Spacer(1, 20))
     
-    # 연구 정보
-    story.append(Paragraph("Research Information", header_style))
+    # 연구 정보 (영한 병기)
+    story.append(Paragraph("Research Information / 연구 정보", header_style))
     research_info = """
-    <b>Principal Investigator:</b> Jeongyeon Kim<br/>
-    <b>Institution:</b> Ewha Womans University, Graduate School<br/>
-    <b>Contact:</b> pen0226@gmail.com<br/>
-    <b>Research Title:</b> Effectiveness of AI-Based Korean Speaking Feedback Systems<br/>
-    <b>Purpose:</b> To analyze the effectiveness of AI feedback for Korean language learning and contribute to future academic research including conference presentations and scholarly publications<br/>
+    <b>Principal Investigator / 연구책임자:</b> Jeongyeon Kim<br/>
+    <b>Institution / 소속기관:</b> Ewha Womans University, Graduate School / 이화여자대학교 대학원<br/>
+    <b>Contact / 연락처:</b> pen0226@gmail.com<br/>
+    <b>Research Title / 연구제목:</b> Effects of AI-Based Self-Feedback Systems on Korean Learners' Speaking Accuracy and Error Recognition / AI 기반 자가 피드백 시스템이 한국어 학습자의 말하기 정확성과 오류 인식에 미치는 영향<br/>
+    <b>Academic Use / 학술적 활용:</b> Master's thesis research, potential academic conference presentations, and possible scholarly journal publications / 석사논문 연구, 학술대회 발표 가능성, 학술지 게재 가능성<br/>
+    <b>Purpose / 연구 목적:</b> To improve AI feedback systems for Korean language education and help future students prepare for language placement interviews / 한국어 교육용 AI 피드백 시스템 개선 및 향후 학생들의 언어교육원 배치고사 준비 지원<br/>
     """
     story.append(Paragraph(research_info, styles['Normal']))
     story.append(Spacer(1, 15))
     
-    # 참여자 정보
-    story.append(Paragraph("Participant Information", header_style))
+    # 참여자 정보 (영한 병기)
+    story.append(Paragraph("Participant Information / 참여자 정보", header_style))
     participant_info = f"""
-    <b>Participant ID:</b> {anonymous_id}<br/>
-    <b>Consent Date:</b> {consent_timestamp}<br/>
-    <b>Consent Method:</b> Electronic Checkbox<br/>
+    <b>Participant ID / 참여자 ID:</b> {anonymous_id}<br/>
+    <b>Consent Date / 동의 날짜:</b> {consent_timestamp}<br/>
+    <b>Consent Method / 동의 방법:</b> Electronic Checkbox / 전자 체크박스<br/>
     """
     story.append(Paragraph(participant_info, styles['Normal']))
     story.append(Spacer(1, 15))
     
-    # 동의 항목 표
-    story.append(Paragraph("Consent Items", header_style))
+    # 동의 항목 표 (영한 병기)
+    story.append(Paragraph("Consent Items / 동의 항목", header_style))
     consent_data = [
-        ['Consent Item', 'Agreed', 'Description'],
-        ['Research Participation', 
+        ['Consent Item / 동의 항목', 'Agreed / 동의', 'Description / 설명'],
+        ['Research Participation / 연구 참여', 
          '✓' if consent_details.get('consent_participation') else '✗',
-         'Voluntary participation in the research study'],
-        ['Audio Recording & AI Processing', 
+         'Voluntary participation in the research study / 연구에 자발적 참여'],
+        ['Audio Recording & AI Processing / 음성 녹음 및 AI 처리', 
          '✓' if consent_details.get('consent_audio_ai') else '✗',
-         'Recording and analysis via international AI services'],
-        ['Data Storage & Research Use', 
+         'Recording and analysis via international AI services / 국제 AI 서비스를 통한 녹음 및 분석'],
+        ['Data Storage & Research Use / 데이터 저장 및 연구 활용', 
          '✓' if consent_details.get('consent_data_storage') else '✗',
-         'Encrypted storage for academic research including thesis, conferences, and publications'],
-        ['Privacy Rights Understanding', 
+         'Encrypted storage for academic research including thesis, conferences, and publications / 논문, 학회, 출판물 등 학술 연구를 위한 암호화된 저장'],
+        ['Privacy Rights Understanding / 개인정보 권리 이해', 
          '✓' if consent_details.get('consent_privacy_rights') else '✗',
-         'Understanding of data protection rights'],
-        ['Final Confirmation', 
+         'Understanding of data protection rights / 데이터 보호 권리에 대한 이해'],
+        ['Final Confirmation / 최종 확인', 
          '✓' if consent_details.get('consent_final_confirm') else '✗',
-         'Final confirmation of all consent items'],
-        ['Optional Zoom Interview', 
-         '✓' if consent_details.get('consent_zoom_interview') else '✗',
-         '15-minute optional interview for deeper feedback analysis']
+         'Final confirmation of all consent items / 모든 동의 항목에 대한 최종 확인'],
     ]
     
     consent_table = Table(consent_data, colWidths=[2.5*inch, 0.8*inch, 2.7*inch])
@@ -581,46 +604,48 @@ def _build_pdf_content(anonymous_id, consent_details, consent_timestamp,
 
 def _build_additional_pdf_sections(anonymous_id, styles, header_style, consent_timestamp):
     """
-    PDF 추가 섹션 구성
+    PDF 추가 섹션 구성 (영한 병기)
     """
     story = []
     
-    # GDPR 권리 안내
-    story.append(Paragraph("Your Rights (GDPR)", header_style))
+    # GDPR 권리 안내 (영한 병기)
+    story.append(Paragraph("Your Rights (GDPR) / 귀하의 권리 (GDPR)", header_style))
     rights_info = """
-    You have the following rights regarding your personal data:<br/>
-    • <b>Right to Access:</b> Request access to your data<br/>
-    • <b>Right to Rectification:</b> Correct inaccurate information<br/>
-    • <b>Right to Erasure:</b> Request deletion of your data<br/>
-    • <b>Right to Object:</b> Object to data processing<br/>
-    • <b>Right to Withdraw:</b> Withdraw consent at any time<br/>
+    You have the following rights regarding your personal data: / 개인정보와 관련하여 다음과 같은 권리를 가집니다:<br/>
+    • <b>Right to Access / 접근권:</b> Request access to your data / 본인 데이터 열람 요청<br/>
+    • <b>Right to Rectification / 정정권:</b> Correct inaccurate information / 부정확한 정보 수정<br/>
+    • <b>Right to Erasure / 삭제권:</b> Request deletion of your data / 데이터 삭제 요청<br/>
+    • <b>Right to Object / 이의제기권:</b> Object to data processing / 데이터 처리에 대한 이의제기<br/>
+    • <b>Right to Withdraw / 철회권:</b> Withdraw consent at any time / 언제든지 동의 철회<br/>
     """
     story.append(Paragraph(rights_info, styles['Normal']))
     story.append(Spacer(1, 15))
     
-    # 연락처 정보
-    story.append(Paragraph("Contact for Data Rights", header_style))
+    # 연락처 정보 (영한 병기)
+    story.append(Paragraph("Contact for Data Rights / 데이터 권리 관련 연락처", header_style))
     contact_info = f"""
-    <b>To exercise your rights or withdraw consent:</b><br/>
+    <b>To exercise your rights or withdraw consent / 권리 행사 또는 동의 철회:</b><br/>
     Email: pen0226@gmail.com<br/>
     Subject: Data Rights Request - {anonymous_id}<br/>
     <br/>
-    <b>Ewha Womans University Research Ethics Center:</b><br/>
+    <b>Ewha Womans University Research Ethics Center / 이화여자대학교 연구윤리센터:</b><br/>
     Email: research@ewha.ac.kr<br/>
     Phone: 02-3277-7152<br/>
     """
     story.append(Paragraph(contact_info, styles['Normal']))
     story.append(Spacer(1, 20))
     
-    # 서명 섹션
-    story.append(Paragraph("Electronic Consent Confirmation", header_style))
+    # 서명 섹션 (영한 병기)
+    story.append(Paragraph("Electronic Consent Confirmation / 전자적 동의 확인", header_style))
     signature_info = f"""
     By checking all consent items above, the participant has provided electronic consent 
     to participate in this research study in accordance with GDPR and Korean research ethics guidelines.<br/>
+    위의 모든 동의 항목을 체크함으로써 참여자는 GDPR 및 한국 연구윤리 가이드라인에 따라 
+    본 연구 참여에 대한 전자적 동의를 제공하였습니다.<br/>
     <br/>
-    <b>Consent completed:</b> {consent_timestamp}<br/>
-    <b>Participant ID:</b> {anonymous_id}<br/>
-    <b>Method:</b> Electronic checkbox confirmation<br/>
+    <b>Consent completed / 동의 완료:</b> {consent_timestamp}<br/>
+    <b>Participant ID / 참여자 ID:</b> {anonymous_id}<br/>
+    <b>Method / 방법:</b> Electronic checkbox confirmation / 전자 체크박스 확인<br/>
     """
     story.append(Paragraph(signature_info, styles['Normal']))
     
@@ -662,25 +687,28 @@ def handle_nickname_input_with_consent():
     if not consent_completed:
         return False
     
-    # 닉네임 입력
+    # 닉네임 입력 - 더 친근하게
     st.markdown("---")
-    st.markdown("### 👤 Step 1: Enter Your Nickname")
-    st.write("Please enter a nickname to identify your experiment session.")
+    st.markdown("""
+    ### 👤 Choose Your Nickname
     
-    # 중요 안내 강조
-    st.info("📌 Use the **SAME NICKNAME** in Session 1 and Session 2 to link your data.")
+    *Pick any nickname you like - this helps connect your two practice sessions!*
+    """)
     
-    # 덜 중요한 프라이버시 안내는 caption 또는 tooltip으로 분리
+    # 친근한 안내
+    st.info("💡 **Important:** Use the **same nickname** for both Session 1 and Session 2!")
+    
     nickname = st.text_input(
-        "Nickname:",
-        placeholder="e.g., Student123, MyNickname, etc.",
-        help="Your nickname is only used for linking your answers. All data is stored anonymously."
+        "Your nickname:",
+        placeholder="e.g., KoreanLearner123, MyNickname, Student_A, etc.",
+        help="Your nickname is just for linking your sessions. Your real identity stays private!"
     )
-    st.caption("🔒 Nickname is for linking only. Your data will be stored anonymously.")
+    
+    st.caption("🔒 Don't worry - your nickname becomes an anonymous ID like 'Student01' in the records.")
     
     # 닉네임이 입력되지 않으면 배경 정보 섹션을 표시하지 않음
     if not nickname.strip():
-        st.warning("⚠️ Please enter a nickname to continue")
+        st.warning("👆 Please enter a nickname to continue")
         return False
     
     # 배경 정보 수집 섹션
@@ -692,7 +720,9 @@ def handle_nickname_input_with_consent():
     
     # 모든 정보가 입력되면 시작 버튼 활성화
     st.markdown("---")
-    if st.button("🚀 Start Experiment", type="primary"):
+    st.markdown("### 🎉 Ready to Start Your Korean Practice?")
+    
+    if st.button("🚀 Let's Start!", type="primary", use_container_width=True):
         return _process_consent_completion(nickname.strip(), consent_details, background_details)
     
     return False
@@ -712,7 +742,7 @@ def _process_consent_completion(nickname, consent_details, background_details):
     save_background_to_session(background_details)
     
     # 동의서 PDF 생성 (ZIP에 포함될 예정)
-    with st.spinner("📄 Preparing your session..."):
+    with st.spinner("🎯 Setting up your Korean practice session..."):
         pdf_filename, pdf_result = generate_consent_pdf(
             anonymous_id, 
             consent_details, 
@@ -722,15 +752,15 @@ def _process_consent_completion(nickname, consent_details, background_details):
         if pdf_filename:
             st.session_state.consent_pdf = pdf_filename
             
-            # ✅ GCS 업로드는 data_io.py의 ZIP 프로세스에서 처리
-            st.success("✅ Consent completed successfully!")
-            st.info("📦 Your consent form will be included in the secure data backup")
+            # 성공 메시지 - 더 친근하고 격려적으로
+            st.success("🎉 Perfect! You're all set up!")
+            st.info("📦 Your consent form is safely stored and will be included in the secure backup")
             
             # 사용자 다운로드 옵션은 여전히 제공
             display_consent_pdf_download(pdf_filename, anonymous_id)
         else:
-            st.success("✅ Consent completed successfully!")
-            st.info("ℹ️ Your consent has been recorded")
+            st.success("🎉 Great! You're ready to start practicing Korean!")
+            st.info("✅ Your consent has been recorded securely")
     
     # 세션에 익명 ID 저장
     st.session_state.session_id = anonymous_id
