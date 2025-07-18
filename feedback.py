@@ -114,9 +114,9 @@ def get_research_scores(transcript, grammar_issues, duration_s):
 
 def get_student_feedback(transcript, research_scores, original_feedback):
     """
-    학생용 격려적 피드백 생성
-    - 연구용 점수를 기반으로 하되 격려적인 메시지로 변환
-    - Grammar, Length, Content, Sentence 등 모든 요소 고려
+    학생용 격려적 피드백 생성 (원본 GPT 피드백 유지)
+    - 원본 GPT 피드백을 그대로 유지하여 교육적 가치 보존
+    - 연구용 점수는 백그라운드에서만 계산
     
     Args:
         transcript: STT 전사 텍스트
@@ -124,7 +124,7 @@ def get_student_feedback(transcript, research_scores, original_feedback):
         original_feedback: GPT가 생성한 원본 피드백
         
     Returns:
-        dict: 학생용 피드백 데이터
+        dict: 학생용 피드백 데이터 (원본 GPT 피드백 유지)
     """
     # 기본값 처리
     if not original_feedback or not isinstance(original_feedback, dict):
@@ -140,36 +140,22 @@ def get_student_feedback(transcript, research_scores, original_feedback):
             "error_count": 3
         }
     
-    # 연구 점수에서 기본 정보 추출
-    word_count = research_scores.get("word_count", 0)
-    error_rate = research_scores.get("error_rate", 0)
-    duration_s = research_scores.get("duration_s", 0)
-    accuracy_score = research_scores.get("accuracy_score", 5)
-    fluency_score = research_scores.get("fluency_score", 5)
+    # 🎯 원본 GPT 피드백을 그대로 반환 (교육적 가치 유지)
+    # 연구용 점수는 이미 st.session_state.research_scores에 저장되어 있음
     
-    # 종합 점수 계산 (정확성과 유창성의 평균)
-    interview_readiness_score = round((accuracy_score + fluency_score) / 2, 1)
-    
-    # 격려적인 피드백 메시지 생성
-    feedback_message = generate_encouraging_feedback_message(
-        word_count, error_rate, duration_s, interview_readiness_score
-    )
-    
-    # 개선 영역 제안
-    improvement_areas = generate_improvement_areas(research_scores, original_feedback)
-    
-    # 학생용 피드백 구성 (원본 피드백 유지하되 점수만 조정)
+    # 원본 피드백 그대로 사용 (GPT가 생성한 교육적 피드백 유지)
     student_feedback = original_feedback.copy()
     
-    # 연구 점수 기반으로 학생용 필드 업데이트
+    # 연구용 메타데이터만 추가 (학생에게는 보이지 않음)
     student_feedback.update({
-        "interview_readiness_score": interview_readiness_score,
-        "interview_readiness_reason": feedback_message,
-        "encouragement_message": generate_encouragement_message(interview_readiness_score),
-        "improvement_areas": improvement_areas,
-        "speaking_duration_feedback": generate_duration_feedback(duration_s),
-        "accuracy_feedback": generate_accuracy_feedback(error_rate),
-        "fluency_feedback": generate_fluency_feedback(word_count)
+        "_research_metadata": {
+            "accuracy_score": research_scores.get("accuracy_score", 0),
+            "fluency_score": research_scores.get("fluency_score", 0),
+            "error_rate": research_scores.get("error_rate", 0),
+            "word_count": research_scores.get("word_count", 0),
+            "duration_s": research_scores.get("duration_s", 0),
+            "dual_evaluation_applied": True
+        }
     })
     
     return student_feedback
@@ -591,7 +577,7 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
                 # 4. 디버그 정보 저장
                 st.session_state.gpt_debug_info = debug_info
                 
-                st.success("✅ AI feedback ready! (Dual evaluation system)")
+                st.success("✅ AI feedback ready!")
                 return student_feedback
             else:
                 raise ValueError("Missing required fields")

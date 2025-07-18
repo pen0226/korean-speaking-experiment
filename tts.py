@@ -245,7 +245,7 @@ def generate_model_audio(text):
 
 def audio_card(audio_data, title, description=""):
     """
-    통일된 오디오 카드 컴포넌트
+    통일된 오디오 카드 컴포넌트 (가운데 정렬 + 큰 글씨)
     
     Args:
         audio_data: 오디오 바이트 데이터
@@ -255,7 +255,7 @@ def audio_card(audio_data, title, description=""):
     if audio_data:
         st.markdown(
             f"""<div style='padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; margin: 5px 0; background-color: #ffffff;'>
-            <h5 style='margin: 0 0 10px 0; color: #374151; font-size: 14px;'>{title}</h5>
+            <h5 style='margin: 0 0 10px 0; color: #374151; font-size: 16px; text-align: center;'>{title}</h5>
             </div>""",
             unsafe_allow_html=True
         )
