@@ -29,46 +29,39 @@ def enhanced_consent_section():
         tuple: (consent_completed, consent_details)
     """
     
-    # 친근한 설명으로 시작
-    st.markdown("""
-    ### 🎯 What You'll Get From This Study
-    
-    **🎁 For You:**
-    - Personalized AI feedback on your Korean speaking  
-    - AI pronunciation examples to practice with  
-    - Quick tips for your Language Education Center interview  
-    - A free practice session—just like a mini Korean tutor
-    
-    **📚 For Research:**
-    - Improve AI tools for Korean learners  
-    - Support a master's thesis project  
-    - Help shape future research and publications
-    """)
-    
-    # 탭으로 정보 구성 (덜 overwhelming하게)
-    tab1, tab2, tab3 = st.tabs(["🎮 What You'll Experience", "🔒 Your Privacy", "📞 Contact Info"])
+    # 탭으로 정보 구성 (5개 탭, Privacy 3번째로 배치)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎮 Practice Flow", "🎁 What You'll Get", "🔒 Your Privacy", "🛠️ AI Tools Used", "📞 Contact Info"])
     
     with tab1:
         st.markdown("""
-        ### 🎮 Practice Flow 
-        - 2 sessions, each ~15-20 mins
-        - Sessions held about a week apart       
-        1. **First recording**
-        2. **Get AI feedback**
-        3. **Second recording**
-        4. **Quick survey**           
+        ### 🎮 Practice Flow
         
-        **Optional Zoom Interview** 💻 
-        - 15-minute call to discuss your experience  
-        - Audio recorded (video is optional) 
+        **📅 2 Sessions** (~15-20 mins each, 1 week apart)
         
-        **AI Tools Used:** 🛠️
-        - **OpenAI Whisper** for transcription  
-        - **GPT-4** for feedback  
-        - **ElevenLabs** for pronunciation samples
+        **🔄 Each Session:**
+        
+        🎙️ First Record → 🤖 AI Feedback → 🎙️ Second Record → 📝 Survey
+        
+        **💻 Optional:** 15-min Zoom chat about your experience
         """)
     
     with tab2:
+        st.markdown("""
+        ### 🎯 What You'll Get From This Study
+        
+        **🎁 For You:**
+        - Personalized AI feedback on your Korean speaking
+        - AI pronunciation examples to practice with
+        - Quick tips for your Language Education Center interview
+        - A free practice session—just like a mini Korean tutor
+        
+        **📚 For Research:**
+        - Improve AI tools for Korean learners
+        - Support a master's thesis project
+        - Help shape future research and publications
+        """)
+    
+    with tab3:
         st.markdown("""
         ### 🔒 Your Data is Kept Safe & You Stay In Control
         
@@ -89,10 +82,18 @@ def enhanced_consent_section():
         - ✏️ **Request corrections** if you spot any errors  
         - 🗑️ **Withdraw at any time** — if before analysis starts, your data will be deleted; afterward, only anonymized results remain  
         - 📤 **Request a copy of your data** after the study ends 
-    
         """)
     
-    with tab3:
+    with tab4:
+        st.markdown("""
+        ### 🛠️ AI Tools Used:
+        
+        - **OpenAI Whisper** for transcription
+        - **GPT-4** for feedback
+        - **ElevenLabs** for pronunciation samples
+        """)
+    
+    with tab5:
         st.markdown("""
         ### 📞 Questions?
         
@@ -104,16 +105,11 @@ def enhanced_consent_section():
         - **Ewha Womans University Research Ethics Center**
         - **Email:** research@ewha.ac.kr
         - **Phone:** 02-3277-7152
-        
         """)
     
     # 간단하고 친근한 동의 체크박스
     st.markdown("---")
-    st.markdown("""
-    ### 🤝 Ready to Start? Just Check These Boxes!
-    
-    *Don't worry - these are just to make sure you understand what the study involves.*
-    """)
+    st.markdown("### 🤝 Ready to Start? Just Check These Boxes!")
     
     # 시각적으로 더 친근한 체크박스 (3개로 간소화)
     col1, col2 = st.columns([1, 4])
@@ -124,7 +120,7 @@ def enhanced_consent_section():
         )
         
         consent_processing = st.checkbox(
-            "🎙️ **I allow voice recording & AI feedback (Whisper→GPT→TTS).**"
+            "🎙️ **I allow voice recording & AI feedback (Whisper→GPT→ElevenLabs).**"
         )
         
         consent_data_rights = st.checkbox(
@@ -161,10 +157,10 @@ def enhanced_consent_section():
             
             return True, consent_details
         else:
-            st.info("👆 Just check the final box when you're ready to start!")
+            st.warning("👆 Just check the final box when you're ready to start!")
             return False, None
     else:
-        st.info("📝 Please check all the boxes above to continue - they help follow research guidelines!")
+        st.warning("📝 Please check all the boxes above to continue")
         return False, None
 
 
@@ -177,8 +173,6 @@ def collect_background_information():
     """
     st.markdown("""
     ### 📊 Tell About Your Korean Learning Journey
-    
-    *This helps provide better feedback!*
     """)
     
     # 학습 기간 질문 - 더 친근하게
@@ -211,7 +205,7 @@ def collect_background_information():
         }
         return True, background_details
     else:
-        st.info("📝 Please answer both questions so the feedback can be personalized!")
+        st.caption("📝 Please answer both questions so the feedback can be personalized!")
         return False, None
 
 
@@ -663,12 +657,10 @@ def handle_nickname_input_with_consent():
     st.markdown("---")
     st.markdown("""
     ### 👤 Choose Your Nickname
-    
-    *Pick any nickname you like - this helps connect your two practice sessions!*
     """)
     
     # 친근한 안내
-    st.info("💡 **Important:** Use the **same nickname** for both Session 1 and Session 2!")
+    st.info("💡 **Important:** Use the **same nickname** for both Session 1 and Session 2! - this helps connect your two practice sessions!")
     
     nickname = st.text_input(
         "Your nickname:",
@@ -676,7 +668,7 @@ def handle_nickname_input_with_consent():
         help="Your nickname is just for linking your sessions. Your real identity stays private!"
     )
     
-    st.caption("🔒 Don't worry - your nickname becomes an anonymous ID like 'Student01' in the records.")
+    st.caption("🔒 Your nickname becomes an anonymous ID like 'Student01' in the records.")
     
     # 닉네임이 입력되지 않으면 배경 정보 섹션을 표시하지 않음
     if not nickname.strip():
