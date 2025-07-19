@@ -565,7 +565,7 @@ def _build_html_consent_content(anonymous_id, consent_details, consent_timestamp
             </tr>
             <tr>
                 <th>Institution / 소속기관</th>
-                <td>Ewha Womans University, Graduate School / 이화여자대학교 대학원</td>
+                <td>Ewha Womans University, Graduate School of International Studies / 이화여자대학교 국제대학원</td>
             </tr>
             <tr>
                 <th>Contact / 연락처</th>
@@ -626,7 +626,7 @@ def _build_html_consent_content(anonymous_id, consent_details, consent_timestamp
                 <tr>
                     <td>Voice Recording & AI Processing<br><strong>음성 녹음 및 AI 처리</strong></td>
                     <td class="agreed">{processing_check}</td>
-                    <td>Voice recording and AI feedback processing (Whisper→GPT→TTS)<br><strong>음성 녹음 및 AI 피드백 처리 (Whisper→GPT→TTS)</strong></td>
+                    <td>Voice recording and AI feedback processing (Whisper→GPT→Elevenlabs)<br><strong>음성 녹음 및 AI 피드백 처리 (Whisper→GPT→Elevenlabs)</strong></td>
                 </tr>
                 <tr>
                     <td>Data Use & Rights Understanding<br><strong>데이터 사용 및 권리 이해</strong></td>
