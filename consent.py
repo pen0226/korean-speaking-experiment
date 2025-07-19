@@ -1,6 +1,7 @@
 """
 consent.py
 연구 참여 동의서 처리 및 HTML 동의서 생성 모듈 (학생 친화적 버전 - GDPR 준수)
+변수명 통일: consent_pdf → consent_file
 """
 
 import streamlit as st
@@ -770,7 +771,7 @@ def handle_nickname_input_with_consent():
 
 def _process_consent_completion(nickname, consent_details, background_details):
     """
-    동의 완료 처리
+    동의 완료 처리 (HTML 파일 저장으로 수정)
     """
     # 익명 ID 생성
     anonymous_id = find_or_create_anonymous_id(nickname)
@@ -786,7 +787,9 @@ def _process_consent_completion(nickname, consent_details, background_details):
         )
         
         if html_filename:
-            st.session_state.consent_pdf = html_filename  # 기존 변수명 유지 (호환성)
+            # 🔧 수정: consent_pdf → consent_file로 변경
+            st.session_state.consent_file = html_filename
+            st.session_state.consent_file_type = "html"  # 파일 형식 명시
             st.success("🎉 Perfect! You're all set up!")
             st.info("📦 Your consent form is safely stored and will be included in the secure backup")
             display_consent_html_download(html_filename, anonymous_id)
