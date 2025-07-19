@@ -1,6 +1,6 @@
 """
 consent.py
-연구 참여 동의서 처리 및 PDF 생성 모듈 (학생 친화적 버전 - GDPR 준수 + 한글 PDF 지원)
+연구 참여 동의서 처리 및 HTML 동의서 생성 모듈 (학생 친화적 버전 - GDPR 준수)
 """
 
 import streamlit as st
@@ -8,88 +8,6 @@ import csv
 import os
 from datetime import datetime, timedelta
 from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION
-
-# ReportLab import with Korean font support
-try:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib import colors
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    REPORTLAB_AVAILABLE = True
-except ImportError:
-    REPORTLAB_AVAILABLE = False
-
-
-def register_korean_fonts():
-    """
-    한글 폰트 등록 (윈도우/맥 지원)
-    
-    Returns:
-        str: 등록된 한글 폰트명
-    """
-    try:
-        import platform
-        system = platform.system()
-        
-        if system == "Windows":
-            font_path = "C:/Windows/Fonts/malgun.ttf"  # 맑은 고딕
-        elif system == "Darwin":  # macOS
-            font_path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"  # 애플 고딕
-        else:
-            return 'Helvetica'  # 기타 OS는 기본 폰트
-        
-        # 폰트 등록 시도
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont('KoreanFont', font_path))
-            return 'KoreanFont'
-        else:
-            return 'Helvetica'
-            
-    except Exception:
-        return 'Helvetica'
-
-
-def get_korean_styles(korean_font):
-    """
-    한글 지원 스타일 생성 (간소화 버전)
-    
-    Args:
-        korean_font: 등록된 한글 폰트명
-        
-    Returns:
-        dict: 스타일 딕셔너리
-    """
-    styles = getSampleStyleSheet()
-    
-    return {
-        'KoreanTitle': ParagraphStyle(
-            'KoreanTitle',
-            parent=styles['Heading1'],
-            fontName=korean_font,
-            fontSize=16,
-            spaceAfter=20,
-            alignment=1
-        ),
-        
-        'KoreanHeader': ParagraphStyle(
-            'KoreanHeader',
-            parent=styles['Heading2'],
-            fontName=korean_font,
-            fontSize=12,
-            spaceAfter=10
-        ),
-        
-        'KoreanNormal': ParagraphStyle(
-            'KoreanNormal',
-            parent=styles['Normal'],
-            fontName=korean_font,
-            fontSize=10,
-            spaceAfter=6
-        )
-    }
 
 
 def enhanced_consent_section():
@@ -463,9 +381,9 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         return False
 
 
-def generate_consent_pdf(anonymous_id, consent_details, consent_timestamp):
+def generate_consent_html(anonymous_id, consent_details, consent_timestamp):
     """
-    한글 지원 참여자 동의서 PDF 생성
+    한글 완벽 지원 HTML 동의서 생성
     
     Args:
         anonymous_id: 익명 ID
@@ -473,150 +391,336 @@ def generate_consent_pdf(anonymous_id, consent_details, consent_timestamp):
         consent_timestamp: 동의 시간
         
     Returns:
-        tuple: (pdf_filename, success_status)
+        tuple: (html_filename, success_status)
     """
-    if not REPORTLAB_AVAILABLE:
-        return None, "reportlab not installed"
-    
     try:
-        korean_font = register_korean_fonts()
-        pdf_filename = os.path.join(FOLDERS["data"], f"{anonymous_id}_consent.pdf")
+        html_filename = os.path.join(FOLDERS["data"], f"{anonymous_id}_consent.html")
         
-        doc = SimpleDocTemplate(pdf_filename, pagesize=A4, topMargin=1*inch)
-        korean_styles = get_korean_styles(korean_font)
+        # HTML 콘텐츠 생성
+        html_content = _build_html_consent_content(anonymous_id, consent_details, consent_timestamp)
         
-        story = _build_korean_pdf_content(anonymous_id, consent_details, consent_timestamp, korean_styles)
-        doc.build(story)
+        # HTML 파일 저장
+        with open(html_filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
         
-        return pdf_filename, True
+        return html_filename, True
         
     except Exception as e:
-        return None, f"PDF generation failed: {str(e)}"
+        return None, f"HTML generation failed: {str(e)}"
 
 
-def _build_korean_pdf_content(anonymous_id, consent_details, consent_timestamp, styles):
+def _build_html_consent_content(anonymous_id, consent_details, consent_timestamp):
     """
-    한글 지원 PDF 내용 구성
+    HTML 동의서 내용 구성 (한글 완벽 지원)
     """
-    story = []
     
-    # 제목
-    story.append(Paragraph("Research Participation Consent Form", styles['KoreanTitle']))
-    story.append(Paragraph("연구 참여 동의서", styles['KoreanTitle']))
-    story.append(Paragraph("AI-Based Korean Speaking Feedback System Study", styles['KoreanTitle']))
-    story.append(Paragraph("AI 기반 한국어 말하기 피드백 시스템 연구", styles['KoreanTitle']))
-    story.append(Spacer(1, 20))
+    # 동의 항목들 체크 표시
+    participation_check = "✓" if consent_details.get('consent_participation') else "✗"
+    processing_check = "✓" if consent_details.get('consent_processing') else "✗"
+    data_rights_check = "✓" if consent_details.get('consent_data_rights') else "✗"
+    final_check = "✓" if consent_details.get('consent_final_confirm') else "✗"
     
-    # 연구 정보
-    story.append(Paragraph("Research Information / 연구 정보", styles['KoreanHeader']))
-    research_info = """
-    <b>Principal Investigator / 연구책임자:</b> Jeongyeon Kim<br/>
-    <b>Institution / 소속기관:</b> Ewha Womans University, Graduate School / 이화여자대학교 대학원<br/>
-    <b>Contact / 연락처:</b> pen0226@gmail.com<br/>
-    <b>Research Title / 연구제목:</b> Effects of AI-Based Self-Feedback Systems on Korean Learners' Speaking Accuracy and Error Recognition / AI 기반 자가 피드백 시스템이 한국어 학습자의 말하기 정확성과 오류 인식에 미치는 영향<br/>
-    <b>Academic Use / 학술적 활용:</b> Master's thesis research, potential academic conference presentations, and possible scholarly journal publications / 석사논문 연구, 학술대회 발표 가능성, 학술지 게재 가능성<br/>
-    <b>Purpose / 연구 목적:</b> To improve AI feedback systems for Korean language education and help future students prepare for language placement interviews / 한국어 교육용 AI 피드백 시스템 개선 및 향후 학생들의 언어교육원 배치고사 준비 지원<br/>
-    """
-    story.append(Paragraph(research_info, styles['KoreanNormal']))
-    story.append(Spacer(1, 15))
+    html_content = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구 참여 동의서 - Research Participation Consent Form</title>
+    <style>
+        body {{
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            color: #333;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #0369a1;
+            padding-bottom: 20px;
+        }}
+        .title {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #0369a1;
+            margin-bottom: 10px;
+        }}
+        .subtitle {{
+            font-size: 18px;
+            color: #666;
+        }}
+        .section {{
+            margin-bottom: 30px;
+        }}
+        .section-title {{
+            font-size: 18px;
+            font-weight: bold;
+            color: #0369a1;
+            border-left: 4px solid #0369a1;
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }}
+        .info-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }}
+        .info-table th, .info-table td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }}
+        .info-table th {{
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }}
+        .consent-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }}
+        .consent-table th, .consent-table td {{
+            border: 1px solid #333;
+            padding: 15px 10px;
+            text-align: left;
+            vertical-align: top;
+        }}
+        .consent-table th {{
+            background-color: #666;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }}
+        .consent-table .agreed {{
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: #059669;
+        }}
+        .rights-list {{
+            list-style: none;
+            padding-left: 0;
+        }}
+        .rights-list li {{
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }}
+        .rights-list li:before {{
+            content: "•";
+            color: #0369a1;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }}
+        .contact-info {{
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #0369a1;
+        }}
+        .signature-section {{
+            background-color: #f0fdf4;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #059669;
+            margin-top: 30px;
+        }}
+        .print-note {{
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }}
+        @media print {{
+            .print-note {{ display: none; }}
+            body {{ margin: 0; padding: 20px; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="print-note">
+        <strong>💡 사용 방법:</strong> 브라우저에서 Ctrl+P (또는 Cmd+P)를 눌러 PDF로 저장하실 수 있습니다.<br>
+        <strong>💡 How to use:</strong> Press Ctrl+P (or Cmd+P) in your browser to save as PDF.
+    </div>
+
+    <div class="header">
+        <div class="title">Research Participation Consent Form</div>
+        <div class="title">연구 참여 동의서</div>
+        <div class="subtitle">AI-Based Korean Speaking Feedback System Study</div>
+        <div class="subtitle">AI 기반 한국어 말하기 피드백 시스템 연구</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Research Information / 연구 정보</div>
+        <table class="info-table">
+            <tr>
+                <th>Principal Investigator / 연구책임자</th>
+                <td>Jeongyeon Kim / 김정연</td>
+            </tr>
+            <tr>
+                <th>Institution / 소속기관</th>
+                <td>Ewha Womans University, Graduate School / 이화여자대학교 대학원</td>
+            </tr>
+            <tr>
+                <th>Contact / 연락처</th>
+                <td>pen0226@gmail.com</td>
+            </tr>
+            <tr>
+                <th>Research Title / 연구제목</th>
+                <td>Effects of AI-Based Self-Feedback Systems on Korean Learners' Speaking Accuracy and Error Recognition<br>
+                AI 기반 자가 피드백 시스템이 한국어 학습자의 말하기 정확성과 오류 인식에 미치는 영향</td>
+            </tr>
+            <tr>
+                <th>Academic Use / 학술적 활용</th>
+                <td>Master's thesis research, potential academic conference presentations, and possible scholarly journal publications<br>
+                석사논문 연구, 학술대회 발표 가능성, 학술지 게재 가능성</td>
+            </tr>
+            <tr>
+                <th>Purpose / 연구 목적</th>
+                <td>To improve AI feedback systems for Korean language education and help future students prepare for language placement interviews<br>
+                한국어 교육용 AI 피드백 시스템 개선 및 향후 학생들의 언어교육원 배치고사 준비 지원</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Participant Information / 참여자 정보</div>
+        <table class="info-table">
+            <tr>
+                <th>Participant ID / 참여자 ID</th>
+                <td>{anonymous_id}</td>
+            </tr>
+            <tr>
+                <th>Consent Date / 동의 날짜</th>
+                <td>{consent_timestamp}</td>
+            </tr>
+            <tr>
+                <th>Consent Method / 동의 방법</th>
+                <td>Electronic Checkbox / 전자 체크박스</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Consent Items / 동의 항목</div>
+        <table class="consent-table">
+            <thead>
+                <tr>
+                    <th>Consent Item / 동의 항목</th>
+                    <th>Agreed<br>동의</th>
+                    <th>Description / 설명</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Research Participation<br><strong>연구 참여</strong></td>
+                    <td class="agreed">{participation_check}</td>
+                    <td>Voluntary participation in the research study<br><strong>연구에 자발적 참여</strong></td>
+                </tr>
+                <tr>
+                    <td>Voice Recording & AI Processing<br><strong>음성 녹음 및 AI 처리</strong></td>
+                    <td class="agreed">{processing_check}</td>
+                    <td>Voice recording and AI feedback processing (Whisper→GPT→TTS)<br><strong>음성 녹음 및 AI 피드백 처리 (Whisper→GPT→TTS)</strong></td>
+                </tr>
+                <tr>
+                    <td>Data Use & Rights Understanding<br><strong>데이터 사용 및 권리 이해</strong></td>
+                    <td class="agreed">{data_rights_check}</td>
+                    <td>Anonymous data use for research and understanding of withdrawal rights<br><strong>연구를 위한 익명 데이터 사용 및 철회 권리 이해</strong></td>
+                </tr>
+                <tr>
+                    <td>Final Confirmation<br><strong>최종 확인</strong></td>
+                    <td class="agreed">{final_check}</td>
+                    <td>Final confirmation of all consent items<br><strong>모든 동의 항목에 대한 최종 확인</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Your Rights (GDPR) / 귀하의 권리 (GDPR)</div>
+        <p>You have the following rights regarding your personal data: / <strong>개인정보와 관련하여 다음과 같은 권리를 가집니다:</strong></p>
+        <ul class="rights-list">
+            <li><strong>Right to Access / 접근권:</strong> Request access to your data / 본인 데이터 열람 요청</li>
+            <li><strong>Right to Rectification / 정정권:</strong> Correct inaccurate information / 부정확한 정보 수정</li>
+            <li><strong>Right to Erasure / 삭제권:</strong> Request deletion of your data / 데이터 삭제 요청</li>
+            <li><strong>Right to Object / 이의제기권:</strong> Object to data processing / 데이터 처리에 대한 이의제기</li>
+            <li><strong>Right to Withdraw / 철회권:</strong> Withdraw consent at any time / 언제든지 동의 철회</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Contact for Data Rights / 데이터 권리 관련 연락처</div>
+        <div class="contact-info">
+            <p><strong>To exercise your rights or withdraw consent / 권리 행사 또는 동의 철회:</strong></p>
+            <p>📧 <strong>Email:</strong> pen0226@gmail.com<br>
+            📋 <strong>Subject:</strong> Data Rights Request - {anonymous_id}</p>
+            
+            <p><strong>Ewha Womans University Research Ethics Center / 이화여자대학교 연구윤리센터:</strong></p>
+            <p>📧 <strong>Email:</strong> research@ewha.ac.kr<br>
+            📞 <strong>Phone:</strong> 02-3277-7152</p>
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="section-title">Electronic Consent Confirmation / 전자적 동의 확인</div>
+        <p>By checking all consent items above, the participant has provided electronic consent to participate in this research study in accordance with GDPR and Korean research ethics guidelines.</p>
+        <p><strong>위의 모든 동의 항목을 체크함으로써 참여자는 GDPR 및 한국 연구윤리 가이드라인에 따라 본 연구 참여에 대한 전자적 동의를 제공하였습니다.</strong></p>
+        
+        <table class="info-table" style="margin-top: 20px;">
+            <tr>
+                <th>Consent completed / 동의 완료</th>
+                <td>{consent_timestamp}</td>
+            </tr>
+            <tr>
+                <th>Participant ID / 참여자 ID</th>
+                <td>{anonymous_id}</td>
+            </tr>
+            <tr>
+                <th>Method / 방법</th>
+                <td>Electronic checkbox confirmation / 전자 체크박스 확인</td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
+        <p>Generated by Korean Speaking Research System / 한국어 말하기 연구 시스템에서 생성됨</p>
+        <p>For research inquiries: pen0226@gmail.com</p>
+    </div>
+</body>
+</html>"""
     
-    # 참여자 정보
-    story.append(Paragraph("Participant Information / 참여자 정보", styles['KoreanHeader']))
-    participant_info = f"""
-    <b>Participant ID / 참여자 ID:</b> {anonymous_id}<br/>
-    <b>Consent Date / 동의 날짜:</b> {consent_timestamp}<br/>
-    <b>Consent Method / 동의 방법:</b> Electronic Checkbox / 전자 체크박스<br/>
-    """
-    story.append(Paragraph(participant_info, styles['KoreanNormal']))
-    story.append(Spacer(1, 15))
-    
-    # 동의 항목 표
-    story.append(Paragraph("Consent Items / 동의 항목", styles['KoreanHeader']))
-    consent_data = [
-        ['Consent Item / 동의 항목', 'Agreed / 동의', 'Description / 설명'],
-        ['Research Participation\n연구 참여', 
-         '✓' if consent_details.get('consent_participation') else '✗',
-         'Voluntary participation\n자발적 참여'],
-        ['Voice Recording & AI Processing\n음성 녹음 및 AI 처리', 
-         '✓' if consent_details.get('consent_processing') else '✗',
-         'Voice recording and AI feedback\n음성 녹음 및 AI 피드백'],
-        ['Data Use & Rights Understanding\n데이터 사용 및 권리 이해', 
-         '✓' if consent_details.get('consent_data_rights') else '✗',
-         'Anonymous data use for research\n연구용 익명 데이터 사용'],
-        ['Final Confirmation\n최종 확인', 
-         '✓' if consent_details.get('consent_final_confirm') else '✗',
-         'Final confirmation\n최종 확인'],
-    ]
-    
-    consent_table = Table(consent_data, colWidths=[2.5*inch, 0.8*inch, 2.7*inch])
-    consent_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, -1), styles['KoreanNormal'].fontName),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP')
-    ]))
-    story.append(consent_table)
-    story.append(Spacer(1, 20))
-    
-    # GDPR 권리 안내
-    story.append(Paragraph("Your Rights (GDPR) / 귀하의 권리 (GDPR)", styles['KoreanHeader']))
-    rights_info = """
-    You have the following rights: / 다음과 같은 권리를 가집니다:<br/>
-    • <b>Right to Access / 접근권:</b> Request access to your data / 데이터 열람 요청<br/>
-    • <b>Right to Rectification / 정정권:</b> Correct inaccurate information / 정보 수정<br/>
-    • <b>Right to Erasure / 삭제권:</b> Request deletion of your data / 데이터 삭제 요청<br/>
-    • <b>Right to Withdraw / 철회권:</b> Withdraw consent at any time / 동의 철회<br/>
-    """
-    story.append(Paragraph(rights_info, styles['KoreanNormal']))
-    story.append(Spacer(1, 15))
-    
-    # 연락처 정보
-    story.append(Paragraph("Contact / 연락처", styles['KoreanHeader']))
-    contact_info = f"""
-    <b>Researcher / 연구자:</b> pen0226@gmail.com (Subject: Data Rights Request - {anonymous_id})<br/>
-    <b>Ethics Center / 연구윤리센터:</b> research@ewha.ac.kr, 02-3277-7152<br/>
-    """
-    story.append(Paragraph(contact_info, styles['KoreanNormal']))
-    story.append(Spacer(1, 20))
-    
-    # 서명 섹션
-    story.append(Paragraph("Electronic Consent Confirmation / 전자적 동의 확인", styles['KoreanHeader']))
-    signature_info = f"""
-    By checking all consent items above, the participant has provided electronic consent.<br/>
-    위의 모든 동의 항목을 체크함으로써 참여자는 전자적 동의를 제공하였습니다.<br/>
-    <br/>
-    <b>Consent completed / 동의 완료:</b> {consent_timestamp}<br/>
-    <b>Participant ID / 참여자 ID:</b> {anonymous_id}<br/>
-    """
-    story.append(Paragraph(signature_info, styles['KoreanNormal']))
-    
-    return story
+    return html_content
 
 
-def display_consent_pdf_download(pdf_filename, anonymous_id):
+def display_consent_html_download(html_filename, anonymous_id):
     """
-    동의서 PDF 다운로드 버튼 표시
+    HTML 동의서 다운로드 버튼 표시
     
     Args:
-        pdf_filename: PDF 파일 경로
+        html_filename: HTML 파일 경로
         anonymous_id: 익명 ID
     """
-    if pdf_filename and os.path.exists(pdf_filename):
+    if html_filename and os.path.exists(html_filename):
         try:
-            with open(pdf_filename, "rb") as pdf_file:
-                st.download_button(
-                    label="📄 Download Your Consent Form",
-                    data=pdf_file.read(),
-                    file_name=f"{anonymous_id}_consent.pdf",
-                    mime="application/pdf"
-                )
+            with open(html_filename, "r", encoding='utf-8') as f:
+                html_content = f.read()
+                
+            st.download_button(
+                label="📄 Download Your Consent Form (HTML)",
+                data=html_content.encode('utf-8'),
+                file_name=f"{anonymous_id}_consent.html",
+                mime="text/html"
+            )
+            
+            st.info("💡 **How to save as PDF:** Open the downloaded HTML file in your browser, then press Ctrl+P (or Cmd+P) and choose 'Save as PDF'")
+            
         except Exception:
-            st.error("PDF download failed")
+            st.error("HTML download failed")
 
 
 def handle_nickname_input_with_consent():
@@ -675,17 +779,17 @@ def _process_consent_completion(nickname, consent_details, background_details):
     save_nickname_mapping(anonymous_id, nickname, consent_details, background_details)
     save_background_to_session(background_details)
     
-    # PDF 생성
+    # HTML 동의서 생성
     with st.spinner("🎯 Setting up your Korean practice session..."):
-        pdf_filename, pdf_result = generate_consent_pdf(
+        html_filename, html_result = generate_consent_html(
             anonymous_id, consent_details, st.session_state.consent_timestamp
         )
         
-        if pdf_filename:
-            st.session_state.consent_pdf = pdf_filename
+        if html_filename:
+            st.session_state.consent_pdf = html_filename  # 기존 변수명 유지 (호환성)
             st.success("🎉 Perfect! You're all set up!")
-            st.info("📦 Your consent form is safely stored")
-            display_consent_pdf_download(pdf_filename, anonymous_id)
+            st.info("📦 Your consent form is safely stored and will be included in the secure backup")
+            display_consent_html_download(html_filename, anonymous_id)
         else:
             st.success("🎉 Great! You're ready to start practicing Korean!")
             st.info("✅ Your consent has been recorded securely")
