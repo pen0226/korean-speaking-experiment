@@ -1,6 +1,6 @@
 """
 config.py
-실험 전역 설정 및 상수 정의 (로컬 .env + Streamlit Cloud secrets 완벽 지원 - GCS 연결 수정)
+실험 전역 설정 및 상수 정의 (로컬 .env + Streamlit Cloud secrets 완벽 지원)
 """
 
 import os
@@ -10,11 +10,10 @@ from dotenv import load_dotenv
 # 환경변수 로드 (로컬 개발용)
 load_dotenv()
 
-# === 환경 감지 함수 ===
+
 def is_streamlit_cloud():
     """Streamlit Cloud 환경인지 감지"""
     try:
-        # Streamlit Cloud 특유의 환경변수들 확인
         cloud_indicators = [
             'STREAMLIT_CLOUD' in os.environ,
             'HOSTNAME' in os.environ and 'streamlit' in os.environ.get('HOSTNAME', '').lower(),
@@ -25,7 +24,6 @@ def is_streamlit_cloud():
         return False
 
 
-# === 이중 환경 Secrets 처리 ===
 def get_secret(key, default=None):
     """
     로컬(.env) + Streamlit Cloud(secrets) 완벽 지원
@@ -35,70 +33,27 @@ def get_secret(key, default=None):
     - Streamlit Cloud: st.secrets에서 읽기
     """
     
-    # 🔥 환경 감지 후 적절한 방법 사용
     if is_streamlit_cloud():
-        # Streamlit Cloud 환경
         try:
             if hasattr(st, 'secrets') and key in st.secrets:
                 return st.secrets[key]
         except Exception as e:
             print(f"Streamlit secrets error for {key}: {e}")
     
-    # 로컬 환경 또는 fallback
     return os.getenv(key, default)
 
 
-def get_safe_openai_client():
-    """안전한 OpenAI 클라이언트 생성 (로컬/클라우드 자동 최적화)"""
-    try:
-        from openai import OpenAI
-        api_key = get_secret('OPENAI_API_KEY')
-        if api_key:
-            if is_streamlit_cloud():
-                # Streamlit Cloud: proxies 문제 대응
-                try:
-                    return OpenAI(api_key=api_key)
-                except TypeError as e:
-                    if "proxies" in str(e):
-                        # proxies 파라미터 오류 시 환경변수 방식으로 재시도
-                        import openai
-                        openai.api_key = api_key
-                        return openai
-                    else:
-                        raise e
-            else:
-                # 로컬 환경: 정상적인 클라이언트 생성
-                return OpenAI(api_key=api_key)
-        else:
-            return None
-    except ImportError:
-        try:
-            # 구버전 fallback
-            import openai
-            api_key = get_secret('OPENAI_API_KEY')
-            if api_key:
-                openai.api_key = api_key
-                return openai
-            return None
-        except ImportError:
-            return None
-    except Exception as e:
-        print(f"OpenAI client initialization error: {e}")
-        return None
-
-
-# === 세션 설정 ===
+# 세션 설정
 CURRENT_SESSION = 1  # 1차 세션: 1, 2차 세션: 2로 변경
 SESSION_LABELS = {
     1: "Session 1",
     2: "Session 2"
 }
 
-# === 실험 설정 ===
-# 기본 질문 (1차 세션용)
+# 실험 설정
 EXPERIMENT_QUESTION = "자기소개를 해 보세요. (예: 이름, 나이, 전공, 성격, 취미, 가족)"
 
-# === 세션별 질문 설정 ===
+# 세션별 질문 설정
 SESSION_QUESTIONS = {
     1: "자기소개를 해 보세요. (예: 이름, 나이, 전공, 성격, 취미, 가족)",
     2: "이번 여름에 한국에서 뭐 하려고 하세요? 특별한 계획이 있으세요?"
@@ -107,7 +62,7 @@ SESSION_QUESTIONS = {
 # 현재 세션에 맞는 질문으로 자동 설정
 EXPERIMENT_QUESTION = SESSION_QUESTIONS.get(CURRENT_SESSION, SESSION_QUESTIONS[1])
 
-# === 배경 정보 설정 ===
+# 배경 정보 설정
 BACKGROUND_INFO = {
     "learning_duration_options": [
         "Less than 6 months",
@@ -124,41 +79,38 @@ BACKGROUND_INFO = {
     ]
 }
 
-# === AI 모델 설정 ===
+# AI 모델 설정
 GPT_MODELS = ["gpt-4o"]
-WHISPER_MODEL = "whisper-1"  # OpenAI API 모델명
 ELEVENLABS_MODEL = "eleven_multilingual_v2"
 
-# === GPT 피드백 토큰 제한 설정 ===
-GPT_FEEDBACK_MAX_TOKENS = 800  # 안전한 토큰 수 제한
-GPT_FEEDBACK_MAX_CHARS = 1000  # fallback용 문자 수 제한
+# GPT 피드백 토큰 제한 설정
+GPT_FEEDBACK_MAX_TOKENS = 800
+GPT_FEEDBACK_MAX_CHARS = 1000
 
-# === API 키 설정 (이중 환경 완벽 지원) ===
+# API 키 설정
 OPENAI_API_KEY = get_secret('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = get_secret('ELEVENLABS_API_KEY')
 ELEVEN_VOICE_ID = get_secret('ELEVEN_VOICE_ID')
 
-# === Google Cloud Storage 설정 (서비스 계정 방식 - 학생 로그인 불필요) ===
-# 💡 ZIP 파일만 업로드하는 간소화된 구조
+# Google Cloud Storage 설정
 GCS_ENABLED = get_secret('GCS_ENABLED', 'False').lower() == 'true'
 GCS_BUCKET_NAME = get_secret('GCS_BUCKET_NAME', 'korean-speaking-experiment')
-GCS_SERVICE_ACCOUNT = get_secret('gcp_service_account')  # 🔥 원래대로: gcp_service_account
+GCS_SERVICE_ACCOUNT = get_secret('gcp_service_account')
 
-# === 간소화된 GCS 폴더 구조 (ZIP 전용) ===
-# 💡 파일 업로드시 자동으로 폴더가 생성됩니다
+# 간소화된 GCS 폴더 구조
 GCS_SIMPLE_STRUCTURE = {
-    1: "session1/",    # session1/Student01_timestamp.zip
-    2: "session2/"     # session2/Student01_timestamp.zip
+    1: "session1/",
+    2: "session2/"
 }
 
-# === Streamlit 페이지 설정 ===
+# Streamlit 페이지 설정
 PAGE_CONFIG = {
     "page_title": f"Korean Speaking Experiment - {SESSION_LABELS.get(CURRENT_SESSION, 'Session 1')}",
     "page_icon": "🇰🇷",
     "layout": "wide"
 }
 
-# === 실험 단계 정의 ===
+# 실험 단계 정의
 EXPERIMENT_STEPS = {
     'nickname_input': ('Step 1', 'Enter Nickname'),
     'first_recording': ('Step 2', 'First Recording'),
@@ -168,16 +120,15 @@ EXPERIMENT_STEPS = {
     'completion': ('Step 6', 'Complete')
 }
 
-# === 설문조사 URL (세션별) - 실제 배포용 URL ===
+# 설문조사 URL
 GOOGLE_FORM_URLS = {
-    1: "https://docs.google.com/forms/d/e/1FAIpQLSds3zsmZYjN3QSc-RKRtbDPTF0ybLrwJW4qVLDg2_xoumBLDw/viewform?usp=header",  # 1차 세션 설문 (실제 URL)
-    2: "https://docs.google.com/forms/d/e/1FAIpQLSds3zsmZYjN3QSc-RKRtbDPTF0ybLrwJW4qVLDg2_xoumBLDw/viewform?usp=header"   # 2차 세션 설문 (같은 설문 사용)
+    1: "https://docs.google.com/forms/d/e/1FAIpQLSds3zsmZYjN3QSc-RKRtbDPTF0ybLrwJW4qVLDg2_xoumBLDw/viewform?usp=header",
+    2: "https://docs.google.com/forms/d/e/1FAIpQLSds3zsmZYjN3QSc-RKRtbDPTF0ybLrwJW4qVLDg2_xoumBLDw/viewform?usp=header"
 }
 
-# 현재 세션에 맞는 설문 URL
 GOOGLE_FORM_URL = GOOGLE_FORM_URLS.get(CURRENT_SESSION, GOOGLE_FORM_URLS[1])
 
-# === 피드백 난이도 설정 ===
+# 피드백 난이도 설정
 FEEDBACK_LEVEL = {
     "target_level": "TOPIK 2",
     "encourage_level_3": True,
@@ -185,7 +136,7 @@ FEEDBACK_LEVEL = {
     "forbidden_speech_styles": ["반말"]
 }
 
-# === STT 기반 루브릭 설정 ===
+# STT 기반 루브릭 설정
 STT_RUBRIC = {
     "excellent": {"min_score": 9, "max_score": 10, "label": "Excellent", "color": "#059669"},
     "good": {"min_score": 7, "max_score": 8, "label": "Good", "color": "#0891b2"},
@@ -194,7 +145,7 @@ STT_RUBRIC = {
     "very_poor": {"min_score": 1, "max_score": 2, "label": "Very Poor", "color": "#991b1b"}
 }
 
-# === 문법 오류 유형 정의 (3개로 간소화) ===
+# 문법 오류 유형 정의
 GRAMMAR_ERROR_TYPES = {
     "Particle": {
         "korean": "조사",
@@ -210,50 +161,48 @@ GRAMMAR_ERROR_TYPES = {
     }
 }
 
-# === 오디오 품질 기준 (1분 목표) ===
+# 오디오 품질 기준
 AUDIO_QUALITY = {
-    "excellent_min_duration": 60,         # 60초 이상이면 excellent
-    "good_min_duration": 45,              # 45-60초면 good  
-    "fair_min_duration": 30,              # 30-45초면 fair
-    "max_recommended_duration": 120       # 최대 권장 시간
+    "excellent_min_duration": 60,
+    "good_min_duration": 45,
+    "fair_min_duration": 30,
+    "max_recommended_duration": 120
 }
 
-# === 데이터 보관 설정 (GDPR 준수) ===
-DATA_RETENTION_DAYS = 730  # 2년
+# 데이터 보관 설정
+DATA_RETENTION_DAYS = 730
 
-# === 로컬 폴더 구조 (백업용) ===
+# 로컬 폴더 구조
 FOLDERS = {
     "data": "data",
     "logs": "logs",
     "audio_recordings": "audio_recordings"
 }
 
-# === TTS 설정 (ElevenLabs 2025 최신 API 호환) ===
+# TTS 설정
 TTS_SETTINGS = {
     "normal": {
-        "stability": 0.75,        # 억양 안정성
-        "similarity_boost": 0.80, # 목소리 일관성 강화
-        "style": 0.15,            # 감정 표현 감소로 자연스러운 억양
+        "stability": 0.75,
+        "similarity_boost": 0.80,
+        "style": 0.15,
         "use_speaker_boost": False,
-        "speed": 1.0              # 🔥 ElevenLabs 공식 speed 파라미터 - 일반 속도 (100%)
+        "speed": 1.0
     },
     "slow": {
-        "stability": 0.85,        # 매우 높은 안정성으로 억양 변화 최소화
-        "similarity_boost": 0.80, # 더 높은 유사성으로 일관된 억양
-        "style": 0.20,            # 매우 낮은 스타일로 단조로운 억양
+        "stability": 0.85,
+        "similarity_boost": 0.80,
+        "style": 0.20,
         "use_speaker_boost": False,
-        "speed": 0.7              # 🔥 ElevenLabs 공식 speed 파라미터 - 느린 속도 (70%) [API 제한: 0.7~1.2]
+        "speed": 0.7
     }
 }
 
-# === GPT 프롬프트 설정 ===
-
-# System Message: AI 기본 역할 정의
+# GPT 프롬프트 설정
 GPT_SYSTEM_PROMPT = """You are a Korean language teaching expert specializing in TOPIK 1-2 level learners. 
 Focus on precise error analysis and practical improvements. 
 Always respond with valid JSON only."""
 
-# === 개선된 피드백 생성 프롬프트 템플릿 (1분 목표) ===
+# 개선된 피드백 생성 프롬프트 템플릿
 FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -334,7 +283,7 @@ Student answered "{question}": {transcript}
 
 Remember: The goal is to help them speak for at least 1 minute (60+ seconds) with MORE PERSONAL DETAILS!"""
 
-# === 개선된 개선도 평가 프롬프트 템플릿 (1분 목표) ===
+# 개선도 평가 프롬프트 템플릿
 IMPROVEMENT_PROMPT_TEMPLATE = """Compare two Korean speaking attempts from a beginner student.
 
 QUESTION: "{question}"
@@ -381,7 +330,7 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 
 Be specific about improvements and always find something positive to say!"""
 
-# === 기본 피드백 데이터 (1분 목표) - vs 방식으로 변경 ===
+# 기본 피드백 데이터
 FALLBACK_FEEDBACK_DATA = {
     "suggested_model_sentence": "안녕하세요. 저는 [이름]이에요. 한국학을 전공해요. 취미는 음악 듣기와 영화 보기예요.",
     "suggested_model_sentence_english": "Hello. I'm [name]. I major in Korean Studies. My hobbies are listening to music and watching movies.",
@@ -404,7 +353,7 @@ FALLBACK_FEEDBACK_DATA = {
     "encouragement_message": "Learning Korean is challenging, but you're making real progress! 화이팅!"
 }
 
-# === 기본 개선도 평가 데이터 (1분 목표) ===
+# 기본 개선도 평가 데이터
 FALLBACK_IMPROVEMENT_DATA = {
     "first_attempt_score": 5,
     "second_attempt_score": 5,
@@ -418,10 +367,10 @@ FALLBACK_IMPROVEMENT_DATA = {
     "encouragement_message": "Every practice session makes you better! Keep going!"
 }
 
-# === 파일 확장자 설정 (이중 환경 호환) ===
-SUPPORTED_AUDIO_FORMATS = ["wav", "mp3", "m4a", "flac", "ogg", "webm"]  # 확장된 지원
+# 파일 확장자 설정
+SUPPORTED_AUDIO_FORMATS = ["wav", "mp3", "m4a", "flac", "ogg", "webm"]
 
-# === UI 색상 테마 ===
+# UI 색상 테마
 UI_COLORS = {
     "primary": "#0369a1",
     "success": "#059669",
@@ -432,40 +381,15 @@ UI_COLORS = {
     "border": "#e2e8f0"
 }
 
-# === 로그 설정 ===
+# 로그 설정
 LOG_FORMAT = {
     "timestamp_format": "%Y-%m-%d %H:%M:%S",
     "filename_format": "upload_log_%Y%m%d.txt"
 }
 
-# === 세션 메타데이터 설정 (이중 환경 지원) ===
-SESSION_METADATA = {
-    "current_session": CURRENT_SESSION,
-    "session_label": SESSION_LABELS.get(CURRENT_SESSION, "Session 1"),
-    "experiment_version": "5.2.1",  # GCS 연결 수정 버전
-    "last_updated": "2025-01-17",
-    "storage_method": "GCS_ZIP_ONLY",  # ZIP 파일만 업로드
-    "auth_required": False,  # 학생 인증 불필요
-    "nickname_matching": True,  # 닉네임 매칭 시스템 활성화
-    "dual_environment": True,  # 로컬/클라우드 이중 환경 지원
-    "config_method": "local_env_cloud_secrets",  # 설정 방식 명시
-    "openai_api_compatible": True,  # OpenAI API 호환성 확인
-    "audio_formats_extended": True,  # 확장된 오디오 형식 지원
-    "gcs_connection_fixed": True  # 🔥 GCS 연결 수정 완료
-}
-
-# === 환경별 설정 ===
-ENVIRONMENT = {
-    "is_cloud": is_streamlit_cloud(),
-    "config_source": "streamlit_secrets" if is_streamlit_cloud() else "local_env",
-    "api_timeout": 30 if is_streamlit_cloud() else 60,  # Cloud에서는 타임아웃 단축
-    "max_retries": 3 if is_streamlit_cloud() else 2,    # Cloud에서는 재시도 증가
-    "debug_mode": not is_streamlit_cloud()              # 로컬에서만 디버그 모드
-}
-
-# === GCS 연결 테스트 함수 추가 ===
+# GCS 연결 테스트 함수
 def test_gcs_connection():
-    """GCS 연결 상태 테스트 (TOML/JSON 호환)"""
+    """GCS 연결 상태 테스트"""
     try:
         if not GCS_ENABLED:
             return False, "GCS_ENABLED is False"
@@ -476,16 +400,13 @@ def test_gcs_connection():
         if not GCS_BUCKET_NAME:
             return False, "GCS_BUCKET_NAME not configured"
         
-        # 🔥 TOML과 JSON 모두 처리 가능한 방식
         import json
         try:
-            # Case 1: TOML에서 딕셔너리로 읽힌 경우
             if isinstance(GCS_SERVICE_ACCOUNT, dict):
-                service_account_info = dict(GCS_SERVICE_ACCOUNT)  # AttrDict를 일반 dict로 변환
+                service_account_info = dict(GCS_SERVICE_ACCOUNT)
                 project_id = service_account_info.get('project_id', 'Unknown')
                 return True, f"GCS Ready - Project: {project_id} (TOML format)"
             
-            # Case 2: JSON 문자열인 경우 (기존 방식)
             elif isinstance(GCS_SERVICE_ACCOUNT, str):
                 service_account_info = json.loads(GCS_SERVICE_ACCOUNT)
                 project_id = service_account_info.get('project_id', 'Unknown')
@@ -502,18 +423,17 @@ def test_gcs_connection():
     except Exception as e:
         return False, f"GCS test failed: {str(e)}"
 
-# === 환경 정보 출력 (개발용) ===
+# 환경 정보 출력 (간소화)
 if not is_streamlit_cloud():
-    print(f"🏠 Local Environment Detected")
-    print(f"📝 Config Source: .env file")
-    print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
-    print(f"☁️ GCS: {'✅ Ready' if GCS_ENABLED else '❌ Disabled'}")
+    api_status = "✅ Loaded" if OPENAI_API_KEY else "❌ Missing"
+    gcs_status = "✅ Ready" if GCS_ENABLED else "❌ Disabled"
 else:
-    print(f"☁️ Streamlit Cloud Environment Detected")
-    print(f"📝 Config Source: st.secrets")
-    print(f"🔑 API Keys: {'✅ Loaded' if OPENAI_API_KEY else '❌ Missing'}")
-    print(f"☁️ GCS: {'✅ Ready' if GCS_ENABLED else '❌ Disabled'}")
+    api_status = "✅ Loaded" if OPENAI_API_KEY else "❌ Missing"
+    gcs_status = "✅ Ready" if GCS_ENABLED else "❌ Disabled"
     
-    # GCS 연결 상태 자동 테스트 (Cloud 환경에서)
-    gcs_status, gcs_message = test_gcs_connection()
-    print(f"🗄️ GCS Status: {'✅' if gcs_status else '❌'} {gcs_message}")
+    # GCS 연결 상태 자동 테스트
+    gcs_test_status, gcs_message = test_gcs_connection()
+    if gcs_test_status:
+        print(f"🗄️ GCS Status: ✅ {gcs_message}")
+    else:
+        print(f"🗄️ GCS Status: ❌ {gcs_message}")

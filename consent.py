@@ -1,6 +1,6 @@
 """
 consent.py
-연구 참여 동의서 처리 및 PDF 생성 모듈 (학생 친화적 버전 - GDPR 준수)
+연구 참여 동의서 처리 및 PDF 생성 모듈 (학생 친화적 버전 - GDPR 준수 + 한글 PDF 지원)
 """
 
 import streamlit as st
@@ -9,16 +9,87 @@ import os
 from datetime import datetime, timedelta
 from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION
 
-# ReportLab import (전역 스코프)
+# ReportLab import with Korean font support
 try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+
+
+def register_korean_fonts():
+    """
+    한글 폰트 등록 (윈도우/맥 지원)
+    
+    Returns:
+        str: 등록된 한글 폰트명
+    """
+    try:
+        import platform
+        system = platform.system()
+        
+        if system == "Windows":
+            font_path = "C:/Windows/Fonts/malgun.ttf"  # 맑은 고딕
+        elif system == "Darwin":  # macOS
+            font_path = "/System/Library/Fonts/AppleSDGothicNeo.ttc"  # 애플 고딕
+        else:
+            return 'Helvetica'  # 기타 OS는 기본 폰트
+        
+        # 폰트 등록 시도
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('KoreanFont', font_path))
+            return 'KoreanFont'
+        else:
+            return 'Helvetica'
+            
+    except Exception:
+        return 'Helvetica'
+
+
+def get_korean_styles(korean_font):
+    """
+    한글 지원 스타일 생성 (간소화 버전)
+    
+    Args:
+        korean_font: 등록된 한글 폰트명
+        
+    Returns:
+        dict: 스타일 딕셔너리
+    """
+    styles = getSampleStyleSheet()
+    
+    return {
+        'KoreanTitle': ParagraphStyle(
+            'KoreanTitle',
+            parent=styles['Heading1'],
+            fontName=korean_font,
+            fontSize=16,
+            spaceAfter=20,
+            alignment=1
+        ),
+        
+        'KoreanHeader': ParagraphStyle(
+            'KoreanHeader',
+            parent=styles['Heading2'],
+            fontName=korean_font,
+            fontSize=12,
+            spaceAfter=10
+        ),
+        
+        'KoreanNormal': ParagraphStyle(
+            'KoreanNormal',
+            parent=styles['Normal'],
+            fontName=korean_font,
+            fontSize=10,
+            spaceAfter=6
+        )
+    }
 
 
 def enhanced_consent_section():
@@ -251,25 +322,18 @@ def find_or_create_anonymous_id(nickname):
         
         # 기존 매핑 파일에서 닉네임 검색
         if os.path.exists(mapping_file):
-            try:
-                with open(mapping_file, 'r', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        if row.get('Nickname', '').strip().lower() == nickname.lower():
-                            # 기존 닉네임 발견! 기존 ID 반환
-                            existing_id = row.get('Anonymous_ID', '').strip()
-                            if existing_id:
-                                print(f"✅ Found existing ID for '{nickname}': {existing_id}")
-                                return existing_id
-            except Exception as e:
-                print(f"Error reading mapping file: {e}")
+            with open(mapping_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get('Nickname', '').strip().lower() == nickname.lower():
+                        existing_id = row.get('Anonymous_ID', '').strip()
+                        if existing_id:
+                            return existing_id
         
         # 기존 닉네임 없음 → 새 ID 생성
         return generate_new_anonymous_id()
         
-    except Exception as e:
-        print(f"Error in find_or_create_anonymous_id: {e}")
-        # 오류 시 타임스탬프 기반 ID
+    except Exception:
         return f"Student{datetime.now().strftime('%m%d%H%M')}"
 
 
@@ -282,34 +346,23 @@ def generate_new_anonymous_id():
     """
     try:
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
-        
-        # 기존 파일에서 마지막 번호 찾기
         last_number = 0
+        
         if os.path.exists(mapping_file):
-            try:
-                with open(mapping_file, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-                    for line in lines[1:]:  # 헤더 제외
-                        if line.strip():
-                            parts = line.strip().split(',')
-                            if len(parts) > 0 and parts[0].startswith('Student'):
-                                try:
-                                    number = int(parts[0].replace('Student', ''))
-                                    last_number = max(last_number, number)
-                                except:
-                                    continue
-            except:
-                pass
+            with open(mapping_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines[1:]:  # 헤더 제외
+                    if line.strip() and line.startswith('Student'):
+                        try:
+                            number = int(line.split(',')[0].replace('Student', ''))
+                            last_number = max(last_number, number)
+                        except:
+                            continue
         
-        # 다음 번호로 ID 생성
         next_number = last_number + 1
-        new_id = f"Student{next_number:02d}"  # Student01, Student02, ...
-        print(f"✨ Generated new ID: {new_id}")
-        return new_id
+        return f"Student{next_number:02d}"
         
-    except Exception as e:
-        print(f"Error generating new ID: {e}")
-        # 오류 시 타임스탬프 기반 ID
+    except Exception:
         return f"Student{datetime.now().strftime('%m%d%H%M')}"
 
 
@@ -330,71 +383,49 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         os.makedirs(FOLDERS["data"], exist_ok=True)
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
         
-        # 헤더가 없으면 생성 (3개 동의 항목으로 변경)
+        # 헤더가 없으면 생성
         if not os.path.exists(mapping_file):
             with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    'Anonymous_ID', 
-                    'Nickname', 
-                    'Timestamp',
-                    'Data_Retention_Until',
-                    'Deletion_Requested',
-                    'Consent_Participation',
-                    'Consent_Processing',
-                    'Consent_Data_Rights',
-                    'Consent_Final_Confirm',
-                    'GDPR_Compliant',
-                    'Learning_Duration',
-                    'Speaking_Confidence',
-                    'Session_Count',
-                    'Last_Session',
-                    'Notes'
+                    'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
+                    'Deletion_Requested', 'Consent_Participation', 'Consent_Processing',
+                    'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant',
+                    'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session', 'Notes'
                 ])
         
-        # 기존 엔트리 확인 (닉네임으로)
-        existing_entry = None
+        # 기존 엔트리 확인
         all_rows = []
+        existing_entry = None
         
         if os.path.exists(mapping_file):
             with open(mapping_file, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 all_rows = list(reader)
-                
-                for row in reader:
+                for row in all_rows:
                     if row.get('Nickname', '').strip().lower() == nickname.lower():
                         existing_entry = row
                         break
         
-        # 데이터 보관 만료일 계산
+        # 기본값 설정
+        if not consent_details:
+            consent_details = {
+                'consent_participation': True, 'consent_processing': True,
+                'consent_data_rights': True, 'consent_final_confirm': True
+            }
+        if not background_details:
+            background_details = {'learning_duration': '', 'speaking_confidence': ''}
+        
         retention_until = (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')
         
-        # 동의 세부 정보 처리 (3개 항목으로 변경)
-        if consent_details is None:
-            consent_details = {
-                'consent_participation': True,
-                'consent_processing': True,
-                'consent_data_rights': True,
-                'consent_final_confirm': True,
-            }
-        
-        # 배경 정보 처리
-        if background_details is None:
-            background_details = {
-                'learning_duration': '',
-                'speaking_confidence': ''
-            }
-        
         if existing_entry:
-            # 기존 엔트리 업데이트 (세션 수 증가)
+            # 기존 엔트리 업데이트
             session_count = int(existing_entry.get('Session_Count', 0)) + 1
-            
-            # 모든 행을 다시 쓰면서 해당 행만 업데이트
             with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
                 fieldnames = [
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
                     'Deletion_Requested', 'Consent_Participation', 'Consent_Processing',
-                    'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant', 
+                    'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant',
                     'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session', 'Notes'
                 ]
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -402,7 +433,6 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                 
                 for row in all_rows:
                     if row.get('Nickname', '').strip().lower() == nickname.lower():
-                        # 기존 엔트리 업데이트
                         row.update({
                             'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                             'Session_Count': session_count,
@@ -416,11 +446,8 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
             with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    anonymous_id,
-                    nickname,
-                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    retention_until,
-                    'FALSE',
+                    anonymous_id, nickname, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    retention_until, 'FALSE',
                     consent_details.get('consent_participation', True),
                     consent_details.get('consent_processing', True),
                     consent_details.get('consent_data_rights', True),
@@ -428,20 +455,17 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'TRUE',
                     background_details.get('learning_duration', ''),
                     background_details.get('speaking_confidence', ''),
-                    1,  # 첫 참여이므로 세션 수는 1
-                    CURRENT_SESSION,  # 현재 세션
-                    ''
+                    1, CURRENT_SESSION, ''
                 ])
         
         return True
-    except Exception as e:
-        print(f"Mapping save failed: {e}")
+    except Exception:
         return False
 
 
 def generate_consent_pdf(anonymous_id, consent_details, consent_timestamp):
     """
-    참여자 동의서를 PDF로 생성 (논문 제출용)
+    한글 지원 참여자 동의서 PDF 생성
     
     Args:
         anonymous_id: 익명 ID
@@ -452,39 +476,16 @@ def generate_consent_pdf(anonymous_id, consent_details, consent_timestamp):
         tuple: (pdf_filename, success_status)
     """
     if not REPORTLAB_AVAILABLE:
-        return None, "reportlab not installed. Run: pip install reportlab"
+        return None, "reportlab not installed"
     
     try:
-        # PDF 파일명
+        korean_font = register_korean_fonts()
         pdf_filename = os.path.join(FOLDERS["data"], f"{anonymous_id}_consent.pdf")
         
-        # PDF 문서 생성
         doc = SimpleDocTemplate(pdf_filename, pagesize=A4, topMargin=1*inch)
-        story = []
-        styles = getSampleStyleSheet()
+        korean_styles = get_korean_styles(korean_font)
         
-        # 커스텀 스타일
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            spaceAfter=20,
-            alignment=1  # 중앙 정렬
-        )
-        
-        header_style = ParagraphStyle(
-            'CustomHeader',
-            parent=styles['Heading2'],
-            fontSize=12,
-            spaceAfter=10,
-            textColor=colors.darkblue
-        )
-        
-        # PDF 내용 구성
-        story.extend(_build_pdf_content(anonymous_id, consent_details, consent_timestamp, 
-                                       title_style, header_style, styles))
-        
-        # PDF 생성
+        story = _build_korean_pdf_content(anonymous_id, consent_details, consent_timestamp, korean_styles)
         doc.build(story)
         
         return pdf_filename, True
@@ -493,22 +494,21 @@ def generate_consent_pdf(anonymous_id, consent_details, consent_timestamp):
         return None, f"PDF generation failed: {str(e)}"
 
 
-def _build_pdf_content(anonymous_id, consent_details, consent_timestamp, 
-                      title_style, header_style, styles):
+def _build_korean_pdf_content(anonymous_id, consent_details, consent_timestamp, styles):
     """
-    PDF 내용 구성 헬퍼 함수 (영한 병기) - 3개 동의 항목으로 간소화
+    한글 지원 PDF 내용 구성
     """
     story = []
     
-    # 제목 (영한 병기)
-    story.append(Paragraph("Research Participation Consent Form", title_style))
-    story.append(Paragraph("연구 참여 동의서", title_style))
-    story.append(Paragraph("AI-Based Korean Speaking Feedback System Study", title_style))
-    story.append(Paragraph("AI 기반 한국어 말하기 피드백 시스템 연구", title_style))
+    # 제목
+    story.append(Paragraph("Research Participation Consent Form", styles['KoreanTitle']))
+    story.append(Paragraph("연구 참여 동의서", styles['KoreanTitle']))
+    story.append(Paragraph("AI-Based Korean Speaking Feedback System Study", styles['KoreanTitle']))
+    story.append(Paragraph("AI 기반 한국어 말하기 피드백 시스템 연구", styles['KoreanTitle']))
     story.append(Spacer(1, 20))
     
-    # 연구 정보 (영한 병기)
-    story.append(Paragraph("Research Information / 연구 정보", header_style))
+    # 연구 정보
+    story.append(Paragraph("Research Information / 연구 정보", styles['KoreanHeader']))
     research_info = """
     <b>Principal Investigator / 연구책임자:</b> Jeongyeon Kim<br/>
     <b>Institution / 소속기관:</b> Ewha Womans University, Graduate School / 이화여자대학교 대학원<br/>
@@ -517,35 +517,35 @@ def _build_pdf_content(anonymous_id, consent_details, consent_timestamp,
     <b>Academic Use / 학술적 활용:</b> Master's thesis research, potential academic conference presentations, and possible scholarly journal publications / 석사논문 연구, 학술대회 발표 가능성, 학술지 게재 가능성<br/>
     <b>Purpose / 연구 목적:</b> To improve AI feedback systems for Korean language education and help future students prepare for language placement interviews / 한국어 교육용 AI 피드백 시스템 개선 및 향후 학생들의 언어교육원 배치고사 준비 지원<br/>
     """
-    story.append(Paragraph(research_info, styles['Normal']))
+    story.append(Paragraph(research_info, styles['KoreanNormal']))
     story.append(Spacer(1, 15))
     
-    # 참여자 정보 (영한 병기)
-    story.append(Paragraph("Participant Information / 참여자 정보", header_style))
+    # 참여자 정보
+    story.append(Paragraph("Participant Information / 참여자 정보", styles['KoreanHeader']))
     participant_info = f"""
     <b>Participant ID / 참여자 ID:</b> {anonymous_id}<br/>
     <b>Consent Date / 동의 날짜:</b> {consent_timestamp}<br/>
     <b>Consent Method / 동의 방법:</b> Electronic Checkbox / 전자 체크박스<br/>
     """
-    story.append(Paragraph(participant_info, styles['Normal']))
+    story.append(Paragraph(participant_info, styles['KoreanNormal']))
     story.append(Spacer(1, 15))
     
-    # 동의 항목 표 (영한 병기) - 3개 항목으로 간소화
-    story.append(Paragraph("Consent Items / 동의 항목", header_style))
+    # 동의 항목 표
+    story.append(Paragraph("Consent Items / 동의 항목", styles['KoreanHeader']))
     consent_data = [
         ['Consent Item / 동의 항목', 'Agreed / 동의', 'Description / 설명'],
-        ['Research Participation / 연구 참여', 
+        ['Research Participation\n연구 참여', 
          '✓' if consent_details.get('consent_participation') else '✗',
-         'Voluntary participation in the research study / 연구에 자발적 참여'],
-        ['Voice Recording & AI Processing / 음성 녹음 및 AI 처리', 
+         'Voluntary participation\n자발적 참여'],
+        ['Voice Recording & AI Processing\n음성 녹음 및 AI 처리', 
          '✓' if consent_details.get('consent_processing') else '✗',
-         'Voice recording and AI feedback processing (Whisper→GPT→TTS) / 음성 녹음 및 AI 피드백 처리 (Whisper→GPT→TTS)'],
-        ['Data Use & Rights Understanding / 데이터 사용 및 권리 이해', 
+         'Voice recording and AI feedback\n음성 녹음 및 AI 피드백'],
+        ['Data Use & Rights Understanding\n데이터 사용 및 권리 이해', 
          '✓' if consent_details.get('consent_data_rights') else '✗',
-         'Anonymous data use for research and understanding of withdrawal rights / 연구를 위한 익명 데이터 사용 및 철회 권리 이해'],
-        ['Final Confirmation / 최종 확인', 
+         'Anonymous data use for research\n연구용 익명 데이터 사용'],
+        ['Final Confirmation\n최종 확인', 
          '✓' if consent_details.get('consent_final_confirm') else '✗',
-         'Final confirmation of all consent items / 모든 동의 항목에 대한 최종 확인'],
+         'Final confirmation\n최종 확인'],
     ]
     
     consent_table = Table(consent_data, colWidths=[2.5*inch, 0.8*inch, 2.7*inch])
@@ -553,67 +553,47 @@ def _build_pdf_content(anonymous_id, consent_details, consent_timestamp,
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), styles['KoreanNormal'].fontName),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP')
     ]))
     story.append(consent_table)
     story.append(Spacer(1, 20))
     
-    # GDPR 권리 안내 등 추가 내용
-    story.extend(_build_additional_pdf_sections(anonymous_id, styles, header_style, consent_timestamp))
-    
-    return story
-
-
-def _build_additional_pdf_sections(anonymous_id, styles, header_style, consent_timestamp):
-    """
-    PDF 추가 섹션 구성 (영한 병기)
-    """
-    story = []
-    
-    # GDPR 권리 안내 (영한 병기)
-    story.append(Paragraph("Your Rights (GDPR) / 귀하의 권리 (GDPR)", header_style))
+    # GDPR 권리 안내
+    story.append(Paragraph("Your Rights (GDPR) / 귀하의 권리 (GDPR)", styles['KoreanHeader']))
     rights_info = """
-    You have the following rights regarding your personal data: / 개인정보와 관련하여 다음과 같은 권리를 가집니다:<br/>
-    • <b>Right to Access / 접근권:</b> Request access to your data / 본인 데이터 열람 요청<br/>
-    • <b>Right to Rectification / 정정권:</b> Correct inaccurate information / 부정확한 정보 수정<br/>
+    You have the following rights: / 다음과 같은 권리를 가집니다:<br/>
+    • <b>Right to Access / 접근권:</b> Request access to your data / 데이터 열람 요청<br/>
+    • <b>Right to Rectification / 정정권:</b> Correct inaccurate information / 정보 수정<br/>
     • <b>Right to Erasure / 삭제권:</b> Request deletion of your data / 데이터 삭제 요청<br/>
-    • <b>Right to Object / 이의제기권:</b> Object to data processing / 데이터 처리에 대한 이의제기<br/>
-    • <b>Right to Withdraw / 철회권:</b> Withdraw consent at any time / 언제든지 동의 철회<br/>
+    • <b>Right to Withdraw / 철회권:</b> Withdraw consent at any time / 동의 철회<br/>
     """
-    story.append(Paragraph(rights_info, styles['Normal']))
+    story.append(Paragraph(rights_info, styles['KoreanNormal']))
     story.append(Spacer(1, 15))
     
-    # 연락처 정보 (영한 병기)
-    story.append(Paragraph("Contact for Data Rights / 데이터 권리 관련 연락처", header_style))
+    # 연락처 정보
+    story.append(Paragraph("Contact / 연락처", styles['KoreanHeader']))
     contact_info = f"""
-    <b>To exercise your rights or withdraw consent / 권리 행사 또는 동의 철회:</b><br/>
-    Email: pen0226@gmail.com<br/>
-    Subject: Data Rights Request - {anonymous_id}<br/>
-    <br/>
-    <b>Ewha Womans University Research Ethics Center / 이화여자대학교 연구윤리센터:</b><br/>
-    Email: research@ewha.ac.kr<br/>
-    Phone: 02-3277-7152<br/>
+    <b>Researcher / 연구자:</b> pen0226@gmail.com (Subject: Data Rights Request - {anonymous_id})<br/>
+    <b>Ethics Center / 연구윤리센터:</b> research@ewha.ac.kr, 02-3277-7152<br/>
     """
-    story.append(Paragraph(contact_info, styles['Normal']))
+    story.append(Paragraph(contact_info, styles['KoreanNormal']))
     story.append(Spacer(1, 20))
     
-    # 서명 섹션 (영한 병기)
-    story.append(Paragraph("Electronic Consent Confirmation / 전자적 동의 확인", header_style))
+    # 서명 섹션
+    story.append(Paragraph("Electronic Consent Confirmation / 전자적 동의 확인", styles['KoreanHeader']))
     signature_info = f"""
-    By checking all consent items above, the participant has provided electronic consent 
-    to participate in this research study in accordance with GDPR and Korean research ethics guidelines.<br/>
-    위의 모든 동의 항목을 체크함으로써 참여자는 GDPR 및 한국 연구윤리 가이드라인에 따라 
-    본 연구 참여에 대한 전자적 동의를 제공하였습니다.<br/>
+    By checking all consent items above, the participant has provided electronic consent.<br/>
+    위의 모든 동의 항목을 체크함으로써 참여자는 전자적 동의를 제공하였습니다.<br/>
     <br/>
     <b>Consent completed / 동의 완료:</b> {consent_timestamp}<br/>
     <b>Participant ID / 참여자 ID:</b> {anonymous_id}<br/>
-    <b>Method / 방법:</b> Electronic checkbox confirmation / 전자 체크박스 확인<br/>
     """
-    story.append(Paragraph(signature_info, styles['Normal']))
+    story.append(Paragraph(signature_info, styles['KoreanNormal']))
     
     return story
 
@@ -633,11 +613,10 @@ def display_consent_pdf_download(pdf_filename, anonymous_id):
                     label="📄 Download Your Consent Form",
                     data=pdf_file.read(),
                     file_name=f"{anonymous_id}_consent.pdf",
-                    mime="application/pdf",
-                    help="Download a copy of your consent form for your records"
+                    mime="application/pdf"
                 )
-        except Exception as e:
-            st.error(f"PDF download error: {e}")
+        except Exception:
+            st.error("PDF download failed")
 
 
 def handle_nickname_input_with_consent():
@@ -653,34 +632,29 @@ def handle_nickname_input_with_consent():
     if not consent_completed:
         return False
     
-    # 닉네임 입력 - 더 친근하게
+    # 닉네임 입력
     st.markdown("---")
-    st.markdown("""
-    ### 👤 Choose Your Nickname
-    """)
-    
-    # 친근한 안내
+    st.markdown("### 👤 Choose Your Nickname")
     st.info("🔗 **Use the exact same nickname** in Session 1 & Session 2 — links your data.")
     
     nickname = st.text_input(
         "Your nickname:",
         placeholder="e.g., KoreanLearner123, MyNickname, Student_A, etc.",
-        help="Your nickname is just for linking your sessions. In our records, it becomes an anonymous ID like 'Student01'. Your real identity stays private!"
+        help="Your nickname becomes an anonymous ID like 'Student01'. Your real identity stays private!"
     )
     
-    # 닉네임이 입력되지 않으면 배경 정보 섹션을 표시하지 않음
     if not nickname.strip():
         st.warning("👆 Please enter a nickname to continue")
         return False
     
-    # 배경 정보 수집 섹션
+    # 배경 정보 수집
     st.markdown("---")
     background_completed, background_details = collect_background_information()
     
     if not background_completed:
         return False
     
-    # 모든 정보가 입력되면 시작 버튼 활성화
+    # 시작 버튼
     st.markdown("---")
     st.markdown("### 🎉 Ready to Start Your Korean Practice?")
     
@@ -692,40 +666,32 @@ def handle_nickname_input_with_consent():
 
 def _process_consent_completion(nickname, consent_details, background_details):
     """
-    동의 완료 처리 (닉네임 매칭 시스템 + ZIP에서 GCS 업로드 처리)
+    동의 완료 처리
     """
-    # 🎯 닉네임 기반으로 기존 ID 찾거나 새로 생성
+    # 익명 ID 생성
     anonymous_id = find_or_create_anonymous_id(nickname)
     
-    # 매핑 정보 저장 (배경 정보 포함)
+    # 매핑 정보 저장
     save_nickname_mapping(anonymous_id, nickname, consent_details, background_details)
-    
-    # 세션 상태에 배경 정보 저장
     save_background_to_session(background_details)
     
-    # 동의서 PDF 생성 (ZIP에 포함될 예정)
+    # PDF 생성
     with st.spinner("🎯 Setting up your Korean practice session..."):
         pdf_filename, pdf_result = generate_consent_pdf(
-            anonymous_id, 
-            consent_details, 
-            st.session_state.consent_timestamp
+            anonymous_id, consent_details, st.session_state.consent_timestamp
         )
         
         if pdf_filename:
             st.session_state.consent_pdf = pdf_filename
-            
-            # 성공 메시지 - 더 친근하고 격려적으로
             st.success("🎉 Perfect! You're all set up!")
-            st.info("📦 Your consent form is safely stored and will be included in the secure backup")
-            
-            # 사용자 다운로드 옵션은 여전히 제공
+            st.info("📦 Your consent form is safely stored")
             display_consent_pdf_download(pdf_filename, anonymous_id)
         else:
             st.success("🎉 Great! You're ready to start practicing Korean!")
             st.info("✅ Your consent has been recorded securely")
     
-    # 세션에 익명 ID 저장
+    # 세션에 ID 저장
     st.session_state.session_id = anonymous_id
-    st.session_state.original_nickname = nickname  # 화면 표시용
+    st.session_state.original_nickname = nickname
     
     return True
