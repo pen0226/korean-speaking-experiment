@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (녹음 화면 개선 버전)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (동의서/배경정보 분리 버전)
 """
 
 import streamlit as st
@@ -12,7 +12,7 @@ from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
-from consent import handle_nickname_input_with_consent
+from consent import handle_consent_only, handle_background_info_only
 from data_io import save_session_data, auto_backup_to_gcs, log_upload_status, display_download_buttons, display_session_details, display_data_quality_info
 from utils import (
     show_progress_indicator, display_question, record_audio,
@@ -27,9 +27,9 @@ from utils import (
 
 
 def initialize_session_state():
-    """세션 상태 초기화 (배경 정보 필드 추가)"""
+    """세션 상태 초기화 (자기효능감 필드 추가)"""
     if 'step' not in st.session_state:
-        st.session_state.step = 'nickname_input'
+        st.session_state.step = 'consent'  # 첫 단계를 'consent'로 변경
         st.session_state.session_number = CURRENT_SESSION
         st.session_state.session_label = SESSION_LABELS.get(CURRENT_SESSION, "Session 1")
         st.session_state.session_id = ""
@@ -42,17 +42,32 @@ def initialize_session_state():
         # 배경 정보 초기화
         st.session_state.learning_duration = ""
         st.session_state.speaking_confidence = ""
+        
+        # 자기효능감 점수 초기화 (6개)
+        for i in range(1, 7):
+            setattr(st.session_state, f'self_efficacy_{i}', '')
 
 
-def handle_nickname_input_step():
-    """닉네임 입력 및 동의 단계 처리 (배경 정보 포함)"""
-    show_progress_indicator('nickname_input')
+def handle_consent_step():
+    """동의서 단계 처리"""
+    show_progress_indicator('consent')
     
     st.markdown("### 📝 Consent to Participate")
     st.markdown("Please read and agree to participate in this research study.")
     
-    # handle_nickname_input_with_consent() 함수가 이미 배경 정보까지 모든 것을 처리함
-    if handle_nickname_input_with_consent():
+    if handle_consent_only():
+        st.session_state.step = 'background_info'
+        st.rerun()
+
+
+def handle_background_info_step():
+    """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
+    show_progress_indicator('background_info')
+    
+    st.markdown("### 📊 Background Information")
+    st.markdown("Please provide some information about your Korean learning journey.")
+    
+    if handle_background_info_only():
         st.session_state.step = 'first_recording'
         st.rerun()
 
@@ -61,33 +76,42 @@ def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃"""
     show_progress_indicator('first_recording')
     
-    # 1) 질문 영역을 박스로 분리
+    # 1) 질문 영역을 박스로 분리 (다크모드 대응)
     st.markdown(
         """
         <div style='
-            background-color: #f8f9fa; 
-            border: 1px solid #e5e7eb; 
-            border-radius: 8px; 
-            padding: 20px; 
-            margin: 10px 0;
+            background-color: rgba(248, 249, 250, 0.95); 
+            border: 2px solid #e5e7eb; 
+            border-radius: 12px; 
+            padding: 25px; 
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         '>
-            <div style='font-weight: bold; margin-bottom: 15px;'>📝 Interview Question:</div>
+            <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Interview Question:</div>
             <div style='text-align: center;'>
-                <div style='font-size: 24px; font-weight: bold; margin-bottom: 10px;'>자기소개를 해 보세요.</div>
-                <div style='font-size: 14px; color: #666;'>(eg. 이름, 나이, 전공, 성격, 취미, 가족, 왜 한국어를 배워요?)</div>
+                <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
+                    Please speak for about 2 minutes in total and talk about both topics below.<br>
+                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly explain the reason.)</span>
+                </div>
+                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                    1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
+                </div>
+                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                    2️⃣ <strong>한국에서 뭐 할 거예요?</strong>
+                </div>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
     
-    # 2) 녹음 안내를 간결하게
+    # 2) 녹음 안내를 간결하게 (2분 목표로 수정)
     st.markdown(
-        "🔴 **Aim for at least 60 seconds** | 🎧 **Quiet environment & headphones recommended**"
+        "🔴 **Aim for about 2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
     )
     
     # 3) 녹음 단계 제목
-    st.markdown("### 🎤 Step 2: First Recording")
+    st.markdown("### 🎤 Step 3: First Recording")
     
     # 첫 번째 오디오 상태 초기화
     if "first_audio" not in st.session_state:
@@ -155,8 +179,8 @@ def handle_feedback_step():
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
     st.warning("⚠️ This feedback is automatically generated by AI and may not be perfect. Please use it as a helpful reference.")
     
-    st.markdown("### 🧠 Step 3: AI Feedback")
-    st.markdown("")  # Step 3 타이틀 아래 여백 추가 (20-24px)
+    st.markdown("### 🧠 Step 4: AI Feedback")
+    st.markdown("")  # Step 4 타이틀 아래 여백 추가 (20-24px)
     
     if st.session_state.feedback:
         feedback = st.session_state.feedback
@@ -273,29 +297,31 @@ def handle_feedback_step():
                     st.markdown("#### 📋 Detailed Feedback")
                     st.write(feedback['interview_readiness_reason'])
             
-            # 녹음 시간 정보
+            # 녹음 시간 정보 (2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
             if duration > 0:
                 st.markdown("#### ⏱️ Speaking Duration")
-                if duration >= 60:
-                    st.success(f"{duration:.1f} seconds - Excellent! Met the 1-minute goal!")
-                elif duration >= 45:
-                    st.info(f"{duration:.1f} seconds - Good, try to reach at least 1 minute (60+ seconds)!")
+                if duration >= 120:
+                    st.success(f"{duration:.1f} seconds - Excellent! Met the 2-minute goal!")
+                elif duration >= 90:
+                    st.info(f"{duration:.1f} seconds - Good, try to reach about 2 minutes (120+ seconds)!")
+                elif duration >= 60:
+                    st.warning(f"{duration:.1f} seconds - Fair, aim for about 2 minutes (120+ seconds) next time!")
                 else:
-                    st.warning(f"{duration:.1f} seconds - Aim for at least 1 minute (60+ seconds) next time!")
+                    st.error(f"{duration:.1f} seconds - Too short, aim for about 2 minutes (120+ seconds)!")
         
         st.markdown("---")
         
         # ===== 다음 단계 준비 =====
         st.markdown("### ✅ Ready for Your Second Try?")
         
-        # 간단한 팁 리스트
+        # 간단한 팁 리스트 (2분 목표로 수정)
         st.info("""
         **Quick Tips for Your Next Recording:**
-        1. 🎯 Aim for **at least 1 minute (60+ seconds)** of speaking
+        1. 🎯 Aim for **about 2 minutes total** of speaking
         2. 🎤 Listen to the model pronunciation above
         3. 📝 Try to fix the grammar points
-        4. 💡 Add some personal details from the content ideas
+        4. 💡 Add details for both topics (summer vacation + plans in Korea)
         """)
         
         # 다음 단계 버튼
@@ -307,60 +333,49 @@ def handle_feedback_step():
         st.error("❌ No feedback available. Please try recording again.")
 
 
-def format_simple_feedback(content):
-    """피드백을 간단하게 포맷팅"""
-    if not content:
-        return ""
-    
-    # 복잡한 기호들 제거
-    content = content.replace('\\n', ' ')
-    content = content.replace('**', '')
-    content = content.replace('💡', '•')
-    content = content.replace('📝', '•')
-    content = content.replace('🎯', '•')
-    content = content.replace('🧠', '-')
-    
-    # 너무 긴 내용은 줄이기
-    if len(content) > 150:
-        content = content[:147] + "..."
-    
-    return content
-
-
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃"""
     show_progress_indicator('second_recording')
     
-    st.markdown("### 🎤 Step 4: Second Recording")
+    st.markdown("### 🎤 Step 5: Second Recording")
     
     # 뒤로가기 버튼
     if create_styled_button("Back to Feedback", "secondary"):
         st.session_state.step = 'feedback'
         st.rerun()
     
-    # 1) 질문 영역을 박스로 분리
+    # 1) 질문 영역을 박스로 분리 (다크모드 대응)
     st.markdown(
         """
         <div style='
-            background-color: #f8f9fa; 
-            border: 1px solid #e5e7eb; 
-            border-radius: 8px; 
-            padding: 20px; 
-            margin: 10px 0;
+            background-color: rgba(248, 249, 250, 0.95); 
+            border: 2px solid #e5e7eb; 
+            border-radius: 12px; 
+            padding: 25px; 
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         '>
-            <div style='font-weight: bold; margin-bottom: 15px;'>📝 Same Question - Second Attempt:</div>
+            <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Same Question - Second Attempt:</div>
             <div style='text-align: center;'>
-                <div style='font-size: 24px; font-weight: bold; margin-bottom: 10px;'>자기소개를 해 보세요.</div>
-                <div style='font-size: 14px; color: #666;'>(eg. 이름, 나이, 전공, 성격, 취미, 가족, 왜 한국어를 배워요?)</div>
+                <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
+                    Please speak for about 2 minutes in total and talk about both topics below.<br>
+                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly explain the reason.)</span>
+                </div>
+                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                    1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
+                </div>
+                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                    2️⃣ <strong>한국에서 뭐 할 거예요?</strong>
+                </div>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
     
-    # 2) 녹음 안내 추가
+    # 2) 녹음 안내 추가 (2분 목표로 수정)
     st.markdown(
-        "🔴 **Aim for at least 60 seconds** | 🎧 **Quiet environment & headphones recommended**"
+        "🔴 **Aim for about 2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
     )
     
     st.write("🚀 Now try again! Apply the feedback you received to improve your answer.")
@@ -470,7 +485,7 @@ def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
     show_progress_indicator('survey')
     
-    st.markdown("### 📋 Step 5: Required Survey")
+    st.markdown("### 📋 Step 6: Required Survey")
     
     # 데이터 저장 상태 확인 및 안내
     if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
@@ -707,7 +722,7 @@ def display_researcher_mode():
                 # 다운로드 버튼들
                 display_download_buttons(csv_filename, excel_filename, zip_filename)
                 
-                # 세션 상세 정보 (배경 정보 + GCS 상태 포함)
+                # 세션 상세 정보 (배경 정보 + 자기효능감 + GCS 상태 포함)
                 display_session_details()
                 
                 # 데이터 품질 정보
@@ -715,11 +730,11 @@ def display_researcher_mode():
 
 
 def main():
-    """메인 애플리케이션 함수 (피드백 경고 배너 위치 조정)"""
+    """메인 애플리케이션 함수 (분리된 단계 처리)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
     
-    # 세션 상태 초기화 (배경 정보 포함)
+    # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
     
     # 제목 (세션 정보 포함)
@@ -731,11 +746,13 @@ def main():
     # 사이드바 설정
     setup_sidebar()
     
-    # 단계별 처리
+    # 단계별 처리 (consent → background_info → first_recording → ...)
     current_step = st.session_state.step
     
-    if current_step == 'nickname_input':
-        handle_nickname_input_step()
+    if current_step == 'consent':
+        handle_consent_step()
+    elif current_step == 'background_info':
+        handle_background_info_step()
     elif current_step == 'first_recording':
         handle_first_recording_step()
     elif current_step == 'feedback':
@@ -748,7 +765,7 @@ def main():
         handle_completion_step()
     else:
         display_error_message(f"Unknown step: {current_step}")
-        st.session_state.step = 'nickname_input'
+        st.session_state.step = 'consent'
         st.rerun()
 
 

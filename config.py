@@ -51,11 +51,11 @@ SESSION_LABELS = {
 }
 
 # 실험 설정
-EXPERIMENT_QUESTION = "자기소개를 해 보세요. (예: 이름, 나이, 전공, 성격, 취미, 가족)"
+EXPERIMENT_QUESTION = "Please speak for about 2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?"
 
 # 세션별 질문 설정
 SESSION_QUESTIONS = {
-    1: "자기소개를 해 보세요. (예: 이름, 나이, 전공, 성격, 취미, 가족)",
+    1: "Please speak for about 2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?",
     2: "이번 여름에 한국에서 뭐 하려고 하세요? 특별한 계획이 있으세요?"
 }
 
@@ -78,6 +78,24 @@ BACKGROUND_INFO = {
         "5️⃣ Very confident"
     ]
 }
+
+# 자기효능감 문항 설정 (6개 문항 - 5점 만점)
+SELF_EFFICACY_ITEMS = [
+    "I can use grammar accurately when speaking Korean.",
+    "I can use appropriate words when speaking Korean.",
+    "I can deliver what I want to say in Korean with confidence.",
+    "I can express my ideas clearly in Korean.",
+    "I can answer related questions well in Korean.",
+    "I can improve my speaking on my own through feedback."
+]
+
+SELF_EFFICACY_SCALE = [
+    "1️⃣ Strongly Disagree",
+    "2️⃣ Disagree", 
+    "3️⃣ Neutral",
+    "4️⃣ Agree",
+    "5️⃣ Strongly Agree"
+]
 
 # AI 모델 설정
 GPT_MODELS = ["gpt-4o"]
@@ -110,14 +128,15 @@ PAGE_CONFIG = {
     "layout": "wide"
 }
 
-# 실험 단계 정의
+# 실험 단계 정의 (2단계 분리: consent → background_info)
 EXPERIMENT_STEPS = {
-    'nickname_input': ('Step 1', 'Enter Nickname'),
-    'first_recording': ('Step 2', 'First Recording'),
-    'feedback': ('Step 3', 'AI Feedback'),
-    'second_recording': ('Step 4', 'Second Recording'),
-    'survey': ('Step 5', 'Required Survey'),
-    'completion': ('Step 6', 'Complete')
+    'consent': ('Step 1', 'Consent Form'),
+    'background_info': ('Step 2', 'Background Info'),
+    'first_recording': ('Step 3', 'First Recording'),
+    'feedback': ('Step 4', 'AI Feedback'),
+    'second_recording': ('Step 5', 'Second Recording'),
+    'survey': ('Step 6', 'Required Survey'),
+    'completion': ('Step 7', 'Complete')
 }
 
 # 설문조사 URL
@@ -161,12 +180,12 @@ GRAMMAR_ERROR_TYPES = {
     }
 }
 
-# 오디오 품질 기준
+# 오디오 품질 기준 (2분 목표로 수정)
 AUDIO_QUALITY = {
-    "excellent_min_duration": 60,
-    "good_min_duration": 45,
-    "fair_min_duration": 30,
-    "max_recommended_duration": 120
+    "excellent_min_duration": 120,  # 2분
+    "good_min_duration": 90,        # 1분 30초
+    "fair_min_duration": 60,        # 1분
+    "max_recommended_duration": 180 # 3분
 }
 
 # 데이터 보관 설정

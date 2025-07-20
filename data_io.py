@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (HTML 동의서 백업 수정)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (자기효능감 필드 추가)
 """
 
 import os
@@ -25,7 +25,7 @@ from config import (
 
 def save_session_data():
     """
-    세션 데이터를 CSV 형식으로 저장
+    세션 데이터를 CSV 형식으로 저장 (자기효능감 포함)
     
     Returns:
         tuple: (csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp)
@@ -58,7 +58,7 @@ def save_session_data():
 
 def build_session_data(timestamp):
     """
-    세션 데이터 딕셔너리 구성
+    세션 데이터 딕셔너리 구성 (자기효능감 필드 추가)
     
     Args:
         timestamp: 타임스탬프
@@ -82,7 +82,7 @@ def build_session_data(timestamp):
         if key not in research_scores:
             research_scores[key] = default_value
 
-    return {
+    session_data = {
         'session_id': st.session_state.session_id,
         'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),
         'session_label': getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1")),
@@ -92,6 +92,14 @@ def build_session_data(timestamp):
         # 배경 정보
         'learning_duration': getattr(st.session_state, 'learning_duration', ''),
         'speaking_confidence': getattr(st.session_state, 'speaking_confidence', ''),
+        
+        # 자기효능감 점수 6개 추가
+        'self_efficacy_1': getattr(st.session_state, 'self_efficacy_1', ''),
+        'self_efficacy_2': getattr(st.session_state, 'self_efficacy_2', ''),
+        'self_efficacy_3': getattr(st.session_state, 'self_efficacy_3', ''),
+        'self_efficacy_4': getattr(st.session_state, 'self_efficacy_4', ''),
+        'self_efficacy_5': getattr(st.session_state, 'self_efficacy_5', ''),
+        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),
         
         # 강화된 동의 추적 (HTML 파일로 수정)
         'consent_given': getattr(st.session_state, 'consent_given', False),
@@ -103,9 +111,9 @@ def build_session_data(timestamp):
         'consent_final_confirmation': getattr(st.session_state, 'consent_final_confirmation', False),
         'consent_zoom_interview': getattr(st.session_state, 'consent_zoom_interview', False),
         'gdpr_compliant': getattr(st.session_state, 'gdpr_compliant', False),
-        'consent_file_generated': getattr(st.session_state, 'consent_file', '') != '',  # PDF → file로 수정
-        'consent_file_filename': getattr(st.session_state, 'consent_file', ''),  # PDF → file로 수정
-        'consent_file_type': 'html',  # 파일 형식 명시
+        'consent_file_generated': getattr(st.session_state, 'consent_file', '') != '',
+        'consent_file_filename': getattr(st.session_state, 'consent_file', ''),
+        'consent_file_type': 'html',
         
         # 실험 데이터
         'question': EXPERIMENT_QUESTION,
@@ -174,11 +182,13 @@ def build_session_data(timestamp):
         'saved_at_step': 'second_recording_complete',
         'save_trigger': 'auto_after_second_recording'
     }
+    
+    return session_data
 
 
 def get_audio_quality_label(duration):
     """
-    음성 길이에 따른 품질 라벨 반환
+    음성 길이에 따른 품질 라벨 반환 (2분 목표 기준)
     
     Args:
         duration: 음성 길이 (초)
@@ -186,11 +196,11 @@ def get_audio_quality_label(duration):
     Returns:
         str: 품질 라벨
     """
-    if duration >= 60:
+    if duration >= 120:  # 2분
         return 'excellent'
-    elif duration >= 45:
+    elif duration >= 90:  # 1분 30초
         return 'good'
-    elif duration >= 30:
+    elif duration >= 60:  # 1분
         return 'fair'
     else:
         return 'very_short'
@@ -278,7 +288,7 @@ def save_audio_files(timestamp):
 
 def create_participant_info_file(session_id, timestamp):
     """
-    참여자 정보 파일 생성
+    참여자 정보 파일 생성 (자기효능감 포함)
     
     Args:
         session_id: 세션 ID
@@ -294,6 +304,12 @@ def create_participant_info_file(session_id, timestamp):
         session_label = getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1"))
         learning_duration = getattr(st.session_state, 'learning_duration', 'Not specified')
         speaking_confidence = getattr(st.session_state, 'speaking_confidence', 'Not specified')
+        
+        # 자기효능감 점수 수집 (6개)
+        efficacy_scores = []
+        for i in range(1, 7):
+            score = getattr(st.session_state, f'self_efficacy_{i}', 'N/A')
+            efficacy_scores.append(f"Item {i}: {score}/5")
         
         research_scores = getattr(st.session_state, 'research_scores', {})
         accuracy_score = research_scores.get('accuracy_score', 'N/A')
@@ -311,6 +327,9 @@ Save Trigger: Auto-save after second recording completion
 === BACKGROUND INFORMATION ===
 Learning Duration: {learning_duration}
 Speaking Confidence: {speaking_confidence}
+
+=== SELF-EFFICACY SCORES (1-5 scale) ===
+{chr(10).join(efficacy_scores)}
 
 === EXPERIMENT DETAILS ===
 Question: {EXPERIMENT_QUESTION}
@@ -340,6 +359,7 @@ This file contains the link between the anonymous ID and the original nickname.
 Data was automatically saved after second recording completion.
 Research scores are calculated using: Accuracy (error rate) + Fluency (word count).
 Student UI scores are generated by GPT for educational purposes.
+Self-efficacy scores (1-5 scale) collected before experiment.
 Consent form is stored as HTML file for Korean language compatibility.
 Contact: pen0226@gmail.com for any data requests or questions.
 """
@@ -383,7 +403,7 @@ def create_comprehensive_backup_zip(session_id, timestamp):
             if os.path.exists(csv_file):
                 zipf.write(csv_file, f"session_data_{timestamp}.csv")
             
-            # 🔧 수정: HTML 동의서 파일 추가 (PDF → HTML로 변경)
+            # HTML 동의서 파일 추가
             consent_html = os.path.join(FOLDERS["data"], f"{session_id}_consent.html")
             if os.path.exists(consent_html):
                 zipf.write(consent_html, f"consent_form_{session_id}.html")
@@ -406,16 +426,30 @@ def create_comprehensive_backup_zip(session_id, timestamp):
             
             # ZIP 내용 요약 파일 추가
             research_scores = getattr(st.session_state, 'research_scores', {})
+            
+            # 자기효능감 평균 계산 (6개)
+            efficacy_scores = []
+            for i in range(1, 7):
+                score = getattr(st.session_state, f'self_efficacy_{i}', 0)
+                if score:
+                    efficacy_scores.append(score)
+            efficacy_avg = sum(efficacy_scores) / len(efficacy_scores) if efficacy_scores else 0
+            
             readme_content = f"""=== ZIP CONTENTS SUMMARY ===
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 Participant: {session_id} (Session {session_num})
 Save Trigger: Auto-save after second recording completion
 
 Files included:
-- participant_info.txt: Participant details and nickname mapping + Research scores
-- session_data_{timestamp}.csv: Complete session data with dual evaluation scores
+- participant_info.txt: Participant details and nickname mapping + Research scores + Self-efficacy scores
+- session_data_{timestamp}.csv: Complete session data with dual evaluation scores + self-efficacy data
 - consent_form_{session_id}.html: Signed consent form (HTML format for Korean support)
 - audio/: All recorded audio files (student + model pronunciations)
+
+SELF-EFFICACY DATA:
+- 6 items measured on 1-5 scale
+- Average self-efficacy score: {efficacy_avg:.2f}/5.0
+- Individual scores stored in CSV under self_efficacy_1 through self_efficacy_6
 
 CONSENT FORM FORMAT:
 - HTML format for perfect Korean language support
@@ -565,7 +599,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
             
             if blob_url:
                 uploaded_files.append(blob_name)
-                print(f"✅ ZIP with HTML consent uploaded: {blob_name}")
+                print(f"✅ ZIP with HTML consent + self-efficacy uploaded: {blob_name}")
             else:
                 errors.append(f"ZIP upload failed: {result_msg}")
                 
@@ -628,7 +662,7 @@ def test_gcs_connection():
 
 def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=False):
     """
-    GCS 업로드 결과를 로그 파일에 기록
+    GCS 업로드 결과를 로그 파일에 기록 (자기효능감 정보 포함)
     
     Args:
         session_id: 세션 ID
@@ -658,6 +692,14 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
         fluency_score = research_scores.get('fluency_score', 'N/A')
         dual_eval_used = getattr(st.session_state, 'gpt_debug_info', {}).get('dual_evaluation', False)
         
+        # 자기효능감 평균 계산 (6개)
+        efficacy_scores = []
+        for i in range(1, 7):
+            score = getattr(st.session_state, f'self_efficacy_{i}', 0)
+            if score:
+                efficacy_scores.append(score)
+        efficacy_avg = sum(efficacy_scores) / len(efficacy_scores) if efficacy_scores else 0
+        
         upload_status = "SUCCESS" if uploaded_files and not errors else "PARTIAL" if uploaded_files else "FAILED"
         
         log_entry = f"""
@@ -666,6 +708,7 @@ Nickname: {original_nickname}
 Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
 Dual Evaluation: {dual_eval_used} (Research scores: Accuracy={accuracy_score}, Fluency={fluency_score})
+Self-Efficacy: Average {efficacy_avg:.2f}/5.0 (6 items collected)
 GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP only)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
@@ -673,7 +716,7 @@ Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: Secured before survey step
 Excel conversion: Removed for faster deployment (CSV only)
-Research Data: Objective scores calculated and stored
+Research Data: Objective scores + self-efficacy calculated and stored
 Consent Format: HTML (Korean language support) - Fixed backup inclusion
 {'='*80}
 """
@@ -696,7 +739,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         zip_filename: ZIP 파일 경로
     """
     if GCS_ENABLED:
-        st.info("📤 ZIP file (including HTML consent form) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
+        st.info("📤 ZIP file (including HTML consent form + self-efficacy data) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
     else:
         st.warning("⚠️ GCS upload is disabled. Use these download buttons to save your data.")
     
@@ -712,7 +755,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
                 with open(zip_filename, 'rb') as f:
                     zip_data = f.read()
                 st.download_button(
-                    label="📦 Complete Backup ZIP (w/ HTML Consent)",
+                    label="📦 Complete Backup ZIP (w/ HTML Consent + Self-Efficacy)",
                     data=zip_data,
                     file_name=f"{st.session_state.session_id}_{timestamp_str}.zip",
                     mime='application/zip',
@@ -741,12 +784,12 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         else:
             st.info("CSV unavailable")
     
-    st.caption("ℹ️ Excel file generation has been removed for faster deployment. The CSV file can be opened directly in Excel. HTML consent form is included in ZIP.")
+    st.caption("ℹ️ Excel file generation has been removed for faster deployment. The CSV file can be opened directly in Excel. HTML consent form + self-efficacy data included in ZIP.")
 
 
 def display_session_details():
     """
-    연구자용 세션 상세 정보 표시
+    연구자용 세션 상세 정보 표시 (자기효능감 포함)
     """
     st.markdown("**📋 Session Details:**")
     display_name = getattr(st.session_state, 'original_nickname', st.session_state.session_id)
@@ -764,6 +807,20 @@ def display_session_details():
         st.write(f"**Learning Duration:** {learning_duration}")
     if speaking_confidence:
         st.write(f"**Speaking Confidence:** {speaking_confidence}")
+    
+    # 자기효능감 점수 표시 (6개)
+    efficacy_scores = []
+    for i in range(1, 7):
+        score = getattr(st.session_state, f'self_efficacy_{i}', 0)
+        if score:
+            efficacy_scores.append(score)
+    
+    if efficacy_scores:
+        avg_efficacy = sum(efficacy_scores) / len(efficacy_scores)
+        st.write(f"**Self-Efficacy:** {avg_efficacy:.2f}/5.0 (6 items)")
+        with st.expander("🎯 Self-Efficacy Details", expanded=False):
+            for i, score in enumerate(efficacy_scores, 1):
+                st.write(f"Item {i}: {score}/5")
     
     # 연구용 점수 정보 표시
     research_scores = getattr(st.session_state, 'research_scores', {})
@@ -783,11 +840,12 @@ def display_session_details():
     # GCS 연동 상태 표시
     st.markdown("**☁️ Google Cloud Storage Status:**")
     if GCS_ENABLED:
-        st.success("✅ GCS upload is enabled (Service Account method - ZIP with HTML consent)")
+        st.success("✅ GCS upload is enabled (Service Account method - ZIP with HTML consent + self-efficacy)")
         if GCS_BUCKET_NAME:
             st.write(f"Bucket: {GCS_BUCKET_NAME}")
             st.write(f"Storage method: ZIP archives + nickname mapping")
             st.write(f"Consent format: HTML (Korean language support)")
+            st.write(f"Self-efficacy: 6 items (1-5 scale) included")
             st.write(f"Save timing: Auto-save after 2nd recording")
         else:
             st.warning("⚠️ No bucket specified")
@@ -803,7 +861,7 @@ def display_session_details():
 
 def display_data_quality_info():
     """
-    데이터 품질 정보 표시
+    데이터 품질 정보 표시 (자기효능감 포함)
     """
     st.markdown("**📊 Data Quality:**")
     col1, col2 = st.columns(2)
@@ -831,6 +889,17 @@ def display_data_quality_info():
             st.write("**🔬 Research Scores:**")
             st.write(f"Accuracy: {research_scores.get('accuracy_score', 'N/A')}/10")
             st.write(f"Fluency: {research_scores.get('fluency_score', 'N/A')}/10")
+        
+        # 자기효능감 요약 (6개)
+        efficacy_scores = []
+        for i in range(1, 7):
+            score = getattr(st.session_state, f'self_efficacy_{i}', 0)
+            if score:
+                efficacy_scores.append(score)
+        
+        if efficacy_scores:
+            avg_efficacy = sum(efficacy_scores) / len(efficacy_scores)
+            st.write(f"**🎯 Self-Efficacy:** {avg_efficacy:.2f}/5.0")
     
     with col2:
         duration2 = getattr(st.session_state, 'audio_duration_2', 0)
@@ -859,7 +928,7 @@ def display_data_quality_info():
 
 def get_quality_description(duration):
     """
-    음성 길이에 따른 품질 설명 반환
+    음성 길이에 따른 품질 설명 반환 (2분 목표 기준)
     
     Args:
         duration: 음성 길이 (초)
@@ -867,11 +936,11 @@ def get_quality_description(duration):
     Returns:
         str: 품질 설명
     """
-    if duration >= 60:
-        return "✅ Excellent (60s+ target reached!)"
-    elif duration >= 45:
-        return "🌟 Good (45-60s, try for 60+)"
-    elif duration >= 30:
-        return "⚠️ Fair (30-45s, needs improvement)"
+    if duration >= 120:
+        return "✅ Excellent (2min+ target reached!)"
+    elif duration >= 90:
+        return "🌟 Good (1.5-2min, try for 2min+)"
+    elif duration >= 60:
+        return "⚠️ Fair (1-1.5min, needs improvement)"
     else:
-        return "❌ Very Short (under 30s, much more needed)"
+        return "❌ Very Short (under 1min, much more needed)"

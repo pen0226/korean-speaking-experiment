@@ -1,30 +1,29 @@
 """
 consent.py
-연구 참여 동의서 처리 및 HTML 동의서 생성 모듈 (학생 친화적 버전 - GDPR 준수)
-변수명 통일: consent_pdf → consent_file
+연구 참여 동의서 처리 및 HTML 동의서 생성 모듈 (동의서와 배경정보 분리 버전)
 """
 
 import streamlit as st
 import csv
 import os
 from datetime import datetime, timedelta
-from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION
+from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION, SELF_EFFICACY_ITEMS, SELF_EFFICACY_SCALE
 
 
 def enhanced_consent_section():
     """
-    학생 친화적 동의 수집 섹션 (GDPR 준수)
+    학생 친화적 동의 수집 섹션 (GDPR 준수) - 동의서만 처리
     
     Returns:
-        tuple: (consent_completed, consent_details)
+        bool: 동의 완료 여부
     """
     
     # 탭으로 정보 구성 (5개 탭, Privacy 3번째로 배치)
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎮 Practice Flow", "🎁 What You'll Get", "🔒 Your Privacy", "🛠️ AI Tools Used", "📞 Contact Info"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔬 Experiment Flow", "🎁 What You'll Get", "🔒 Your Privacy", "🛠️ AI Tools Used", "📞 Contact Info"])
     
     with tab1:
         st.markdown("""
-        ### 🎮 Practice Flow
+        ### 🔬 Experiment Flow
         
         **📅 2 Sessions** (~15-20 mins each, 1 week apart)
         
@@ -122,50 +121,59 @@ def enhanced_consent_section():
     essential_consents = [consent_participation, consent_processing, consent_data_rights]
     
     if all(essential_consents):
+        # 동의 완료 시점에 timestamp 생성
+        consent_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        final_consent = st.checkbox(
-            "✅ **Let's do this! I'm ready to start practicing Korean with AI feedback.**"
-        )
+        # 성공 메시지 (원래 메시지 유지)
+        st.success(f"🌟 Awesome! Welcome to your Korean practice session! ({consent_timestamp})")
         
-        if final_consent:
-            consent_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # 성공 메시지
-            st.success(f"🌟 Awesome! Welcome to your Korean practice session! ({consent_timestamp})")
-            
-            # 동의 정보 세션에 저장 (3개 항목으로 간소화)
-            consent_details = {
-                'consent_participation': consent_participation,
-                'consent_processing': consent_processing,
-                'consent_data_rights': consent_data_rights,
-                'consent_final_confirm': final_consent,
-                'consent_timestamp': consent_timestamp
-            }
-            
-            # 세션 상태에 저장
-            save_consent_to_session(consent_details)
-            
-            return True, consent_details
-        else:
-            st.warning("👆 Just check the final box when you're ready to start!")
-            return False, None
+        # 동의 정보 세션에 저장 (최종 확인은 자동으로 True)
+        consent_details = {
+            'consent_participation': consent_participation,
+            'consent_processing': consent_processing,
+            'consent_data_rights': consent_data_rights,
+            'consent_final_confirm': True,  # 자동으로 True 설정
+            'consent_timestamp': consent_timestamp
+        }
+        
+        # 세션 상태에 저장
+        save_consent_to_session(consent_details)
+        
+        # 다음 단계 버튼
+        st.markdown("---")
+        if st.button("🔄 Next: Background Information", type="primary", use_container_width=True):
+            return True
+        
+        return False
     else:
         st.warning("📝 Please check all the boxes above to continue")
-        return False, None
+        return False
 
 
 def collect_background_information():
     """
-    친근한 배경 정보 수집 섹션
+    배경 정보 수집 섹션 (닉네임 + 학습기간 + 자신감 + 자기효능감 8문항)
     
     Returns:
         tuple: (background_completed, background_details)
     """
-    st.markdown("""
-    ### 📊 Tell About Your Korean Learning Journey
-    """)
+    st.markdown("### 👤 Choose Your Nickname")
+    st.info("🔗 **Use the exact same nickname** in Session 1 & Session 2 — links your data.")
     
-    # 학습 기간 질문 - 더 친근하게
+    nickname = st.text_input(
+        "Your nickname:",
+        placeholder="e.g., KoreanLearner123, MyNickname, Student_A, etc.",
+        help="Your nickname becomes an anonymous ID like 'Student01'. Your real identity stays private!"
+    )
+    
+    if not nickname.strip():
+        st.warning("👆 Please enter a nickname to continue")
+        return False, None
+    
+    st.markdown("---")
+    st.markdown("### 📊 Tell About Your Korean Learning Journey")
+    
+    # 학습 기간 질문
     st.markdown("**🕐 How long have you been learning Korean?**")
     
     learning_duration = st.radio(
@@ -177,7 +185,7 @@ def collect_background_information():
     
     st.markdown("---")
     
-    # 자신감 질문 - 격려하는 톤으로
+    # 자신감 질문
     st.markdown("**🌟 How confident do you feel speaking Korean right now?**")
     
     speaking_confidence = st.radio(
@@ -187,21 +195,57 @@ def collect_background_information():
         label_visibility="collapsed"
     )
     
+    st.markdown("---")
+    
+    # 자기효능감 문항 6개 추가
+    st.markdown("### 🎯 Korean Speaking Self-Efficacy")
+    st.markdown("*Please rate how much you agree with each statement:*")
+    
+    self_efficacy_scores = {}
+    
+    for i, item in enumerate(SELF_EFFICACY_ITEMS, 1):
+        st.markdown(f"**{i}. {item}**")
+        
+        score = st.radio(
+            f"Your rating for statement {i}:",
+            options=SELF_EFFICACY_SCALE,
+            key=f"radio_self_efficacy_{i}",  # 위젯 키를 다르게 설정
+            label_visibility="collapsed"
+        )
+        
+        if score:
+            # "1️⃣ Strongly Disagree" → 1로 변환
+            score_value = int(score.split('️⃣ ')[0].replace('1', '1').replace('2', '2').replace('3', '3').replace('4', '4').replace('5', '5'))
+            self_efficacy_scores[f'self_efficacy_{i}'] = score_value
+        
+        # 문항 사이 여백
+        if i < len(SELF_EFFICACY_ITEMS):
+            st.markdown("")
+    
     # 모든 필수 항목이 선택되었는지 확인
-    if learning_duration and speaking_confidence:
+    required_items = [learning_duration, speaking_confidence] + [nickname.strip()]
+    all_efficacy_answered = len(self_efficacy_scores) == len(SELF_EFFICACY_ITEMS)
+    
+    if all(required_items) and all_efficacy_answered:
         background_details = {
+            'nickname': nickname.strip(),
             'learning_duration': learning_duration,
-            'speaking_confidence': speaking_confidence
+            'speaking_confidence': speaking_confidence,
+            **self_efficacy_scores  # 자기효능감 점수 8개 추가
         }
         return True, background_details
     else:
-        st.caption("📝 Please answer both questions so the feedback can be personalized!")
+        missing_count = len(SELF_EFFICACY_ITEMS) - len(self_efficacy_scores)
+        if missing_count > 0:
+            st.caption(f"📝 Please answer all questions above ({missing_count} self-efficacy items remaining)")
+        else:
+            st.caption("📝 Please answer all questions above")
         return False, None
 
 
 def save_consent_to_session(consent_details):
     """
-    동의 정보를 세션 상태에 저장 (3개 항목으로 간소화)
+    동의 정보를 세션 상태에 저장
     
     Args:
         consent_details: 동의 세부 정보 딕셔너리
@@ -217,13 +261,20 @@ def save_consent_to_session(consent_details):
 
 def save_background_to_session(background_details):
     """
-    배경 정보를 세션 상태에 저장
+    배경 정보를 세션 상태에 저장 (자기효능감 포함)
     
     Args:
-        background_details: 배경 정보 딕셔너리
+        background_details: 배경 정보 딕셔너리 (자기효능감 점수 포함)
     """
+    st.session_state.original_nickname = background_details['nickname']
     st.session_state.learning_duration = background_details['learning_duration']
     st.session_state.speaking_confidence = background_details['speaking_confidence']
+    
+    # 자기효능감 점수 6개 저장
+    for i in range(1, 7):
+        key = f'self_efficacy_{i}'
+        if key in background_details:
+            setattr(st.session_state, key, background_details[key])
 
 
 def find_or_create_anonymous_id(nickname):
@@ -287,13 +338,13 @@ def generate_new_anonymous_id():
 
 def save_nickname_mapping(anonymous_id, nickname, consent_details=None, background_details=None):
     """
-    닉네임 매핑 정보를 CSV 파일에 저장 (연구자 전용) - 3개 동의 항목으로 간소화
+    닉네임 매핑 정보를 CSV 파일에 저장 (자기효능감 점수 포함)
     
     Args:
         anonymous_id: 익명 ID
         nickname: 사용자 닉네임
         consent_details: 동의 세부 정보
-        background_details: 배경 정보
+        background_details: 배경 정보 (자기효능감 포함)
         
     Returns:
         bool: 저장 성공 여부
@@ -302,16 +353,22 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         os.makedirs(FOLDERS["data"], exist_ok=True)
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
         
-        # 헤더가 없으면 생성
+        # 헤더가 없으면 생성 (자기효능감 필드 6개 추가)
         if not os.path.exists(mapping_file):
             with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
-                writer.writerow([
+                headers = [
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
                     'Deletion_Requested', 'Consent_Participation', 'Consent_Processing',
                     'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant',
-                    'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session', 'Notes'
-                ])
+                    'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session'
+                ]
+                # 자기효능감 필드 6개 추가
+                for i in range(1, 7):
+                    headers.append(f'Self_Efficacy_{i}')
+                headers.append('Notes')
+                
+                writer.writerow(headers)
         
         # 기존 엔트리 확인
         all_rows = []
@@ -337,6 +394,12 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         
         retention_until = (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')
         
+        # 자기효능감 점수 추출 (6개)
+        efficacy_scores = []
+        for i in range(1, 7):
+            key = f'self_efficacy_{i}'
+            efficacy_scores.append(background_details.get(key, ''))
+        
         if existing_entry:
             # 기존 엔트리 업데이트
             session_count = int(existing_entry.get('Session_Count', 0)) + 1
@@ -345,8 +408,12 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
                     'Deletion_Requested', 'Consent_Participation', 'Consent_Processing',
                     'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant',
-                    'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session', 'Notes'
+                    'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session'
                 ]
+                for i in range(1, 7):
+                    fieldnames.append(f'Self_Efficacy_{i}')
+                fieldnames.append('Notes')
+                
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 
@@ -359,12 +426,16 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                             'Learning_Duration': background_details.get('learning_duration', row.get('Learning_Duration', '')),
                             'Speaking_Confidence': background_details.get('speaking_confidence', row.get('Speaking_Confidence', ''))
                         })
+                        # 자기효능감 점수 업데이트 (6개)
+                        for i in range(1, 7):
+                            key = f'Self_Efficacy_{i}'
+                            row[key] = background_details.get(f'self_efficacy_{i}', row.get(key, ''))
                     writer.writerow(row)
         else:
             # 새 엔트리 추가
             with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
-                writer.writerow([
+                row_data = [
                     anonymous_id, nickname, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     retention_until, 'FALSE',
                     consent_details.get('consent_participation', True),
@@ -374,8 +445,13 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'TRUE',
                     background_details.get('learning_duration', ''),
                     background_details.get('speaking_confidence', ''),
-                    1, CURRENT_SESSION, ''
-                ])
+                    1, CURRENT_SESSION
+                ]
+                # 자기효능감 점수 6개 추가
+                row_data.extend(efficacy_scores)
+                row_data.append('')  # Notes
+                
+                writer.writerow(row_data)
         
         return True
     except Exception:
@@ -724,72 +800,70 @@ def display_consent_html_download(html_filename, anonymous_id):
             st.error("HTML download failed")
 
 
-def handle_nickname_input_with_consent():
+def handle_consent_only():
     """
-    닉네임 입력, 동의 처리, 배경 정보 수집을 통합한 함수
+    동의서만 처리하는 함수
     
     Returns:
-        bool: 처리 완료 여부
+        bool: 동의 완료 여부
     """
-    # 동의 섹션 처리
-    consent_completed, consent_details = enhanced_consent_section()
+    consent_completed = enhanced_consent_section()
+    return consent_completed
+
+
+def handle_background_info_only():
+    """
+    배경 정보만 처리하는 함수 (닉네임 + 학습기간 + 자신감 + 자기효능감)
     
-    if not consent_completed:
-        return False
-    
-    # 닉네임 입력
-    st.markdown("---")
-    st.markdown("### 👤 Choose Your Nickname")
-    st.info("🔗 **Use the exact same nickname** in Session 1 & Session 2 — links your data.")
-    
-    nickname = st.text_input(
-        "Your nickname:",
-        placeholder="e.g., KoreanLearner123, MyNickname, Student_A, etc.",
-        help="Your nickname becomes an anonymous ID like 'Student01'. Your real identity stays private!"
-    )
-    
-    if not nickname.strip():
-        st.warning("👆 Please enter a nickname to continue")
-        return False
-    
-    # 배경 정보 수집
-    st.markdown("---")
+    Returns:
+        bool: 배경 정보 수집 완료 여부
+    """
     background_completed, background_details = collect_background_information()
     
-    if not background_completed:
-        return False
-    
-    # 시작 버튼
-    st.markdown("---")
-    st.markdown("### 🎉 Ready to Start Your Korean Practice?")
-    
-    if st.button("🚀 Let's Start!", type="primary", use_container_width=True):
-        return _process_consent_completion(nickname.strip(), consent_details, background_details)
+    if background_completed:
+        # 시작 버튼
+        st.markdown("---")
+        st.markdown("### 🎉 Ready to Start Your Korean Practice?")
+        
+        if st.button("🚀 Let's Start!", type="primary", use_container_width=True):
+            return _process_background_completion(background_details)
     
     return False
 
 
-def _process_consent_completion(nickname, consent_details, background_details):
+def _process_background_completion(background_details):
     """
-    동의 완료 처리 (HTML 파일 저장으로 수정)
+    배경 정보 완료 처리 (HTML 파일 저장)
     """
+    nickname = background_details['nickname']
+    
     # 익명 ID 생성
     anonymous_id = find_or_create_anonymous_id(nickname)
     
-    # 매핑 정보 저장
+    # 세션에서 저장된 동의 정보 가져오기
+    consent_details = {
+        'consent_participation': getattr(st.session_state, 'consent_participation', True),
+        'consent_processing': getattr(st.session_state, 'consent_processing', True),
+        'consent_data_rights': getattr(st.session_state, 'consent_data_rights', True),
+        'consent_final_confirm': getattr(st.session_state, 'consent_final_confirmation', True),
+        'consent_timestamp': getattr(st.session_state, 'consent_timestamp', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    }
+    
+    # 매핑 정보 저장 (자기효능감 포함)
     save_nickname_mapping(anonymous_id, nickname, consent_details, background_details)
     save_background_to_session(background_details)
     
     # HTML 동의서 생성
     with st.spinner("🎯 Setting up your Korean practice session..."):
         html_filename, html_result = generate_consent_html(
-            anonymous_id, consent_details, st.session_state.consent_timestamp
+            anonymous_id, 
+            consent_details,
+            consent_details['consent_timestamp']
         )
         
         if html_filename:
-            # 🔧 수정: consent_pdf → consent_file로 변경
             st.session_state.consent_file = html_filename
-            st.session_state.consent_file_type = "html"  # 파일 형식 명시
+            st.session_state.consent_file_type = "html"
             st.success("🎉 Perfect! You're all set up!")
             st.info("📦 Your consent form is safely stored and will be included in the secure backup")
             display_consent_html_download(html_filename, anonymous_id)
@@ -799,6 +873,5 @@ def _process_consent_completion(nickname, consent_details, background_details):
     
     # 세션에 ID 저장
     st.session_state.session_id = anonymous_id
-    st.session_state.original_nickname = nickname
     
     return True
