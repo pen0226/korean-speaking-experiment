@@ -662,7 +662,7 @@ def handle_completion_step():
 
 
 def display_optional_progress_view():
-    """선택적 진행상황 표시"""
+    """선택적 진행상황 표시 (2인칭 톤으로 수정)"""
     if hasattr(st.session_state, 'saved_files') and st.session_state.saved_files:
         # saved_files의 첫 번째 요소(csv_filename)가 존재하는지 확인
         if len(st.session_state.saved_files) > 0 and st.session_state.saved_files[0]:
@@ -682,14 +682,138 @@ def display_optional_progress_view():
                 with col2:
                     st.code(st.session_state.transcription_2, language=None)
                 
-                # 개선도 분석
+                # 개선도 분석 (제목 변경 및 2인칭 톤 적용)
                 if hasattr(st.session_state, 'improvement_assessment'):
                     st.markdown("---")
-                    st.markdown("### 📈 STT-Based Improvement Analysis")
+                    st.markdown("### 📈 Improvement Analysis")  # 🔥 제목 변경
                     
                     improvement = st.session_state.improvement_assessment
-                    display_improvement_metrics(improvement)
-                    display_improvement_details(improvement)
+                    
+                    # 🔥 2인칭 톤으로 개선도 메트릭 표시
+                    display_improvement_metrics_personal(improvement)
+                    display_improvement_details_personal(improvement)
+
+
+def display_improvement_metrics_personal(improvement):
+    """개선도 메트릭 표시 (2인칭 톤으로 수정)"""
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        first_score = improvement.get('first_attempt_score', 0)
+        st.metric("Your First Attempt", f"{first_score}/10")
+    
+    with col2:
+        second_score = improvement.get('second_attempt_score', 0)
+        difference = improvement.get('score_difference', 0)
+        st.metric("Your Second Attempt", f"{second_score}/10", f"{difference:+.1f}")
+    
+    with col3:
+        improvement_score = improvement.get('improvement_score', 0)
+        st.metric("Your Improvement Score", f"{improvement_score}/10")
+
+
+def display_improvement_details_personal(improvement):
+    """개선도 상세 정보 표시 (2인칭 톤으로 수정)"""
+    # 📈 Your Progress Analysis 섹션
+    st.markdown("#### 📈 Your Progress Analysis")
+    
+    # 🔥 3인칭을 2인칭으로 변경하여 따뜻하고 격려적인 톤으로 표시
+    analysis_text = improvement.get('improvement_reason', '')
+    overall_assessment = improvement.get('overall_assessment', '')
+    
+    # 3인칭 표현을 2인칭으로 변환
+    analysis_text = convert_to_second_person(analysis_text)
+    overall_assessment = convert_to_second_person(overall_assessment)
+    
+    # Analysis 표시 (더 따뜻한 톤으로)
+    if analysis_text:
+        st.markdown(
+            f"""
+            <div style='
+                background-color: #f0f9ff;
+                border: 2px solid #0ea5e9;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 10px 0;
+            '>
+                <div style='color: #0c4a6e; font-weight: bold; margin-bottom: 10px;'>
+                    📋 Analysis: {analysis_text}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    
+    # Overall Summary 표시 (더 격려적인 톤으로)
+    if overall_assessment:
+        st.markdown(
+            f"""
+            <div style='
+                background-color: #f0fdf4;
+                border: 2px solid #22c55e;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 10px 0;
+            '>
+                <div style='color: #166534; font-weight: bold; margin-bottom: 10px;'>
+                    🎯 Overall Summary: {overall_assessment}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    
+    # Specific Improvements 표시
+    improvements = improvement.get('specific_improvements', [])
+    if improvements:
+        st.markdown("#### ✅ What You Improved")
+        for item in improvements[:3]:  # 최대 3개
+            # 2인칭으로 변환
+            item = convert_to_second_person(item)
+            st.markdown(f"• {item}")
+    
+    # Remaining Issues 표시 (격려적인 톤으로)
+    remaining = improvement.get('remaining_issues', [])
+    if remaining:
+        st.markdown("#### 🎯 Areas for Future Practice")
+        for item in remaining[:3]:  # 최대 3개
+            # 2인칭으로 변환하고 더 격려적으로
+            item = convert_to_second_person(item)
+            st.markdown(f"• {item}")
+    
+    # Encouragement Message
+    encouragement = improvement.get('encouragement_message', '')
+    if encouragement:
+        encouragement = convert_to_second_person(encouragement)
+        st.success(f"💪 {encouragement}")
+
+
+def convert_to_second_person(text):
+    """3인칭 표현을 2인칭으로 변환하고 더 따뜻한 톤으로 수정"""
+    if not text:
+        return text
+    
+    # 기본적인 3인칭 → 2인칭 변환
+    text = text.replace("The student", "You")
+    text = text.replace("the student", "you")
+    text = text.replace("They ", "You ")
+    text = text.replace("they ", "you ")
+    text = text.replace("Their ", "Your ")
+    text = text.replace("their ", "your ")
+    text = text.replace("Them ", "You ")
+    text = text.replace("them ", "you ")
+    
+    # 더 격려적인 표현으로 변경
+    text = text.replace("significantly improved", "made wonderful progress")
+    text = text.replace("effectively applied", "successfully used")
+    text = text.replace("addressed previous grammar issues", "fixed grammar points beautifully")
+    text = text.replace("incorporated vocabulary suggestions", "applied vocabulary tips well")
+    text = text.replace("made major improvements", "showed amazing improvement")
+    text = text.replace("extending your speaking time", "speaking much longer - great job!")
+    text = text.replace("enriching your content", "adding wonderful personal details")
+    text = text.replace("showing a strong understanding", "demonstrating excellent progress")
+    
+    return text
 
 
 def test_gcs_connection_simple():

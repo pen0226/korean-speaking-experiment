@@ -62,7 +62,7 @@ def count_grammar_errors(grammar_issues):
 
 def get_research_scores(transcript, grammar_issues, duration_s):
     """
-    연구용 정확한 수치 계산 (논문용) - 1-2분 기준으로 수정
+    연구용 정확한 수치 계산 (논문용) - 60-120초 기준으로 수정
     - Accuracy: 오류율 기반 (10 - (error_rate / 10))
     - Fluency: 단어수 기반 (word_count / 120 * 10) - 1.5분 기준으로 120단어
     
@@ -162,10 +162,10 @@ def get_student_feedback(transcript, research_scores, original_feedback):
 
 
 def generate_encouraging_feedback_message(word_count, error_rate, duration_s, score):
-    """격려적인 피드백 메시지 생성 (1-2분 기준)"""
+    """격려적인 피드백 메시지 생성 (60-120초 기준)"""
     messages = []
     
-    # 🔥 길이 피드백 (1-2분 기준으로 수정)
+    # 🔥 길이 피드백 (60-120초 기준으로 수정)
     if duration_s >= 90:
         messages.append(f"Excellent! You spoke for {duration_s:.1f} seconds - perfect length!")
     elif duration_s >= 75:
@@ -181,7 +181,7 @@ def generate_encouraging_feedback_message(word_count, error_rate, duration_s, sc
     else:
         messages.append("Focus on grammar practice - you're learning!")
     
-    # 🔥 단어 수 피드백 (1-2분 기준으로 수정)
+    # 🔥 단어 수 피드백 (60-120초 기준으로 수정)
     if word_count >= 120:
         messages.append(f"Great vocabulary use with {word_count} words!")
     elif word_count >= 80:
@@ -193,10 +193,10 @@ def generate_encouraging_feedback_message(word_count, error_rate, duration_s, sc
 
 
 def generate_improvement_areas(research_scores, original_feedback):
-    """개선 영역 제안 생성 (1-2분 기준)"""
+    """개선 영역 제안 생성 (60-120초 기준)"""
     areas = []
     
-    # 🔥 Duration 기반 (1-2분 기준으로 수정)
+    # 🔥 Duration 기반 (60-120초 기준으로 수정)
     if research_scores.get("duration_s", 0) < 90:
         areas.append("Speaking length - aim for 90+ seconds")
     
@@ -204,7 +204,7 @@ def generate_improvement_areas(research_scores, original_feedback):
     if research_scores.get("error_rate", 0) > 15:
         areas.append("Grammar accuracy")
     
-    # 🔥 단어 수 기반 (1-2분 기준으로 수정)
+    # 🔥 단어 수 기반 (60-120초 기준으로 수정)
     if research_scores.get("word_count", 0) < 60:
         areas.append("Adding more personal details")
     
@@ -233,9 +233,9 @@ def generate_encouragement_message(score):
 
 
 def generate_duration_feedback(duration_s):
-    """녹음 길이 기반 피드백 (1-2분 기준)"""
+    """녹음 길이 기반 피드백 (60-120초 기준)"""
     if duration_s >= 90:
-        return f"Perfect! {duration_s:.1f} seconds meets the 1-2 minute goal!"
+        return f"Perfect! {duration_s:.1f} seconds meets the 60-120 seconds goal!"
     elif duration_s >= 75:
         return f"Good length at {duration_s:.1f} seconds. Try for 90+ next time!"
     elif duration_s >= 60:
@@ -257,7 +257,7 @@ def generate_accuracy_feedback(error_rate):
 
 
 def generate_fluency_feedback(word_count):
-    """유창성 기반 피드백 (1-2분 기준)"""
+    """유창성 기반 피드백 (60-120초 기준)"""
     if word_count >= 120:
         return f"Excellent fluency with {word_count} words!"
     elif word_count >= 90:
@@ -578,10 +578,16 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     if len(transcript) != len(processed_transcript):
         st.info(f"📝 Text processed: {len(transcript)} → {len(processed_transcript)} characters for better AI analysis")
     
-    # 🔥 duration 정보를 포함한 프롬프트 생성 + TOPIK 기준 점수 가이드
+    # 🔥 duration 정보를 포함한 프롬프트 생성 + TOPIK 기준 점수 가이드 + 2인칭 톤
     enhanced_prompt_template = FEEDBACK_PROMPT_TEMPLATE + f"""
 
 **STUDENT SPEAKING DURATION:** {duration:.1f} seconds
+
+**IMPORTANT TONE GUIDANCE - SPEAK DIRECTLY TO THE STUDENT:**
+- Always use "You" instead of "The student" 
+- Write feedback as if you're a warm Korean teacher talking directly to the student
+- Be encouraging and personal: "Great job! You spoke for..." instead of "The student spoke for..."
+- Use friendly, supportive language throughout all feedback sections
 
 **VOCABULARY SUGGESTIONS (vs format for educational comparison):**
 - Only suggest if you find word choice issues that need comparison
@@ -603,6 +609,8 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
 - Score 2 to 3: Poor task completion (incomplete coverage of topics), very limited content, frequent language errors affecting communication, any duration
 - Score 1: Very poor task completion, minimal content, major communication breakdown, any duration
 **Duration Requirement:** Responses under 60 seconds cannot score above 5. Focus primarily on content quality and language accuracy for higher scores.
+
+**REMEMBER: Write ALL feedback sections using "You" and speak directly to the student with warmth and encouragement!**
 
 Use the actual duration ({duration:.1f}s) when generating your feedback and scoring."""
 
@@ -711,7 +719,7 @@ def parse_gpt_response(raw_content):
 def validate_and_fix_feedback(feedback):
     """피드백 구조를 검증하고 누락된 필수 필드를 추가"""
     
-    # 🔥 필수 필드 기본값 (vs 방식 어휘팁)
+    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤)
     required_fields = {
         "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
@@ -830,7 +838,7 @@ def get_default_grammar_issues():
 
 
 def get_fallback_feedback():
-    """API 실패시 사용할 기본 피드백 (1-2분 기준, vs 방식 어휘 제안 포함)"""
+    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤)"""
     return {
         "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
@@ -849,12 +857,24 @@ def get_fallback_feedback():
 
 
 def get_improvement_assessment(first_transcript, second_transcript, original_feedback):
-    """STT 기반 루브릭을 사용한 개선도 평가"""
+    """STT 기반 루브릭을 사용한 개선도 평가 (2인칭 톤)"""
     if not OPENAI_API_KEY:
         return get_fallback_improvement_assessment()
     
+    # 🔥 개선도 평가 프롬프트에도 2인칭 톤 지침 추가
+    enhanced_improvement_template = IMPROVEMENT_PROMPT_TEMPLATE.replace(
+        "**Task:** Evaluate improvement between attempts. Be encouraging and specific!",
+        """**Task:** Evaluate improvement between attempts. Be encouraging and specific!
+
+**IMPORTANT TONE GUIDANCE - SPEAK DIRECTLY TO THE STUDENT:**
+- Always use "You" instead of "The student" 
+- Write feedback as if you're a warm Korean teacher talking directly to the student
+- Be encouraging and personal: "Great improvement! You spoke much longer..." instead of "The student improved..."
+- Use friendly, supportive language throughout all assessment sections"""
+    )
+    
     prompt = generate_prompt(
-        IMPROVEMENT_PROMPT_TEMPLATE,
+        enhanced_improvement_template,
         question=EXPERIMENT_QUESTION,
         first_transcript=first_transcript,
         second_transcript=second_transcript,
@@ -866,7 +886,7 @@ def get_improvement_assessment(first_transcript, second_transcript, original_fee
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a Korean teacher evaluating progress. Respond only with valid JSON."},
+                {"role": "system", "content": "You are a Korean teacher evaluating progress. Respond only with valid JSON. Always speak directly to the student using 'You' instead of 'The student'."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.1,
@@ -887,7 +907,7 @@ def get_improvement_assessment(first_transcript, second_transcript, original_fee
 
 
 def validate_and_fix_improvement(improvement):
-    """개선도 평가를 검증하고 누락된 필수 필드를 추가"""
+    """개선도 평가를 검증하고 누락된 필수 필드를 추가 (2인칭 톤)"""
     required_fields = {
         "first_attempt_score": 5,
         "second_attempt_score": 5,
@@ -931,8 +951,19 @@ def validate_and_fix_improvement(improvement):
 
 
 def get_fallback_improvement_assessment():
-    """개선도 평가 실패시 기본값"""
-    return FALLBACK_IMPROVEMENT_DATA.copy()
+    """개선도 평가 실패시 기본값 (2인칭 톤)"""
+    return {
+        "first_attempt_score": 5,
+        "second_attempt_score": 5,
+        "score_difference": 0,
+        "improvement_score": 5,
+        "improvement_reason": "Technical error - manual review needed",
+        "specific_improvements": ["You attempted Korean speaking practice"],
+        "remaining_issues": ["Practice speaking for at least 60-120 seconds"],
+        "feedback_application": "unknown",
+        "overall_assessment": "Keep practicing - focus on at least 60-120 seconds with personal details",
+        "encouragement_message": "Every practice session makes you better! Keep going!"
+    }
 
 
 def get_score_category_info(score):
@@ -960,7 +991,7 @@ def display_score_with_category(score, label="Score"):
 
 
 def display_score_with_encouragement(score, duration=0):
-    """점수를 격려 메시지와 함께 표시 (1-2분 기준)"""
+    """점수를 격려 메시지와 함께 표시 (60-120초 기준)"""
     category_info = get_score_category_info(score)
     
     # 점수 표시
@@ -969,7 +1000,7 @@ def display_score_with_encouragement(score, duration=0):
         unsafe_allow_html=True
     )
     
-    # 🔥 격려 메시지 (TOPIK 기준으로 수정)
+    # 🔥 격려 메시지 (TOPIK 기준으로 수정, 60-120초 목표)
     if score >= 8:
         st.balloons()
         message = "🌟 Outstanding! Excellent task completion with rich content!"

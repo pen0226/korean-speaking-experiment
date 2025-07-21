@@ -40,41 +40,6 @@ def fix_tts_sentence_punctuation(text):
         return text + '.'
 
 
-def apply_slow_speed_formatting(text):
-    """
-    느린 속도를 위한 텍스트 포맷팅 (띄어쓰기 문제 수정)
-    
-    Args:
-        text: 원본 텍스트
-        
-    Returns:
-        str: 느린 속도용으로 포맷팅된 텍스트
-    """
-    # 🔥 띄어쓰기 2배 로직 제거 - voice_settings의 speed로만 조절
-    # 1. 문장 사이 공백 정리만
-    text = re.sub(r'([.!?])\s*', r'\1 ', text)
-    
-    # 2. 띄어쓰기 2배 로직 완전 제거
-    # text = re.sub(r'\s+', '  ', text)  # ❌ 제거됨
-    
-    # 원본 띄어쓰기 그대로 유지하고 ElevenLabs voice_settings로만 속도 조절
-    return text
-
-
-def apply_natural_pacing(text):
-    """
-    자연스러운 말하기 속도를 위한 포맷팅 (변경 없음)
-    
-    Args:
-        text: 원본 텍스트
-        
-    Returns:
-        str: 자연스럽게 포맷팅된 텍스트
-    """
-    # 원본 텍스트 그대로 반환
-    return text
-
-
 def get_elevenlabs_client():
     """
     ElevenLabs 클라이언트 생성 (2025 최신 SDK 호환)
@@ -128,13 +93,8 @@ def synthesize_audio(text, speed="normal"):
         # 🎯 개선된 마침표 보정 (정상 마침표는 그대로 유지)
         text = fix_tts_sentence_punctuation(text)
         
-        # 🔥 속도별 텍스트 포맷팅 적용 (띄어쓰기 문제 수정)
-        if speed == "slow":
-            text = apply_slow_speed_formatting(text)
-            print(f"Slow speed text (fixed spacing): {text}")
-        else:
-            text = apply_natural_pacing(text)
-            print(f"Normal speed text: {text}")
+        # 🔥 속도와 관계없이 원본 텍스트 그대로 사용 (텍스트 포맷팅 제거)
+        print(f"{speed.capitalize()} speed text: {text}")
         
         print("Starting TTS generation...")
         print("Text:", text[:100] + "..." if len(text) > 100 else text)
