@@ -1,6 +1,6 @@
 """
 utils.py
-시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (1분 기준) - vs 방식 어휘 팁으로 업데이트
+시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (2분 기준) - vs 방식 어휘 팁으로 업데이트
 """
 
 import streamlit as st
@@ -362,7 +362,7 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (1분 목표) - 노란색 박스로 변경
+    간소화된 녹음 인터페이스 (2분 목표) - 노란색 박스로 변경
     
     Args:
         key: 컴포넌트 키
@@ -754,7 +754,7 @@ def display_improvement_details(improvement_assessment):
 
 def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0):
     """
-    두 음성을 비교 표시 (1분 기준)
+    두 음성을 비교 표시 (2분 기준)
     
     Args:
         first_audio: 첫 번째 오디오 데이터
@@ -797,7 +797,7 @@ def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0
 
 def get_duration_status(duration):
     """
-    음성 길이 상태 반환 (1분 목표)
+    음성 길이 상태 반환 (2분 목표)
     
     Args:
         duration: 음성 길이 (초)
@@ -805,14 +805,14 @@ def get_duration_status(duration):
     Returns:
         str: 상태 설명
     """
-    if duration >= 60:
-        return "✅ Excellent - Met the 1-minute goal!"
-    elif duration >= 45:
+    if duration >= 120:
+        return "✅ Excellent - Met the 2-minute goal!"
+    elif duration >= 90:
         return "🌟 Good - Almost there!"
-    elif duration >= 30:
-        return "⚠️ Fair - Try for at least 1 minute next time"
+    elif duration >= 60:
+        return "⚠️ Fair - Try for at least 2 minutes next time"
     else:
-        return "❌ Short - Aim for at least 1 minute"
+        return "❌ Short - Aim for at least 2 minutes"
 
 
 def display_contact_info(session_id):

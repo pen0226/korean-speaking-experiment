@@ -173,12 +173,16 @@ def collect_background_information():
     st.markdown("---")
     st.markdown("### 📊 Tell About Your Korean Learning Journey")
     
+    # 안내 문구 추가 (노란색)
+    st.warning("💡 This short survey has 8 questions and takes about 1 minute. Please answer honestly for better feedback.")
+    
     # 학습 기간 질문
     st.markdown("**🕐 How long have you been learning Korean?**")
     
     learning_duration = st.radio(
         "Pick the option that fits you best:",
         options=BACKGROUND_INFO["learning_duration_options"],
+        index=None,
         key="bg_learning_duration",
         label_visibility="collapsed"
     )
@@ -191,6 +195,7 @@ def collect_background_information():
     speaking_confidence = st.radio(
         "Choose what describes you best:",
         options=BACKGROUND_INFO["confidence_options"],
+        index=None,
         key="bg_speaking_confidence",
         label_visibility="collapsed"
     )
@@ -209,6 +214,7 @@ def collect_background_information():
         score = st.radio(
             f"Your rating for statement {i}:",
             options=SELF_EFFICACY_SCALE,
+            index=None,
             key=f"radio_self_efficacy_{i}",  # 위젯 키를 다르게 설정
             label_visibility="collapsed"
         )
@@ -235,11 +241,7 @@ def collect_background_information():
         }
         return True, background_details
     else:
-        missing_count = len(SELF_EFFICACY_ITEMS) - len(self_efficacy_scores)
-        if missing_count > 0:
-            st.caption(f"📝 Please answer all questions above ({missing_count} self-efficacy items remaining)")
-        else:
-            st.caption("📝 Please answer all questions above")
+        st.caption("📝 Please answer all questions above")
         return False, None
 
 

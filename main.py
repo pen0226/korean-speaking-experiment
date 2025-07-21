@@ -73,7 +73,7 @@ def handle_background_info_step():
 
 
 def handle_first_recording_step():
-    """첫 번째 녹음 단계 처리 - 개선된 레이아웃"""
+    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (2분 기준)"""
     show_progress_indicator('first_recording')
     
     # 1) 질문 영역을 박스로 분리 (다크모드 대응)
@@ -173,7 +173,7 @@ def process_first_recording():
 
 
 def handle_feedback_step():
-    """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선"""
+    """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (2분 기준)"""
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -246,18 +246,19 @@ def handle_feedback_step():
         # Grammar Tips (utils.py의 함수 사용)
         display_grammar_tips_simplified(feedback)
         
-        # Vocabulary Tips (utils.py의 함수 사용)
+        # Vocabulary Tips (utils.py의 함수 사용) - 개인맞춤형으로 표시
         has_vocab = feedback.get('vocabulary_suggestions') and len(feedback['vocabulary_suggestions']) > 0
         if has_vocab:
             with st.expander("💭 Vocabulary Tips", expanded=False):
-                st.markdown("*Better word choices for more natural Korean:*")
+                st.markdown("*Personalized word choice improvements based on your answer:*")
                 display_vocabulary_tips_simplified(feedback)
+        # 🔥 어휘 제안이 없으면 expander 자체를 표시하지 않음 (학생이 모든 단어를 올바르게 사용한 경우)
         
         # Content Ideas (줄바꿈 처리 개선)
         content_suggestions = feedback.get('content_expansion_suggestions', [])
         if content_suggestions:
             with st.expander("💡 Content Ideas - Make Your Answer Longer", expanded=False):
-                st.markdown("*You can add these topics to speak for at least 1 minute (60+ seconds):*")
+                st.markdown("*You can add these topics to speak for at least 2 minutes (120+ seconds):*")
                 for i, suggestion in enumerate(content_suggestions[:2], 1):  # 최대 2개만
                     # Content suggestion 줄바꿈 처리
                     formatted_suggestion = format_content_ideas(suggestion)
@@ -269,7 +270,7 @@ def handle_feedback_step():
                     if i < len(content_suggestions[:2]):
                         st.markdown("")
                 
-                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1 minute (60+ seconds)!")
+                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 2 minutes (120+ seconds)!")
         
         # Advanced Grammar Pattern (접을 수 있는 형태) - 포맷 개선
         if feedback.get('grammar_expression_tip'):
@@ -297,7 +298,7 @@ def handle_feedback_step():
                     st.markdown("#### 📋 Detailed Feedback")
                     st.write(feedback['interview_readiness_reason'])
             
-            # 녹음 시간 정보 (2분 목표로 수정)
+            # 🔥 녹음 시간 정보 (2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
             if duration > 0:
                 st.markdown("#### ⏱️ Speaking Duration")
@@ -315,7 +316,7 @@ def handle_feedback_step():
         # ===== 다음 단계 준비 =====
         st.markdown("### ✅ Ready for Your Second Try?")
         
-        # 간단한 팁 리스트 (2분 목표로 수정)
+        # 🔥 간단한 팁 리스트 (2분 목표로 수정)
         st.info("""
         **Quick Tips for Your Next Recording:**
         1. 🎯 Aim for **about 2 minutes total** of speaking
@@ -334,7 +335,7 @@ def handle_feedback_step():
 
 
 def handle_second_recording_step():
-    """두 번째 녹음 단계 처리 - 개선된 레이아웃"""
+    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (2분 기준)"""
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")

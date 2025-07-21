@@ -62,9 +62,9 @@ def count_grammar_errors(grammar_issues):
 
 def get_research_scores(transcript, grammar_issues, duration_s):
     """
-    연구용 정확한 수치 계산 (논문용)
+    연구용 정확한 수치 계산 (논문용) - 2분 기준으로 수정
     - Accuracy: 오류율 기반 (10 - (error_rate / 10))
-    - Fluency: 단어수 기반 (word_count / 80 * 10)
+    - Fluency: 단어수 기반 (word_count / 160 * 10) - 2분 기준으로 160단어
     
     Args:
         transcript: STT 전사 텍스트
@@ -99,8 +99,8 @@ def get_research_scores(transcript, grammar_issues, duration_s):
     # Accuracy Score: 10에서 오류율의 1/10을 뺀 값 (최소 0, 최대 10)
     accuracy_score = max(0, min(10, 10 - (error_rate / 10)))
     
-    # Fluency Score: 80단어를 기준으로 10점 만점 (최소 0, 최대 10)
-    fluency_score = max(0, min(10, (total_words / 80) * 10))
+    # 🔥 Fluency Score: 160단어를 기준으로 10점 만점 (2분 기준으로 수정)
+    fluency_score = max(0, min(10, (total_words / 160) * 10))
     
     return {
         "accuracy_score": round(accuracy_score, 1),
@@ -135,8 +135,8 @@ def get_student_feedback(transcript, research_scores, original_feedback):
             "accuracy_score": 5.0,
             "fluency_score": 5.0,
             "error_rate": 20.0,
-            "word_count": 40,
-            "duration_s": 30.0,
+            "word_count": 80,
+            "duration_s": 60.0,
             "error_count": 3
         }
     
@@ -162,16 +162,16 @@ def get_student_feedback(transcript, research_scores, original_feedback):
 
 
 def generate_encouraging_feedback_message(word_count, error_rate, duration_s, score):
-    """격려적인 피드백 메시지 생성"""
+    """격려적인 피드백 메시지 생성 (2분 기준)"""
     messages = []
     
-    # 길이 피드백 (가장 중요)
-    if duration_s >= 60:
+    # 🔥 길이 피드백 (2분 기준으로 수정)
+    if duration_s >= 120:
         messages.append(f"Excellent! You spoke for {duration_s:.1f} seconds - perfect length!")
-    elif duration_s >= 45:
-        messages.append(f"Good job speaking for {duration_s:.1f} seconds! Try to reach 60+ seconds next time.")
+    elif duration_s >= 90:
+        messages.append(f"Good job speaking for {duration_s:.1f} seconds! Try to reach 120+ seconds next time.")
     else:
-        messages.append(f"You spoke for {duration_s:.1f} seconds. Aim for at least 60 seconds to score higher!")
+        messages.append(f"You spoke for {duration_s:.1f} seconds. Aim for at least 120 seconds to score higher!")
     
     # 정확성 피드백
     if error_rate <= 5:
@@ -181,10 +181,10 @@ def generate_encouraging_feedback_message(word_count, error_rate, duration_s, sc
     else:
         messages.append("Focus on grammar practice - you're learning!")
     
-    # 단어 수 피드백
-    if word_count >= 80:
+    # 🔥 단어 수 피드백 (2분 기준으로 수정)
+    if word_count >= 160:
         messages.append(f"Great vocabulary use with {word_count} words!")
-    elif word_count >= 40:
+    elif word_count >= 80:
         messages.append(f"Good speaking volume with {word_count} words.")
     else:
         messages.append(f"Try to add more details - you used {word_count} words.")
@@ -193,19 +193,19 @@ def generate_encouraging_feedback_message(word_count, error_rate, duration_s, sc
 
 
 def generate_improvement_areas(research_scores, original_feedback):
-    """개선 영역 제안 생성"""
+    """개선 영역 제안 생성 (2분 기준)"""
     areas = []
     
-    # Duration 기반
-    if research_scores.get("duration_s", 0) < 60:
-        areas.append("Speaking length - aim for 60+ seconds")
+    # 🔥 Duration 기반 (2분 기준으로 수정)
+    if research_scores.get("duration_s", 0) < 120:
+        areas.append("Speaking length - aim for 120+ seconds")
     
     # 오류율 기반
     if research_scores.get("error_rate", 0) > 15:
         areas.append("Grammar accuracy")
     
-    # 단어 수 기반
-    if research_scores.get("word_count", 0) < 40:
+    # 🔥 단어 수 기반 (2분 기준으로 수정)
+    if research_scores.get("word_count", 0) < 80:
         areas.append("Adding more personal details")
     
     # 원본 피드백에서 추가 영역
@@ -233,13 +233,13 @@ def generate_encouragement_message(score):
 
 
 def generate_duration_feedback(duration_s):
-    """녹음 길이 기반 피드백"""
-    if duration_s >= 60:
-        return f"Perfect! {duration_s:.1f} seconds meets the 1-minute goal!"
-    elif duration_s >= 45:
-        return f"Good length at {duration_s:.1f} seconds. Try for 60+ next time!"
-    elif duration_s >= 30:
-        return f"Fair length at {duration_s:.1f} seconds. Aim for 60+ seconds!"
+    """녹음 길이 기반 피드백 (2분 기준)"""
+    if duration_s >= 120:
+        return f"Perfect! {duration_s:.1f} seconds meets the 2-minute goal!"
+    elif duration_s >= 90:
+        return f"Good length at {duration_s:.1f} seconds. Try for 120+ next time!"
+    elif duration_s >= 60:
+        return f"Fair length at {duration_s:.1f} seconds. Aim for 120+ seconds!"
     else:
         return f"Too short at {duration_s:.1f} seconds. Much more needed for good score!"
 
@@ -257,12 +257,12 @@ def generate_accuracy_feedback(error_rate):
 
 
 def generate_fluency_feedback(word_count):
-    """유창성 기반 피드백"""
-    if word_count >= 80:
+    """유창성 기반 피드백 (2분 기준)"""
+    if word_count >= 160:
         return f"Excellent fluency with {word_count} words!"
-    elif word_count >= 60:
+    elif word_count >= 120:
         return f"Good fluency with {word_count} words."
-    elif word_count >= 40:
+    elif word_count >= 80:
         return f"Fair fluency with {word_count} words - add more details!"
     else:
         return f"Work on speaking more - only {word_count} words used."
@@ -359,16 +359,19 @@ def preprocess_long_transcript(transcript):
         return preprocess_long_transcript_fallback(cleaned)
 
 
-# === 간소화된 오류 분류 함수 (3개 유형만) ===
+# === 간소화된 오류 분류 함수 (3개 주요 유형 + 기타) ===
 def classify_error_type(issue_text):
     """
-    피드백 텍스트를 분석하여 3개 오류 타입 중 하나 반환
+    피드백 텍스트를 분석하여 4개 오류 타입 중 하나 반환
+    - 3개 주요 유형: Particle, Verb Ending, Verb Tense
+    - 기타: Others (모든 다른 문법 오류)
     
     Args:
         issue_text: 분석할 피드백 텍스트
         
     Returns:
-        str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense) 또는 None
+        str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense, 또는 None)
+              None인 경우 호출부에서 "Others"로 분류됨
     """
     issue_lower = issue_text.lower()
     
@@ -416,51 +419,120 @@ def classify_error_type(issue_text):
     if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
         return "Verb Ending"
     
-    # 5. 3개 유형에 해당하지 않으면 None 반환
+    # 🔥 5. 3개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
     return None
 
 
-# === 어휘 필터링 함수 ===
-def filter_grammar_from_vocabulary(vocab_suggestions):
+# === 🔥 스마트한 중복 필터링 함수 (vs 방식으로 수정됨) ===
+def extract_grammar_corrections(grammar_issues):
     """
-    vocabulary에서 문법 관련 항목 제거
+    문법 피드백에서 실제 수정 내용 추출
     
     Args:
-        vocab_suggestions: 어휘 제안 리스트
+        grammar_issues: 문법 이슈 리스트
         
     Returns:
-        list: 문법 관련 항목이 제거된 순수 어휘 제안 리스트
+        list: (original, fix) 튜플들의 리스트
     """
-    # 필터링할 문법 키워드들
-    grammar_keywords = [
-        # 조사
-        "을", "를", "은", "는", "이", "가", "에서", "에게", "에", "와", "과", "의", "로", "으로",
-        # 어미
-        "예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다",
-        # 시제
-        "했어요", "할게요", "할 거예요", "하고 있어요", "갔어요", "왔어요",
-        # 문법 관련 단어들
-        "particle", "ending", "tense", "조사", "어미", "시제", "grammar"
-    ]
+    corrections = []
+    
+    for issue in grammar_issues:
+        if isinstance(issue, str) and '|' in issue:
+            parts = issue.split('|')
+            if len(parts) >= 3:
+                original = parts[1].strip().strip("'\"")
+                fix = parts[2].strip().strip("'\"")
+                if original and fix:
+                    corrections.append((original.lower(), fix.lower()))
+    
+    return corrections
+
+
+def extract_vs_words_from_vocabulary(vocab_suggestions):
+    """
+    vs 방식 어휘 제안에서 단어들 추출
+    
+    Args:
+        vocab_suggestions: 어휘 제안 리스트 (vs 방식)
+        
+    Returns:
+        list: [(word_a, word_b), ...] 형태의 단어 쌍들
+    """
+    vs_pairs = []
+    
+    for suggestion in vocab_suggestions:
+        if "❓ **" in suggestion and " vs " in suggestion:
+            try:
+                # ❓ **공부하다 vs 배우다** 부분 추출
+                lines = suggestion.replace('\\n', '\n').split('\n')
+                for line in lines:
+                    if line.startswith('❓ **') and ' vs ' in line:
+                        title_text = line.replace('❓ **', '').replace('**', '').strip()
+                        if ' vs ' in title_text:
+                            words = title_text.split(' vs ')
+                            if len(words) >= 2:
+                                word_a = words[0].strip()
+                                word_b = words[1].strip()
+                                vs_pairs.append((word_a.lower(), word_b.lower()))
+                        break
+            except:
+                continue
+    
+    return vs_pairs
+
+
+def filter_grammar_from_vocabulary(vocab_suggestions, grammar_issues):
+    """
+    🔥 스마트한 중복 필터링: 실제 문법 피드백과 중복되는 어휘 팁만 제거 (vs 방식)
+    
+    Args:
+        vocab_suggestions: 어휘 제안 리스트 (vs 방식)
+        grammar_issues: 문법 이슈 리스트
+        
+    Returns:
+        list: 중복이 제거된 어휘 제안 리스트
+    """
+    # 문법 피드백에서 실제 수정된 내용들 추출
+    grammar_corrections = extract_grammar_corrections(grammar_issues)
+    
+    # vs 어휘 제안에서 단어 쌍들 추출
+    vs_word_pairs = extract_vs_words_from_vocabulary(vocab_suggestions)
     
     filtered = []
-    for tip in vocab_suggestions:
-        # 문법 키워드가 포함되어 있으면 제외
-        tip_lower = tip.lower()
-        is_grammar = any(keyword in tip_lower for keyword in grammar_keywords)
+    for vocab_tip in vocab_suggestions:
+        is_duplicate = False
         
-        if not is_grammar:
-            filtered.append(tip)
+        # 이 어휘 팁의 단어 쌍 찾기
+        current_vs_pairs = extract_vs_words_from_vocabulary([vocab_tip])
+        
+        for word_a, word_b in current_vs_pairs:
+            # 문법 수정 내용과 비교
+            for grammar_old, grammar_new in grammar_corrections:
+                # 어휘 팁의 단어들이 문법 수정에 포함되어 있는지 확인
+                if ((word_a in grammar_old or grammar_old in word_a) and 
+                    (word_b in grammar_new or grammar_new in word_b)) or \
+                   ((word_b in grammar_old or grammar_old in word_b) and 
+                    (word_a in grammar_new or grammar_new in word_a)):
+                    is_duplicate = True
+                    break
+            
+            if is_duplicate:
+                break
+        
+        # 중복이 아닌 경우만 포함
+        if not is_duplicate:
+            filtered.append(vocab_tip)
     
-    return filtered[:2]  # 최대 2개만
+    return filtered
 
 
-def get_pure_vocabulary_suggestions():
-    """순수 어휘 선택 기본 예시들 (vs 방식으로 변경)"""
+def get_default_vocabulary_suggestions():
+    """
+    🔥 vs 방식 기본 어휘 제안 (단어 비교 교육)
+    """
     return [
         "❓ **공부하다 vs 배우다**\\n💡 공부하다: Academic studying or reviewing material at a desk\\n💡 배우다: Learning new skills or acquiring new knowledge\\n🟢 시험을 위해 공부해요 (I study for exams) / 한국어를 배우고 있어요 (I'm learning Korean)\\n📝 Use '배우다' for new skills, '공부하다' for reviewing",
-        "❓ **좋다 vs 좋아하다**\\n💡 좋다: Adjective - something is good (state/quality)\\n💡 좋아하다: Verb - to like something (preference)\\n🟢 날씨가 좋아요 (The weather is nice) / 음악을 좋아해요 (I like music)\\n📝 Use '이/가 좋다' vs '을/를 좋아하다'",
-        "❓ **여행하다 vs ~에 여행 가다**\\n💡 여행하다: General traveling activity\\n💡 ~에 여행 가다: Going to a specific destination\\n🟢 여름에 여행해요 (I travel in summer) / 제주도에 여행 갔어요 (I went on a trip to Jeju)\\n📝 Use '장소에 여행 가다' when destination is important"
+        "❓ **좋다 vs 좋아하다**\\n💡 좋다: Adjective - something is good (state/quality)\\n💡 좋아하다: Verb - to like something (preference)\\n🟢 날씨가 좋아요 (The weather is nice) / 음악을 좋아해요 (I like music)\\n📝 Use '이/가 좋다' vs '을/를 좋아하다'"
     ]
 
 
@@ -506,16 +578,29 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     if len(transcript) != len(processed_transcript):
         st.info(f"📝 Text processed: {len(transcript)} → {len(processed_transcript)} characters for better AI analysis")
     
-    # duration 정보를 포함한 프롬프트 생성
+    # 🔥 duration 정보를 포함한 프롬프트 생성 (2분 기준)
     enhanced_prompt_template = FEEDBACK_PROMPT_TEMPLATE + f"""
 
 **STUDENT SPEAKING DURATION:** {duration:.1f} seconds
 
 **DURATION-BASED SCORING:**
-- If 60+ seconds: Excellent length (meets 1-minute goal!)
-- If 45-60 seconds: Good length, encourage reaching 60+ seconds
-- If 30-45 seconds: Fair length, needs to reach at least 60 seconds
-- If under 30 seconds: Too short, must improve significantly
+- If 120+ seconds: Excellent length (meets 2-minute goal!)
+- If 90-120 seconds: Good length, encourage reaching 120+ seconds
+- If 60-90 seconds: Fair length, needs to reach at least 120 seconds
+- If under 60 seconds: Too short, must improve significantly
+
+**VOCABULARY SUGGESTIONS (vs format for educational comparison):**
+- Only suggest if you find word choice issues that need comparison
+- Format: "❓ **Word A vs Word B**\\n💡 Word A: [explanation]\\n💡 Word B: [explanation]\\n🟢 [examples showing both]\\n📝 [key difference]"
+- Focus on commonly confused pairs for beginners (공부하다 vs 배우다, 좋다 vs 좋아하다, etc.)
+- Emphasize when to use each word, not that one is "wrong"
+
+**ADVANCED PATTERN (1-2 suggestions max):**
+- Choose 1-2 most relevant patterns based on what student missed:
+  • Pattern 1: 'X와/과 함께 Y했어요' (if simple past experiences)
+  • Pattern 2: 'X고 싶어서 Y할 거예요' (if plans without reasons)  
+  • Pattern 3: 'X에는 Y했어요' (if no time expressions)
+- Only suggest patterns the student didn't use well
 
 Use the actual duration ({duration:.1f}s) when generating your feedback and scoring."""
 
@@ -632,32 +717,36 @@ def parse_gpt_response(raw_content):
 def validate_and_fix_feedback(feedback):
     """피드백 구조를 검증하고 누락된 필수 필드를 추가"""
     
-    # 필수 필드 기본값
+    # 🔥 필수 필드 기본값 (vs 방식 어휘팁)
     required_fields = {
-        "suggested_model_sentence": "안녕하세요. 저는 [이름]이에요. 한국학을 전공해요. 취미는 음악 듣기와 영화 보기예요.",
-        "suggested_model_sentence_english": "Hello. I'm [name]. I major in Korean Studies. My hobbies are listening to music and watching movies.",
+        "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "content_expansion_suggestions": [
-            "💬 Topic: Favorite Korean food\\n📝 Example: '제가 가장 좋아하는 한국 음식은 불고기예요. 불고기는 달콤하고 맛있어요.'\\n   'My favorite Korean food is bulgogi. It is sweet and delicious.'",
-            "💬 Topic: Why you study Korean\\n📝 Example: '한국 문화가 재미있어서 한국어를 공부해요.'\\n   'I study Korean because Korean culture is interesting.'"
+            "💬 Topic: Summer vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+            "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
+        "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
-        "interview_readiness_reason": "You're making good progress! Focus on speaking longer (60+ seconds) with more personal details.",
+        "interview_readiness_reason": "You're making good progress! Focus on speaking longer (120+ seconds) with more personal details.",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
     
     feedback = ensure_required_fields(feedback, required_fields)
     
-    # Grammar issues 검증 및 개선 (최대 6개, 3개 유형만)
+    # 🔥 Grammar issues 검증 및 개선 (최대 6개, 모든 오류 표시 + 유형 분류 유지)
     if 'grammar_issues' in feedback and feedback['grammar_issues']:
         valid_issues = []
         for i, issue in enumerate(feedback['grammar_issues'][:6]):  # 최대 6개
             if isinstance(issue, str) and len(issue) > 10:
-                # 오류 타입 분류 (3개 유형만)
+                # 🎯 오류 타입 분류 (3개 주요 유형 + 기타)
                 error_type = classify_error_type(issue)
-                if error_type:  # 3개 유형 중 하나인 경우만
-                    standardized_issue = standardize_grammar_issue(issue, error_type)
-                    valid_issues.append(standardized_issue)
+                if not error_type:  # 3개 유형에 해당하지 않으면
+                    error_type = "Others"  # "Others" 유형으로 분류
+                
+                # 🔥 모든 유효한 문법 오류를 포함 (필터링 제거)
+                standardized_issue = standardize_grammar_issue(issue, error_type)
+                valid_issues.append(standardized_issue)
         
         if valid_issues:
             feedback['grammar_issues'] = valid_issues
@@ -666,38 +755,23 @@ def validate_and_fix_feedback(feedback):
     else:
         feedback['grammar_issues'] = get_default_grammar_issues()
     
-    # ─── Vocabulary suggestions 재구성 (최대 2개) + 문법 겹침 필터링 ───
+    # 🔥 Vocabulary suggestions 재구성 (vs 방식 + 스마트 중복 필터링)
     if 'vocabulary_suggestions' in feedback and feedback['vocabulary_suggestions']:
-        # 먼저 문법 관련 항목 필터링
-        filtered_vocab = filter_grammar_from_vocabulary(feedback['vocabulary_suggestions'])
+        # 🎯 스마트한 중복 필터링: 실제 문법 피드백과 중복되는 내용만 제거
+        filtered_vocab = filter_grammar_from_vocabulary(
+            feedback['vocabulary_suggestions'], 
+            feedback.get('grammar_issues', [])
+        )
         
-        if len(filtered_vocab) >= 2:
-            # 충분한 순수 어휘 제안이 있으면 사용
-            vocab_to_process = filtered_vocab[:2]
+        if filtered_vocab:
+            # GPT가 생성한 vs 방식 어휘 제안이 있으면 우선 사용
+            feedback['vocabulary_suggestions'] = filtered_vocab[:2]  # 최대 2개
         else:
-            # 필터링 후 부족하면 기본 어휘 제안으로 보완
-            pure_suggestions = get_pure_vocabulary_suggestions()
-            vocab_to_process = (filtered_vocab + pure_suggestions)[:2]
+            # 모든 어휘 제안이 문법과 중복되어 필터링된 경우 기본값 사용
+            feedback['vocabulary_suggestions'] = get_default_vocabulary_suggestions()
     else:
-        # 어휘 제안이 없으면 기본값 사용
-        vocab_to_process = get_pure_vocabulary_suggestions()[:2]
-
-    # → vs 방식 포맷으로 재구성
-    formatted_vocab = []
-    for tip in vocab_to_process:
-        # 이미 vs 포맷인지 확인
-        if "❓ **" in tip and " vs " in tip:
-            formatted_vocab.append(tip)
-            continue
-        
-        # 기존 ❌✅ 포맷인 경우 vs 포맷으로 변환 (기본값 사용)
-        # GPT가 새로운 형식을 학습할 때까지는 기본 vs 예시 사용
-        if len(formatted_vocab) < 2:
-            pure_suggestions = get_pure_vocabulary_suggestions()
-            formatted_vocab.extend(pure_suggestions[:2-len(formatted_vocab)])
-            break
-
-    feedback['vocabulary_suggestions'] = formatted_vocab[:2]
+        # GPT가 어휘 제안을 생성하지 않았으면 기본값 사용
+        feedback['vocabulary_suggestions'] = get_default_vocabulary_suggestions()
     
     # 점수 검증
     score = feedback.get("interview_readiness_score", 6)
@@ -742,17 +816,18 @@ def standardize_grammar_issue(issue_text, error_type):
 
 
 def get_default_explanation(error_type):
-    """오류 타입별 기본 설명"""
+    """오류 타입별 기본 설명 (4개 유형 지원)"""
     explanations = {
         "Particle": "Use the appropriate particle to mark the grammatical role",
         "Verb Ending": "Use the correct verb ending form",
-        "Verb Tense": "Use the appropriate tense marker"
+        "Verb Tense": "Use the appropriate tense marker",
+        "Others": "Review this grammar point carefully"  # 🔥 "Others" 유형 추가
     }
     return explanations.get(error_type, "Review this grammar point")
 
 
 def get_default_grammar_issues():
-    """기본 문법 이슈들 (3개 유형만)"""
+    """기본 문법 이슈들 (3개 주요 유형)"""
     return [
         "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object and change '전공이에요' to '전공해요'",
         "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing that you like doing activities",
@@ -761,23 +836,20 @@ def get_default_grammar_issues():
 
 
 def get_fallback_feedback():
-    """API 실패시 사용할 기본 피드백 (1분 기준, vs 방식)"""
+    """API 실패시 사용할 기본 피드백 (2분 기준, vs 방식 어휘 제안 포함)"""
     return {
-        "suggested_model_sentence": "안녕하세요. 저는 [이름]이에요. [전공]을 공부해요. 취미는 [취미]예요. 한국어를 공부하는 것이 재미있어요.",
-        "suggested_model_sentence_english": "Hello. I'm [name]. I study [major]. My hobby is [hobby]. Studying Korean is interesting.",
+        "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "grammar_issues": get_default_grammar_issues(),
-        "vocabulary_suggestions": [
-            "❓ **공부하다 vs 배우다**\\n💡 공부하다: Academic studying or reviewing material at a desk\\n💡 배우다: Learning new skills or acquiring new knowledge\\n🟢 시험을 위해 공부해요 (I study for exams) / 한국어를 배우고 있어요 (I'm learning Korean)\\n📝 Use '배우다' for new skills, '공부하다' for reviewing",
-            "❓ **좋다 vs 좋아하다**\\n💡 좋다: Adjective - something is good (state/quality)\\n💡 좋아하다: Verb - to like something (preference)\\n🟢 날씨가 좋아요 (The weather is nice) / 음악을 좋아해요 (I like music)\\n📝 Use '이/가 좋다' vs '을/를 좋아하다'"
-        ],
+        "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함
         "content_expansion_suggestions": [
-            "💬 Topic: Favorite Korean food\\n📝 Example: '제가 가장 좋아하는 한국 음식은 불고기예요. 불고기는 달콤하고 맛있어요.'\\n   'My favorite Korean food is bulgogi. It is sweet and delicious.'",
-            "💬 Topic: Why you study Korean\\n📝 Example: '한국 문화가 재미있어서 한국어를 공부해요.'\\n   'I study Korean because Korean culture is interesting.'"
+            "💬 Topic: Summer vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+            "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
-        "fluency_comment": "Keep practicing! Try to speak for at least 1 minute (60+ seconds) to build fluency.",
+        "fluency_comment": "Keep practicing! Try to speak for at least 2 minutes (120+ seconds) to build fluency.",
         "interview_readiness_score": 5,
-        "interview_readiness_reason": "You're making progress! Focus on speaking for at least 1 minute (60+ seconds) with more personal details.",
+        "interview_readiness_reason": "You're making progress! Focus on speaking for at least 2 minutes (120+ seconds) with more personal details.",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
 
@@ -829,9 +901,9 @@ def validate_and_fix_improvement(improvement):
         "improvement_score": 5,
         "improvement_reason": "Continue practicing for better fluency and accuracy",
         "specific_improvements": ["Attempted Korean speaking practice"],
-        "remaining_issues": ["Focus on speaking longer (60+ seconds) with more details"],
+        "remaining_issues": ["Focus on speaking longer (120+ seconds) with more details"],
         "feedback_application": "unclear",
-        "overall_assessment": "Keep practicing! Focus on speaking for 60+ seconds with personal details.",
+        "overall_assessment": "Keep practicing! Focus on speaking for 120+ seconds with personal details.",
         "encouragement_message": "Every practice session makes you better! Keep going!"
     }
     
@@ -894,7 +966,7 @@ def display_score_with_category(score, label="Score"):
 
 
 def display_score_with_encouragement(score, duration=0):
-    """점수를 격려 메시지와 함께 표시"""
+    """점수를 격려 메시지와 함께 표시 (2분 기준)"""
     category_info = get_score_category_info(score)
     
     # 점수 표시
@@ -903,26 +975,26 @@ def display_score_with_encouragement(score, duration=0):
         unsafe_allow_html=True
     )
     
-    # 격려 메시지
+    # 🔥 격려 메시지 (2분 기준으로 수정)
     if score >= 8:
         st.balloons()
         message = "🌟 Outstanding! You're interview-ready!"
-        if duration >= 60:
+        if duration >= 120:
             message += " Perfect length too!"
     elif score >= 7:
         message = "🎯 Great job! Almost perfect!"
-        if duration < 60:
-            message += " Try to speak a bit longer (60+ seconds)."
+        if duration < 120:
+            message += " Try to speak a bit longer (120+ seconds)."
     elif score >= 6:
         message = "💪 Good work! You're improving!"
-        if duration < 60:
-            message += " Aim for 60+ seconds."
+        if duration < 120:
+            message += " Aim for 120+ seconds."
     elif score >= 5:
         message = "🚀 Keep going! You're learning!"
-        message += " Focus on reaching 60 seconds."
+        message += " Focus on reaching 120 seconds."
     else:
         message = "🌱 Everyone starts somewhere! Keep practicing!"
-        message += " Work towards speaking for 60 seconds."
+        message += " Work towards speaking for 120 seconds."
     
     # 메시지 표시
     st.markdown(

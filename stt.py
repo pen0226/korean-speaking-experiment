@@ -349,7 +349,7 @@ def estimate_audio_duration(audio_bytes):
 
 def get_audio_quality_assessment(duration):
     """
-    음성 길이를 기반으로 품질 평가 (60초 목표)
+    음성 길이를 기반으로 품질 평가 (2분/120초 목표로 수정)
     
     Args:
         duration: 음성 길이 (초)
@@ -359,7 +359,7 @@ def get_audio_quality_assessment(duration):
     """
     from config import AUDIO_QUALITY
     
-    if duration >= AUDIO_QUALITY["excellent_min_duration"]:  # 60초 이상
+    if duration >= AUDIO_QUALITY["excellent_min_duration"]:  # 120초 이상
         if duration <= AUDIO_QUALITY["max_recommended_duration"]:
             return {
                 "status": "excellent",
@@ -374,25 +374,25 @@ def get_audio_quality_assessment(duration):
                 "message": f"Excellent! ({duration:.1f}s) Lots of content for the AI to work with!",
                 "color": "info"
             }
-    elif duration >= AUDIO_QUALITY["good_min_duration"]:  # 45-60초
+    elif duration >= AUDIO_QUALITY["good_min_duration"]:  # 90-120초
         return {
             "status": "good",
             "icon": "🌟",
-            "message": f"Good! ({duration:.1f}s) Try to reach 60+ seconds for an even better score.",
+            "message": f"Good! ({duration:.1f}s) Try to reach 120+ seconds for an even better score.",
             "color": "info"
         }
-    elif duration >= AUDIO_QUALITY["fair_min_duration"]:  # 30-45초
+    elif duration >= AUDIO_QUALITY["fair_min_duration"]:  # 60-90초
         return {
             "status": "fair",
             "icon": "⚠️",
-            "message": f"Fair start! ({duration:.1f}s) Aim for 60+ seconds to show better fluency.",
+            "message": f"Fair start! ({duration:.1f}s) Aim for 120+ seconds to show better fluency.",
             "color": "warning"
         }
-    else:  # 30초 미만
+    else:  # 60초 미만
         return {
             "status": "very_short",
             "icon": "❌",
-            "message": f"Too brief! ({duration:.1f}s) Please speak for at least 30+ seconds, ideally 60+ seconds.",
+            "message": f"Too brief! ({duration:.1f}s) Please speak for at least 60+ seconds, ideally 120+ seconds.",
             "color": "error"
         }
 

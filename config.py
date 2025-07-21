@@ -180,7 +180,7 @@ GRAMMAR_ERROR_TYPES = {
     }
 }
 
-# 오디오 품질 기준 (2분 목표로 수정)
+# 🔥 오디오 품질 기준 (2분 목표로 수정)
 AUDIO_QUALITY = {
     "excellent_min_duration": 120,  # 2분
     "good_min_duration": 90,        # 1분 30초
@@ -221,56 +221,59 @@ GPT_SYSTEM_PROMPT = """You are a Korean language teaching expert specializing in
 Focus on precise error analysis and practical improvements. 
 Always respond with valid JSON only."""
 
-# 개선된 피드백 생성 프롬프트 템플릿
+# 🔥 개선된 피드백 생성 프롬프트 템플릿 (2분 목표 + 강화된 오류 감지 + vs 방식 어휘 제안)
 FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
 
 **IMPORTANT GUIDELINES:**
 1. Be encouraging and positive - these are beginners learning Korean
-2. Content expansion is MOST important - help them speak for at least 1 minute (60+ seconds)
-3. Keep grammar explanations simple and beginner-friendly
-4. Always praise what they did well first
-5. Target level: {target_level}
-6. Allowed speech styles: {allowed_styles}
-7. Forbidden speech styles: {forbidden_styles}
+2. Keep grammar explanations simple and beginner-friendly
+3. Always praise what they did well first
+4. Target level: {target_level}
+5. Allowed speech styles: {allowed_styles}
+6. Forbidden speech styles: {forbidden_styles}
 
 **STYLE MATCHING REQUIREMENT:**
-- First analyze the student's speech style from their transcript
-- If student uses 해요체 (해요, 이에요, 가요, 와요, 봐요, etc.), generate model sentence in 해요체
-- If student uses 합니다체 (합니다, 입니다, 갑니다, 옵니다, etc.), generate model sentence in 합니다체
-- Keep the same politeness level as the student throughout the entire model sentence
-- This ensures natural consistency with the student's preferred speech style
+- IMPORTANT: Preserve the student’s speech style for EACH sentence individually.
+- Do NOT change all sentences into one style. Keep the same style per sentence as in the original.
+- If a sentence uses 해요(해요, 이에요, 가요, 와요, 봐요, etc.), write that sentence in 해요.
+- If a sentence uses 합니다(합니다, 입니다, 갑니다, 옵니다, etc.), write that sentence in 합니다.
+- If the student mixes styles, reflect that mix.
+- Do NOT use 반말 or plain dictionary‑style endings (e.g., “‑다”). Use only speech styles that are appropriate for an interview: either 합니다‑style or 해요‑style, following the student’s usage.
 
-**ANALYSIS REQUIREMENTS:**
+**ANALYSIS REQUIREMENTS:**  
+1. **Grammar Issues**
+   - Carefully check each sentence for grammar issues that beginners often make.
+   - Look for particles (은/는, 이/가, 을/를), verb endings, and tense errors.
+   - Also include minor errors and awkward constructions related to grammar.
+   - Check word order, honorifics, and overall sentence structure.
+   - MUST include "Original:" and "→ Fix:" format.
+   - **Target: Find up to 6 issues if they exist.**
 
-1. **Content Expansion** (2 specific ideas) - MOST IMPORTANT!
-   - Give concrete, personal topics they can add
-   - Each idea should help them speak 15+ more seconds
-   - Use examples they can directly copy
+2. **Vocabulary (vs format for educational comparison)**
+   - Only suggest if you find word choice issues that need comparison between similar words
+   - Format: "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both words in context]\\n📝 [key difference and usage rule]"
+   - Focus on commonly confused pairs for beginners (공부하다 vs 배우다, 좋다 vs 좋아하다, 가다 vs 오다, etc.)
+   - Emphasize when to use each word, not that one is "wrong"
+   - **Target: Provide 1–2 vocabulary comparisons when improvements are possible.**
+   - Do NOT overlap with grammar corrections.
+
+3. **Content Expansion** (2 specific ideas)
+   - Give two concrete, personal topics they can add.
+   - Each idea should help them speak at least 30 more seconds.
+   - Use examples they can directly copy.
+   - **CRITICAL: Topic names must be in ENGLISH, Korean sentences in Korean.**
    
-2. **Grammar Issues** (up to 6 maximum) - Keep it simple!
-   - Only point out the most important errors
-   - Use simple language, avoid technical terms
-   - Show clear before/after examples
-   - Focus on these 3 types: Particle, Verb Ending, Verb Tense
-   - MUST include "Original:" and "→ Fix:" format
+4. **One Advanced Pattern** (something to aspire to)
+   - Provide one useful pattern for the placement interview.
+   - Must be appropriate for their level (TOPIK 1–2).
 
-3. **Vocabulary** (1-2 suggestions) - WORD CHOICE ONLY!
-   - Suggest ONLY alternative words or phrases for better expression
-   - Do NOT correct particles (은/는, 이/가, 을/를), verb endings, or tense markers here
-   - Focus on synonyms, better word choices, or more natural expressions
-   - Example: '많이' → '정말', '좋다' → '재미있다', '공부하다' → '배우다'
-   - Avoid grammar corrections - those belong in Grammar Issues section
-
-4. **One Advanced Pattern** - Something to aspire to
-   - One useful pattern for the placement interview
-   - Must be appropriate for their level
-
-**GRAMMAR ERROR TYPES (use only these 3):**
+**GRAMMAR ERROR TYPES**
 - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
-- **Verb Ending**: Wrong ending (예요/이에요, 아요/어요, etc.)
-- **Verb Tense**: Wrong time expression (past/present/future)
+- **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
+- **Verb Tense**: Incorrect verb tense usage (past/present/future)
+- **Others**: For grammar mistakes that do not fit the above three categories
 
 **Required JSON Structure:**
 {{
@@ -278,31 +281,32 @@ Student answered "{question}": {transcript}
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
     ],
     "vocabulary_suggestions": [
-        "💭 Better: '[old word/phrase]' → '[new word/phrase]'\\n🧠 Why: [very simple reason]"
+        "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both in context]\\n📝 [key difference]",
+        "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both in context]\\n📝 [key difference]"
     ],
     "content_expansion_suggestions": [
-        "💬 Topic: [Specific personal topic]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'",
-        "💬 Topic: [Specific personal topic]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'"
+        "💬 Topic: [English topic name]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'",
+        "💬 Topic: [English topic name]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'"
     ],
     "grammar_expression_tip": "🚀 Try this: '[pattern]' = '[meaning]'\\n📝 Example: '[Korean example]'\\n💡 When to use: [simple explanation]",
     "interview_readiness_score": [1-10],
     "interview_readiness_reason": "Encouraging explanation of score"
 }}
 
-**TONE:** Be warm, encouraging, and supportive. These are beginners who need confidence!
-
 **Scoring Guide:**
-- 8-10: Spoke 60s+, rich personal content, only minor errors
-- 6-7: Spoke 45-60s, good content, some errors but understandable
-- 4-5: Spoke 30-45s, basic content, several errors
-- 1-3: Spoke under 30s, limited content, major communication issues
+- Score 8 to 10: Spoke 120s+, rich personal content, only minor errors
+- Score 6 to 7: Spoke 90-120s, good content, some errors but understandable
+- Score 4 to 5: Spoke 60-90s, basic content, several errors
+- Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
 
-Remember: The goal is to help them speak for at least 1 minute (60+ seconds) with MORE PERSONAL DETAILS!"""
-
-# 개선도 평가 프롬프트 템플릿
+# 🔥 개선도 평가 프롬프트 템플릿 (2분 기준)
 IMPROVEMENT_PROMPT_TEMPLATE = """Compare two Korean speaking attempts from a beginner student.
 
 QUESTION: "{question}"
@@ -313,7 +317,7 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 **Task:** Evaluate improvement between attempts. Be encouraging and specific!
 
 **Focus on:**
-1. Did they speak longer? (Most important! Target: at least 1 minute / 60+ seconds)
+1. Did they speak longer? (Most important! Target: at least 2 minutes / 120+ seconds)
 2. Did they add more personal details?
 3. Did they fix any grammar issues?
 4. Did they use the vocabulary suggestions?
@@ -321,10 +325,10 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 6. Did they maintain allowed speech styles ({allowed_styles})?
 
 **Scoring Guide:**
-- 8-10: Major improvement - much longer (closer to 60s), richer content, applied feedback well
-- 6-7: Good improvement - somewhat longer, some new content, tried to apply feedback
-- 4-5: Some improvement - slight changes, minimal new content
-- 1-3: Little/no improvement - similar or shorter
+- Score 8 to 10: Major improvement - much longer (closer to 120s), richer content, applied feedback well
+- Score 6 to 7: Good improvement - somewhat longer, some new content, tried to apply feedback
+- Score 4 to 5: Some improvement - slight changes, minimal new content
+- Score 1 to 3: Little/no improvement - similar or shorter
 
 **JSON Response:**
 {{
@@ -349,30 +353,30 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 
 Be specific about improvements and always find something positive to say!"""
 
-# 기본 피드백 데이터
+# 🔥 기본 피드백 데이터 (2분 기준, vs 방식 어휘 제안으로 수정)
 FALLBACK_FEEDBACK_DATA = {
-    "suggested_model_sentence": "안녕하세요. 저는 [이름]이에요. 한국학을 전공해요. 취미는 음악 듣기와 영화 보기예요.",
-    "suggested_model_sentence_english": "Hello. I'm [name]. I major in Korean Studies. My hobbies are listening to music and watching movies.",
+    "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+    "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
     "grammar_issues": [
-        "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object and change '전공이에요' to '전공해요'",
-        "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing that you like doing activities",
-        "Verb Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'"
+        "Particle|친구가 만났어요|친구를 만났어요|Use '을/를' for people you meet, not '이/가'",
+        "Verb Tense|내일 한국어 공부해요|내일 한국어 공부할 거예요|Use future tense '할 거예요' for definite future plans",
+        "Verb Ending|음악을 좋아요|음악을 좋아해요|Use '좋아해요' when expressing that you like something"
     ],
     "vocabulary_suggestions": [
         "❓ **공부하다 vs 배우다**\\n💡 공부하다: Academic studying or reviewing material at a desk\\n💡 배우다: Learning new skills or acquiring new knowledge\\n🟢 시험을 위해 공부해요 (I study for exams) / 한국어를 배우고 있어요 (I'm learning Korean)\\n📝 Use '배우다' for new skills, '공부하다' for reviewing",
         "❓ **좋다 vs 좋아하다**\\n💡 좋다: Adjective - something is good (state/quality)\\n💡 좋아하다: Verb - to like something (preference)\\n🟢 날씨가 좋아요 (The weather is nice) / 음악을 좋아해요 (I like music)\\n📝 Use '이/가 좋다' vs '을/를 좋아하다'"
     ],
     "content_expansion_suggestions": [
-        "💬 Topic: Favorite Korean food\\n📝 Example: '제가 가장 좋아하는 한국 음식은 불고기예요. 불고기는 달콤하고 맛있어요.'\\n   'My favorite Korean food is bulgogi. It is sweet and delicious.'",
-        "💬 Topic: Why you study Korean\\n📝 Example: '한국 문화가 재미있어서 한국어를 공부해요.'\\n   'I study Korean because Korean culture is interesting.'"
+        "💬 Topic: Summer vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+        "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
     ],
-    "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
+    "grammar_expression_tip": "🚀 Try these useful patterns:\\n• 'X와/과 함께 Y했어요' = 'I did Y together with X'\\n📝 Example: '가족과 함께 여행했어요'\\n• 'X고 싶어서 Y할 거예요' = 'I will do Y because I want to X'\\n📝 Example: '한국어를 배우고 싶어서 수업을 들을 거예요'\\n💡 Use to make your answers more detailed and natural",
     "interview_readiness_score": 6,
-    "interview_readiness_reason": "Good start! Focus on speaking for at least 1 minute (60+ seconds) to score higher. You can do it!",
+    "interview_readiness_reason": "Good start! Focus on speaking for at least 2 minutes (120+ seconds) to score higher. You can do it!",
     "encouragement_message": "Learning Korean is challenging, but you're making real progress! 화이팅!"
 }
 
-# 기본 개선도 평가 데이터
+# 🔥 기본 개선도 평가 데이터 (2분 기준)
 FALLBACK_IMPROVEMENT_DATA = {
     "first_attempt_score": 5,
     "second_attempt_score": 5,
@@ -380,9 +384,9 @@ FALLBACK_IMPROVEMENT_DATA = {
     "improvement_score": 5,
     "improvement_reason": "Technical error - manual review needed",
     "specific_improvements": ["Attempted Korean speaking"],
-    "remaining_issues": ["Practice speaking for at least 1 minute (60+ seconds)"],
+    "remaining_issues": ["Practice speaking for at least 2 minutes (120+ seconds)"],
     "feedback_application": "unknown",
-    "overall_assessment": "Keep practicing - focus on at least 1 minute (60+ seconds) with personal details",
+    "overall_assessment": "Keep practicing - focus on at least 2 minutes (120+ seconds) with personal details",
     "encouragement_message": "Every practice session makes you better! Keep going!"
 }
 
