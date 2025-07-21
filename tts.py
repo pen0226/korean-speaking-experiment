@@ -1,6 +1,6 @@
 """
 tts.py
-ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (2025 최신 API 호환 버전 - 속도 수정)
+ElevenLabs를 이용한 텍스트-음성 변환 및 오디오 재생 모듈 (2025 최신 API 호환 버전 - 억양 문제 해결)
 """
 
 import streamlit as st
@@ -15,7 +15,7 @@ from config import (
 
 def fix_tts_sentence_punctuation(text):
     """
-    자연스러운 억양을 위한 마침표 자동 보정 (억양 내림 유도)
+    자연스러운 억양을 위한 마침표 자동 보정 (개선된 로직)
     
     Args:
         text: 보정할 텍스트
@@ -25,21 +25,24 @@ def fix_tts_sentence_punctuation(text):
     """
     text = text.strip()
     
-    # 🎯 한국어 TTS 억양 개선: 모든 문장 끝에 명확한 마침표
+    # 🎯 개선된 마침표 처리 로직
     if text.endswith(('?', '!')):
         # 의문문, 감탄문은 그대로 유지
         return text
-    elif text.endswith(('.', '...')):
-        # 이미 마침표가 있으면 정리만
-        return text.rstrip('.') + '.'
+    elif text.endswith('.'):
+        # 이미 정상 마침표로 끝나면 그대로 반환
+        return text
+    elif text.endswith('...'):
+        # 만약 '...' 등 특수한 경우를 특별 처리하고 싶다면 여기서 별도로
+        return text
     else:
-        # 한국어 어미로 끝나더라도 명확한 마침표 추가
+        # 그 외에는 마침표 추가
         return text + '.'
 
 
 def apply_slow_speed_formatting(text):
     """
-    느린 속도를 위한 간단한 텍스트 포맷팅 (쉼표 추가 제거)
+    느린 속도를 위한 텍스트 포맷팅 (띄어쓰기 문제 수정)
     
     Args:
         text: 원본 텍스트
@@ -47,19 +50,20 @@ def apply_slow_speed_formatting(text):
     Returns:
         str: 느린 속도용으로 포맷팅된 텍스트
     """
+    # 🔥 띄어쓰기 2배 로직 제거 - voice_settings의 speed로만 조절
     # 1. 문장 사이 공백 정리만
     text = re.sub(r'([.!?])\s*', r'\1 ', text)
     
-    # 2. 단어 간격을 약간 늘리기 (띄어쓰기 늘리기)
-    text = re.sub(r'\s+', '  ', text)  # 단일 공백을 두 개로
+    # 2. 띄어쓰기 2배 로직 완전 제거
+    # text = re.sub(r'\s+', '  ', text)  # ❌ 제거됨
     
-    # 쉼표 추가 로직 완전 제거
+    # 원본 띄어쓰기 그대로 유지하고 ElevenLabs voice_settings로만 속도 조절
     return text
 
 
 def apply_natural_pacing(text):
     """
-    자연스러운 말하기 속도를 위한 포맷팅 (쉼표 추가 제거)
+    자연스러운 말하기 속도를 위한 포맷팅 (변경 없음)
     
     Args:
         text: 원본 텍스트
@@ -67,7 +71,7 @@ def apply_natural_pacing(text):
     Returns:
         str: 자연스럽게 포맷팅된 텍스트
     """
-    # 쉼표 추가 로직 완전 제거 - 그냥 원본 텍스트 반환
+    # 원본 텍스트 그대로 반환
     return text
 
 
@@ -102,7 +106,7 @@ def get_elevenlabs_client():
 
 def synthesize_audio(text, speed="normal"):
     """
-    텍스트를 음성으로 변환 (2025 최신 ElevenLabs API 사용 - 속도 수정 버전)
+    텍스트를 음성으로 변환 (2025 최신 ElevenLabs API 사용 - 억양 문제 해결)
     
     Args:
         text: 변환할 텍스트
@@ -121,13 +125,13 @@ def synthesize_audio(text, speed="normal"):
             print("Failed to initialize ElevenLabs client")
             return None
         
-        # 🎯 자연스러운 억양을 위한 마침표 보정만
+        # 🎯 개선된 마침표 보정 (정상 마침표는 그대로 유지)
         text = fix_tts_sentence_punctuation(text)
         
-        # 🐌 속도별 텍스트 포맷팅 적용 (쉼표 없이)
+        # 🔥 속도별 텍스트 포맷팅 적용 (띄어쓰기 문제 수정)
         if speed == "slow":
             text = apply_slow_speed_formatting(text)
-            print(f"Slow speed text: {text}")
+            print(f"Slow speed text (fixed spacing): {text}")
         else:
             text = apply_natural_pacing(text)
             print(f"Normal speed text: {text}")
@@ -137,34 +141,24 @@ def synthesize_audio(text, speed="normal"):
         print("Voice ID:", ELEVEN_VOICE_ID)
         print("Speed:", speed)
         
-        # 🔥 2025 수정: voice_settings에서 speed를 제거하지 않고 그대로 유지
+        # 🎯 config.py의 TTS_SETTINGS를 그대로 사용 (하드코딩 제거)
         voice_settings = TTS_SETTINGS.get(speed, TTS_SETTINGS["normal"]).copy()
-        
-        # 🎯 한국어 억양 개선: 더 안정적인 설정
-        if speed == "slow":
-            voice_settings["stability"] = 0.75  # 더 높은 안정성 (억양 변화 최소화)
-            voice_settings["style"] = 0.35      # 더 낮은 스타일 (단조로운 억양)
-            voice_settings["speed"] = 0.7       # 🔥 2025 수정: speed를 voice_settings 안에 유지
-        else:
-            voice_settings["stability"] = 0.75  # 일반 속도도 안정성 증가
-            voice_settings["style"] = 0.45      # 스타일 약간 감소
-            voice_settings["speed"] = 1.0       # 🔥 2025 수정: speed를 voice_settings 안에 유지
         
         # 2025 최신 API 파라미터
         generation_params = {
             "text": text,
             "voice": ELEVEN_VOICE_ID,
             "model": ELEVENLABS_MODEL,
-            "voice_settings": voice_settings,  # 🔥 speed가 포함된 voice_settings 그대로 전달
-            # 🆕 2025 최신 파라미터들
+            "voice_settings": voice_settings,  # config.py의 개선된 설정 사용
+            # 2025 최신 파라미터들
             "output_format": "mp3_44100_128",  # 고품질 MP3
             "optimize_streaming_latency": 1,   # 지연시간 최적화 (0-4)
         }
         
-        print(f"Voice settings ({speed}) - 2025 Enhanced with speed:", voice_settings)
+        print(f"Voice settings ({speed}) - Korean Intonation Fixed:", voice_settings)
         print(f"Generation params: {list(generation_params.keys())}")
         
-        # 🚀 2025 최신 API 호출 방식 (speed 분리 로직 완전 제거)
+        # 2025 최신 API 호출 방식
         try:
             # 최신 스트리밍 방식 시도
             audio_generator = client.generate(**generation_params)
@@ -175,12 +169,12 @@ def synthesize_audio(text, speed="normal"):
         except Exception as stream_error:
             print(f"Streaming failed, trying legacy method: {stream_error}")
             
-            # 레거시 방식 fallback (speed 분리 없이)
+            # 레거시 방식 fallback
             legacy_params = {
                 "text": text,
                 "voice": ELEVEN_VOICE_ID,
                 "model": ELEVENLABS_MODEL,
-                "voice_settings": voice_settings  # 🔥 speed 포함된 그대로 전달
+                "voice_settings": voice_settings  # config.py의 개선된 설정 사용
             }
             
             audio_generator = client.generate(**legacy_params)
@@ -202,7 +196,7 @@ def synthesize_audio(text, speed="normal"):
         error_msg = str(e)
         print("TTS error:", error_msg)
         
-        # 🆕 향상된 에러 메시지
+        # 향상된 에러 메시지
         if "quota" in error_msg.lower():
             st.error("❌ ElevenLabs quota exceeded. Please check your account.")
         elif "voice" in error_msg.lower() and "not found" in error_msg.lower():
@@ -217,7 +211,7 @@ def synthesize_audio(text, speed="normal"):
 
 def generate_model_audio(text):
     """
-    일반속도와 느린속도 모델 음성 생성 (2025 최신 API - 속도 수정)
+    일반속도와 느린속도 모델 음성 생성 (2025 최신 API - 억양 문제 해결)
     
     Args:
         text: 변환할 텍스트
@@ -234,8 +228,8 @@ def generate_model_audio(text):
             if normal_audio:
                 model_audio["normal"] = normal_audio
         
-        # 느린 속도 생성 (voice_settings로만 차이)
-        with st.spinner("🐌 Creating slow speed version..."):
+        # 느린 속도 생성 (voice_settings로만 차이, 띄어쓰기 정상)
+        with st.spinner("🐌 Creating slow speed version (fixed spacing)..."):
             slow_audio = synthesize_audio(text, "slow")
             if slow_audio:
                 model_audio["slow"] = slow_audio
@@ -268,7 +262,7 @@ def audio_card(audio_data, title, description=""):
 
 def display_model_audio(model_audio_dict):
     """
-    모델 발음 오디오를 표시 (2025 최신 API 기반 - 속도 수정)
+    모델 발음 오디오를 표시 (2025 최신 API 기반 - 억양 문제 해결)
     
     Args:
         model_audio_dict: {"normal": audio_data, "slow": audio_data}
@@ -286,7 +280,7 @@ def display_model_audio(model_audio_dict):
         audio_card(
             model_audio_dict.get('slow'), 
             "🐌 Slow & Clear", 
-            "📚 Perfect for learning - clearer pronunciation"
+            "📚 Perfect for learning - natural spacing, clearer pronunciation"
         )
     
     with col2:
@@ -322,11 +316,11 @@ def check_tts_availability():
         try:
             # 일부 최신 버전에서 지원하는 version 확인
             if hasattr(client, 'get_models'):
-                return True, "TTS ready (2025 Latest API - Speed Fixed)"
+                return True, "TTS ready (2025 Latest API - Korean Intonation Fixed)"
             else:
-                return True, "TTS ready (Standard API - Speed Fixed)"
+                return True, "TTS ready (Standard API - Korean Intonation Fixed)"
         except:
-            return True, "TTS ready (Connected - Speed Fixed)"
+            return True, "TTS ready (Connected - Korean Intonation Fixed)"
             
     except ImportError:
         try:
@@ -339,7 +333,7 @@ def check_tts_availability():
 
 def display_tts_status():
     """
-    AI Model Voice 상태를 사이드바에 표시 (2025 버전 정보 포함 - 속도 수정)
+    AI Model Voice 상태를 사이드바에 표시 (2025 버전 정보 포함 - 억양 문제 해결)
     """
     is_available, status = check_tts_availability()
     
@@ -432,7 +426,7 @@ def validate_text_for_tts(text):
     if not has_korean:
         return False, "No Korean text detected"
     
-    # 🆕 특수 문자 제한 확인
+    # 특수 문자 제한 확인
     forbidden_chars = ['<', '>', '{', '}', '[', ']']
     if any(char in text for char in forbidden_chars):
         return False, "Text contains forbidden characters (HTML/XML tags)"
@@ -442,7 +436,7 @@ def validate_text_for_tts(text):
 
 def process_feedback_audio(feedback_dict):
     """
-    피드백에서 모델 문장을 추출하여 오디오 생성 (2025 최신 API - 속도 수정)
+    피드백에서 모델 문장을 추출하여 오디오 생성 (2025 최신 API - 억양 문제 해결)
     
     Args:
         feedback_dict: GPT 피드백 딕셔너리
@@ -452,7 +446,7 @@ def process_feedback_audio(feedback_dict):
     """
     model_sentence = feedback_dict.get('suggested_model_sentence', '')
     
-    # 🎯 자연스러운 억양 유도: 마침표 자동 추가만
+    # 🎯 개선된 마침표 처리 (정상 마침표는 그대로 유지)
     model_sentence = fix_tts_sentence_punctuation(model_sentence)
     
     if not model_sentence:
@@ -471,13 +465,13 @@ def process_feedback_audio(feedback_dict):
         st.info(f"ℹ️ TTS not available: {status}")
         return {}
     
-    # 오디오 생성 (2025 최신 API - 속도 수정)
+    # 오디오 생성 (2025 최신 API - 억양 문제 해결)
     return generate_model_audio(model_sentence)
 
 
 def display_audio_generation_progress():
     """
-    오디오 생성 진행상황 표시 (2025 업데이트 - 속도 수정)
+    오디오 생성 진행상황 표시 (2025 업데이트 - 억양 문제 해결)
     """
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -485,9 +479,9 @@ def display_audio_generation_progress():
     # 단계별 진행상황 시뮬레이션 (2025 API 반영)
     steps = [
         "🔊 Initializing ...",
-        "🎯 Processing Korean text with advanced formatting...", 
+        "🎯 Processing Korean text with improved intonation...", 
         "🚀 Generating natural speed audio ...",
-        "🐌 Generating slow speed audio ...",
+        "🐌 Generating slow speed audio...",
         "✅ Audio generation complete!"
     ]
     
@@ -502,7 +496,7 @@ def display_audio_generation_progress():
 
 def test_elevenlabs_connection():
     """
-    ElevenLabs API 연결 테스트 (2025 디버그용 - 속도 수정)
+    ElevenLabs API 연결 테스트 (2025 디버그용 - 억양 문제 해결)
     
     Returns:
         tuple: (success, message, details)
@@ -515,9 +509,9 @@ def test_elevenlabs_connection():
         # 간단한 테스트 호출 (실제 TTS 없이)
         if hasattr(client, 'get_models'):
             models = client.get_models()
-            return True, "Connection successful (Speed Fixed)", f"Available models: {len(models) if models else 0}"
+            return True, "Connection successful (Korean Intonation Fixed)", f"Available models: {len(models) if models else 0}"
         else:
-            return True, "Connection successful (Speed Fixed)", "Legacy API detected"
+            return True, "Connection successful (Korean Intonation Fixed)", "Legacy API detected"
             
     except Exception as e:
         return False, f"Connection failed: {str(e)}", "Check API key and network"

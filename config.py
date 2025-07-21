@@ -205,17 +205,17 @@ FOLDERS = {
 # TTS 설정
 TTS_SETTINGS = {
     "normal": {
-        "stability": 0.75,
+        "stability": 0.4,
         "similarity_boost": 0.80,
-        "style": 0.15,
-        "use_speaker_boost": False,
+        "style": 0.1,
+        "use_speaker_boost": True,
         "speed": 1.0
     },
     "slow": {
-        "stability": 0.85,
+        "stability": 0.4,
         "similarity_boost": 0.80,
-        "style": 0.20,
-        "use_speaker_boost": False,
+        "style": 0.1,
+        "use_speaker_boost": True,
         "speed": 0.7
     }
 }
