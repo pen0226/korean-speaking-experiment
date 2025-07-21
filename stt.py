@@ -349,7 +349,7 @@ def estimate_audio_duration(audio_bytes):
 
 def get_audio_quality_assessment(duration):
     """
-    음성 길이를 기반으로 품질 평가 (2분/120초 목표로 수정)
+    음성 길이를 기반으로 품질 평가 (1분~2분 목표로 수정)
     
     Args:
         duration: 음성 길이 (초)
@@ -359,40 +359,42 @@ def get_audio_quality_assessment(duration):
     """
     from config import AUDIO_QUALITY
     
-    if duration >= AUDIO_QUALITY["excellent_min_duration"]:  # 120초 이상
-        if duration <= AUDIO_QUALITY["max_recommended_duration"]:
-            return {
-                "status": "excellent",
-                "icon": "✅",
-                "message": f"Great! Your recording is {duration:.1f}s — perfect length for the interview!",
-                "color": "success"
-            }
-        else:
-            return {
-                "status": "long",
-                "icon": "📝",
-                "message": f"Excellent! ({duration:.1f}s) Lots of content for the AI to work with!",
-                "color": "info"
-            }
-    elif duration >= AUDIO_QUALITY["good_min_duration"]:  # 90-120초
+    TARGET_MIN_DURATION = 60  # 1분
+    TARGET_MAX_DURATION = 120 # 2분
+
+    if TARGET_MIN_DURATION <= duration <= TARGET_MAX_DURATION:
+        return {
+            "status": "excellent",
+            "icon": "✅",
+            "message": f"Excellent! Your recording is {duration:.1f}s — a perfect length (1-2 minutes) for the interview!",
+            "color": "success"
+        }
+    elif duration > TARGET_MAX_DURATION:
+        return {
+            "status": "long",
+            "icon": "📝",
+            "message": f"Great! ({duration:.1f}s) You've provided plenty of content",
+            "color": "info"
+        }
+    elif duration >= AUDIO_QUALITY["good_min_duration"]:  # config.py의 "good_min_duration" 값에 따라 1분 미만이지만 양호한 범위
         return {
             "status": "good",
             "icon": "🌟",
-            "message": f"Good! ({duration:.1f}s) Try to reach 120+ seconds for an even better score.",
+            "message": f"Good start! ({duration:.1f}s) Aim for 1-2 minutes for best results.",
             "color": "info"
         }
-    elif duration >= AUDIO_QUALITY["fair_min_duration"]:  # 60-90초
+    elif duration >= AUDIO_QUALITY["fair_min_duration"]:  # config.py의 "fair_min_duration" 값에 따라 다소 짧은 범위
         return {
             "status": "fair",
             "icon": "⚠️",
-            "message": f"Fair start! ({duration:.1f}s) Aim for 120+ seconds to show better fluency.",
+            "message": f"Fair start! ({duration:.1f}s) Aim for 1-2 minutes to show better fluency.",
             "color": "warning"
         }
-    else:  # 60초 미만
+    else:  # 최소 길이 미만
         return {
             "status": "very_short",
             "icon": "❌",
-            "message": f"Too brief! ({duration:.1f}s) Please speak for at least 60+ seconds, ideally 120+ seconds.",
+            "message": f"Too brief! ({duration:.1f}s) Please speak for at least 1 minute, ideally 60–120 seconds.",
             "color": "error"
         }
 

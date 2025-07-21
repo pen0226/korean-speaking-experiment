@@ -7,7 +7,7 @@ import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 import difflib
 import re
-from config import EXPERIMENT_STEPS, SUPPORTED_AUDIO_FORMATS, UI_COLORS, EXPERIMENT_QUESTION
+from config import EXPERIMENT_STEPS, SUPPORTED_AUDIO_FORMATS, UI_COLORS, EXPERIMENT_QUESTION, AUDIO_QUALITY
 
 
 def convert_student_to_you(text):
@@ -797,7 +797,7 @@ def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0
 
 def get_duration_status(duration):
     """
-    음성 길이 상태 반환 (2분 목표)
+    음성 길이 상태 반환 (1-2분 목표로 수정)
     
     Args:
         duration: 음성 길이 (초)
@@ -805,14 +805,19 @@ def get_duration_status(duration):
     Returns:
         str: 상태 설명
     """
-    if duration >= 120:
-        return "✅ Excellent - Met the 2-minute goal!"
-    elif duration >= 90:
-        return "🌟 Good - Almost there!"
-    elif duration >= 60:
-        return "⚠️ Fair - Try for at least 2 minutes next time"
+    # config.py의 AUDIO_QUALITY 기준을 직접 활용하여 일관성을 높입니다.
+    TARGET_EXCELLENT_DURATION = AUDIO_QUALITY["excellent_min_duration"] # 90초 (1.5분)
+    TARGET_GOOD_DURATION = AUDIO_QUALITY["good_min_duration"] # 75초 (1분 15초)
+    TARGET_FAIR_DURATION = AUDIO_QUALITY["fair_min_duration"] # 60초 (1분)
+
+    if duration >= TARGET_EXCELLENT_DURATION: # 90초 이상
+        return f"✅ Excellent! {duration:.1f}s — a perfect length (1-2 minutes) for the interview!"
+    elif duration >= TARGET_GOOD_DURATION: # 75초 이상
+        return f"🌟 Good! {duration:.1f}s — almost reached the 1-2 minute goal!"
+    elif duration >= TARGET_FAIR_DURATION: # 60초 이상
+        return f"⚠️ Fair! {duration:.1f}s — try for at least 1-2 minutes next time."
     else:
-        return "❌ Short - Aim for at least 2 minutes"
+        return f"❌ Short! {duration:.1f}s — aim for at least 1-2 minutes for a better score."
 
 
 def display_contact_info(session_id):

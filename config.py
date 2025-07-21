@@ -51,11 +51,11 @@ SESSION_LABELS = {
 }
 
 # 실험 설정
-EXPERIMENT_QUESTION = "Please speak for about 2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?"
+EXPERIMENT_QUESTION = "Please speak for about 1-2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?"
 
 # 세션별 질문 설정
 SESSION_QUESTIONS = {
-    1: "Please speak for about 2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?",
+    1: "Please speak for about 1-2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?",
     2: "이번 여름에 한국에서 뭐 하려고 하세요? 특별한 계획이 있으세요?"
 }
 
@@ -177,13 +177,17 @@ GRAMMAR_ERROR_TYPES = {
     "Verb Tense": {
         "korean": "동사시제", 
         "description": "Wrong tense with time indicators"
+    },
+    "Others": { # <-- 이 부분이 추가됩니다.
+        "korean": "기타",
+        "description": "Other grammar mistakes not fitting specific categories"
     }
 }
 
-# 🔥 오디오 품질 기준 (2분 목표로 수정)
+# 🔥 오디오 품질 기준 (1-2분 목표로 수정)
 AUDIO_QUALITY = {
-    "excellent_min_duration": 120,  # 2분
-    "good_min_duration": 90,        # 1분 30초
+    "excellent_min_duration": 90,   # 1.5분 (중간값)
+    "good_min_duration": 75,        # 1분 15초
     "fair_min_duration": 60,        # 1분
     "max_recommended_duration": 180 # 3분
 }
@@ -221,7 +225,7 @@ GPT_SYSTEM_PROMPT = """You are a Korean language teaching expert specializing in
 Focus on precise error analysis and practical improvements. 
 Always respond with valid JSON only."""
 
-# 🔥 개선된 피드백 생성 프롬프트 템플릿 (2분 목표 + 강화된 오류 감지 + vs 방식 어휘 제안)
+# 🔥 개선된 피드백 생성 프롬프트 템플릿 (1-2분 목표 + 강화된 오류 감지 + vs 방식 어휘 제안)
 FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -234,30 +238,31 @@ Student answered "{question}": {transcript}
 5. Allowed speech styles: {allowed_styles}
 6. Forbidden speech styles: {forbidden_styles}
 
-**STYLE MATCHING REQUIREMENT:**
-- IMPORTANT: Preserve the student’s speech style for EACH sentence individually.
-- Do NOT change all sentences into one style. Keep the same style per sentence as in the original.
-- If a sentence uses 해요(해요, 이에요, 가요, 와요, 봐요, etc.), write that sentence in 해요.
-- If a sentence uses 합니다(합니다, 입니다, 갑니다, 옵니다, etc.), write that sentence in 합니다.
-- If the student mixes styles, reflect that mix.
-- Do NOT use 반말 or plain dictionary‑style endings (e.g., “‑다”). Use only speech styles that are appropriate for an interview: either 합니다‑style or 해요‑style, following the student’s usage.
+**⚠️⚠️ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE ⚠️⚠️**
+- **ABSOLUTELY DO NOT change all sentences into one style.** You MUST preserve the student's speech style for EACH sentence individually.
+- If a sentence uses 해요(해요, 이에요, 가요, 와요, 봐요, etc.), write that sentence in 해요-style.
+- If a sentence uses 합니다(합니다, 입니다, 갑니다, 옵니다, etc.), write that sentence in 합니다-style.
+- If the student mixes styles within their response, you MUST reflect that mix in the `suggested_model_sentence`.
+- **STRICTLY PROHIBITED:** Do NOT use 반말 or plain dictionary-style endings (e.g., "‑다"). ONLY use speech styles that are appropriate for an interview: either 합니다-style or 해요-style, following the student's usage.
+- **Example for clarity:** If student says "저는 학생이에요. 한국에 갑니다." model should suggest "저는 학생이에요. 한국에 갑니다." NOT "저는 학생입니다. 한국에 갑니다."
 
-**ANALYSIS REQUIREMENTS:**  
-1. **Grammar Issues**
+**ANALYSIS REQUIREMENTS:** 1. **Grammar Issues**
    - Carefully check each sentence for grammar issues that beginners often make.
    - Look for particles (은/는, 이/가, 을/를), verb endings, and tense errors.
    - Also include minor errors and awkward constructions related to grammar.
    - Check word order, honorifics, and overall sentence structure.
    - MUST include "Original:" and "→ Fix:" format.
+   - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
    - **Target: Find up to 6 issues if they exist.**
 
-2. **Vocabulary (vs format for educational comparison)**
-   - Only suggest if you find word choice issues that need comparison between similar words
+2. **Vocabulary (vs format for educational comparison, including unnatural word choice)**
+   - Only suggest if you find word choice issues that need comparison between similar words OR if the student used an **unnatural/incorrect word choice** for the context.
    - Format: "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both words in context]\\n📝 [key difference and usage rule]"
    - Focus on commonly confused pairs for beginners (공부하다 vs 배우다, 좋다 vs 좋아하다, 가다 vs 오다, etc.)
-   - Emphasize when to use each word, not that one is "wrong"
+   - **Example for unnatural word choice:** If student says "친구를 만들고 싶어요", suggest "❓ **만들다 vs 사귀다**\\n💡 만들다: To create or build a physical object/abstract concept.\\n💡 사귀다: To make friends or build a relationship.\\n🟢 집을 만들어요 (I build a house) / 친구를 사귀어요 (I make friends).\\n📝 '사귀다' is used for friends/relationships."
+   - Emphasize when to use each word, not that one is "wrong" (unless clearly incorrect for context).
    - **Target: Provide 1–2 vocabulary comparisons when improvements are possible.**
-   - Do NOT overlap with grammar corrections.
+   - **CRITICAL: This section should handle unnatural/incorrect word choices. DO NOT overlap with grammar corrections.**
 
 3. **Content Expansion** (2 specific ideas)
    - Give two concrete, personal topics they can add.
@@ -301,12 +306,12 @@ Student answered "{question}": {transcript}
 }}
 
 **Scoring Guide:**
-- Score 8 to 10: Spoke 120s+, rich personal content, only minor errors
-- Score 6 to 7: Spoke 90-120s, good content, some errors but understandable
-- Score 4 to 5: Spoke 60-90s, basic content, several errors
+- Score 8 to 10: Spoke 90s+, rich personal content, only minor errors
+- Score 6 to 7: Spoke 75-90s, good content, some errors but understandable
+- Score 4 to 5: Spoke 60-75s, basic content, several errors
 - Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
 
-# 🔥 개선도 평가 프롬프트 템플릿 (2분 기준)
+# 🔥 개선도 평가 프롬프트 템플릿 (1-2분 기준)
 IMPROVEMENT_PROMPT_TEMPLATE = """Compare two Korean speaking attempts from a beginner student.
 
 QUESTION: "{question}"
@@ -317,7 +322,7 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 **Task:** Evaluate improvement between attempts. Be encouraging and specific!
 
 **Focus on:**
-1. Did they speak longer? (Most important! Target: at least 2 minutes / 120+ seconds)
+1. Did they speak longer? (Most important! Target: at least 1-2 minutes / 90+ seconds)
 2. Did they add more personal details?
 3. Did they fix any grammar issues?
 4. Did they use the vocabulary suggestions?
@@ -325,7 +330,7 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 6. Did they maintain allowed speech styles ({allowed_styles})?
 
 **Scoring Guide:**
-- Score 8 to 10: Major improvement - much longer (closer to 120s), richer content, applied feedback well
+- Score 8 to 10: Major improvement - much longer (closer to 90s+), richer content, applied feedback well
 - Score 6 to 7: Good improvement - somewhat longer, some new content, tried to apply feedback
 - Score 4 to 5: Some improvement - slight changes, minimal new content
 - Score 1 to 3: Little/no improvement - similar or shorter
@@ -353,12 +358,12 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 
 Be specific about improvements and always find something positive to say!"""
 
-# 🔥 기본 피드백 데이터 (2분 기준, vs 방식 어휘 제안으로 수정)
+# 🔥 기본 피드백 데이터 (1-2분 기준, vs 방식 어휘 제안으로 수정)
 FALLBACK_FEEDBACK_DATA = {
     "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
     "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
     "grammar_issues": [
-        "Particle|친구가 만났어요|친구를 만났어요|Use '을/를' for people you meet, not '이/가'",
+        "Particle|친구가 만났어요|친구를 만났어요|Use '를' to indicate the object and change '전공이에요' to '전공해요'",
         "Verb Tense|내일 한국어 공부해요|내일 한국어 공부할 거예요|Use future tense '할 거예요' for definite future plans",
         "Verb Ending|음악을 좋아요|음악을 좋아해요|Use '좋아해요' when expressing that you like something"
     ],
@@ -372,11 +377,11 @@ FALLBACK_FEEDBACK_DATA = {
     ],
     "grammar_expression_tip": "🚀 Try these useful patterns:\\n• 'X와/과 함께 Y했어요' = 'I did Y together with X'\\n📝 Example: '가족과 함께 여행했어요'\\n• 'X고 싶어서 Y할 거예요' = 'I will do Y because I want to X'\\n📝 Example: '한국어를 배우고 싶어서 수업을 들을 거예요'\\n💡 Use to make your answers more detailed and natural",
     "interview_readiness_score": 6,
-    "interview_readiness_reason": "Good start! Focus on speaking for at least 2 minutes (120+ seconds) to score higher. You can do it!",
+    "interview_readiness_reason": "Good start! Focus on speaking for at least 1-2 minutes (90+ seconds) to score higher. You can do it!",
     "encouragement_message": "Learning Korean is challenging, but you're making real progress! 화이팅!"
 }
 
-# 🔥 기본 개선도 평가 데이터 (2분 기준)
+# 🔥 기본 개선도 평가 데이터 (1-2분 기준)
 FALLBACK_IMPROVEMENT_DATA = {
     "first_attempt_score": 5,
     "second_attempt_score": 5,
@@ -384,9 +389,9 @@ FALLBACK_IMPROVEMENT_DATA = {
     "improvement_score": 5,
     "improvement_reason": "Technical error - manual review needed",
     "specific_improvements": ["Attempted Korean speaking"],
-    "remaining_issues": ["Practice speaking for at least 2 minutes (120+ seconds)"],
+    "remaining_issues": ["Practice speaking for at least 1-2 minutes (90+ seconds)"],
     "feedback_application": "unknown",
-    "overall_assessment": "Keep practicing - focus on at least 2 minutes (120+ seconds) with personal details",
+    "overall_assessment": "Keep practicing - focus on at least 1-2 minutes (90+ seconds) with personal details",
     "encouragement_message": "Every practice session makes you better! Keep going!"
 }
 

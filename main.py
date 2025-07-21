@@ -1,19 +1,20 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (동의서/배경정보 분리 버전)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (연구용 TOPIK 분석 통합)
 """
 
 import streamlit as st
 from datetime import datetime
 import re
 
-# 모듈 imports (GCS 버전으로 수정)
+# 모듈 imports (연구용 scoring 모듈 추가)
 from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
 from consent import handle_consent_only, handle_background_info_only
 from data_io import save_session_data, auto_backup_to_gcs, log_upload_status, display_download_buttons, display_session_details, display_data_quality_info
+from research_scoring import get_research_analysis_data  # 🆕 연구용 모듈 추가
 from utils import (
     show_progress_indicator, display_question, record_audio,
     display_transcription_with_highlights, display_model_sentence_with_highlights,
@@ -73,7 +74,7 @@ def handle_background_info_step():
 
 
 def handle_first_recording_step():
-    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (2분 기준)"""
+    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (1-2분 기준)"""
     show_progress_indicator('first_recording')
     
     # 1) 질문 영역을 박스로 분리 (다크모드 대응)
@@ -90,7 +91,7 @@ def handle_first_recording_step():
             <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Interview Question:</div>
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
-                    Please speak for about 2 minutes in total and talk about both topics below.<br>
+                    Please speak for about 1-2 minutes in total and talk about both topics below.<br>
                     <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly explain the reason.)</span>
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
@@ -105,9 +106,9 @@ def handle_first_recording_step():
         unsafe_allow_html=True
     )
     
-    # 2) 녹음 안내를 간결하게 (2분 목표로 수정)
+    # 2) 녹음 안내를 간결하게 (1-2분 목표로 수정)
     st.markdown(
-        "🔴 **Aim for about 2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
+        "🔴 **Aim for about 1-2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
     )
     
     # 3) 녹음 단계 제목
@@ -132,7 +133,7 @@ def handle_first_recording_step():
 
 
 def process_first_recording():
-    """첫 번째 녹음 처리"""
+    """첫 번째 녹음 처리 (연구용 데이터 생성 추가)"""
     with st.spinner("🎙️ Processing your recording..."):
         # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.first_audio_type == "upload":
@@ -160,6 +161,21 @@ def process_first_recording():
                 st.session_state.feedback = feedback
             
             if feedback:
+                # 🆕 연구용 데이터 생성 (1차 시도)
+                try:
+                    research_data_1 = get_research_analysis_data(
+                        transcript=transcription,
+                        grammar_issues=feedback.get('grammar_issues', []),
+                        duration_s=duration,
+                        feedback_data=feedback,
+                        attempt_number=1
+                    )
+                    st.session_state.research_data_1 = research_data_1
+                    print("✅ Research data for attempt 1 generated successfully")
+                except Exception as e:
+                    print(f"⚠️ Research data generation failed for attempt 1: {e}")
+                    st.session_state.research_data_1 = None
+                
                 # TTS 생성
                 model_audio = process_feedback_audio(feedback)
                 st.session_state.model_audio = model_audio
@@ -173,7 +189,7 @@ def process_first_recording():
 
 
 def handle_feedback_step():
-    """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (2분 기준)"""
+    """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (1-2분 기준)"""
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -258,7 +274,7 @@ def handle_feedback_step():
         content_suggestions = feedback.get('content_expansion_suggestions', [])
         if content_suggestions:
             with st.expander("💡 Content Ideas - Make Your Answer Longer", expanded=False):
-                st.markdown("*You can add these topics to speak for at least 2 minutes (120+ seconds):*")
+                st.markdown("*You can add these topics to speak for at least 1-2 minutes (90+ seconds):*")
                 for i, suggestion in enumerate(content_suggestions[:2], 1):  # 최대 2개만
                     # Content suggestion 줄바꿈 처리
                     formatted_suggestion = format_content_ideas(suggestion)
@@ -270,7 +286,7 @@ def handle_feedback_step():
                     if i < len(content_suggestions[:2]):
                         st.markdown("")
                 
-                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 2 minutes (120+ seconds)!")
+                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1-2 minutes (90+ seconds)!")
         
         # Advanced Grammar Pattern (접을 수 있는 형태) - 포맷 개선
         if feedback.get('grammar_expression_tip'):
@@ -298,28 +314,28 @@ def handle_feedback_step():
                     st.markdown("#### 📋 Detailed Feedback")
                     st.write(feedback['interview_readiness_reason'])
             
-            # 🔥 녹음 시간 정보 (2분 목표로 수정)
+            # 🔥 녹음 시간 정보 (1-2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
             if duration > 0:
                 st.markdown("#### ⏱️ Speaking Duration")
-                if duration >= 120:
-                    st.success(f"{duration:.1f} seconds - Excellent! Met the 2-minute goal!")
-                elif duration >= 90:
-                    st.info(f"{duration:.1f} seconds - Good, try to reach about 2 minutes (120+ seconds)!")
+                if duration >= 90:
+                    st.success(f"{duration:.1f} seconds - Excellent! Met the 1-2 minute goal!")
+                elif duration >= 75:
+                    st.info(f"{duration:.1f} seconds - Good, try to reach about 1-2 minutes (90+ seconds)!")
                 elif duration >= 60:
-                    st.warning(f"{duration:.1f} seconds - Fair, aim for about 2 minutes (120+ seconds) next time!")
+                    st.warning(f"{duration:.1f} seconds - Fair, aim for about 1-2 minutes (90+ seconds) next time!")
                 else:
-                    st.error(f"{duration:.1f} seconds - Too short, aim for about 2 minutes (120+ seconds)!")
+                    st.error(f"{duration:.1f} seconds - Too short, aim for about 1-2 minutes (90+ seconds)!")
         
         st.markdown("---")
         
         # ===== 다음 단계 준비 =====
         st.markdown("### ✅ Ready for Your Second Try?")
         
-        # 🔥 간단한 팁 리스트 (2분 목표로 수정)
+        # 🔥 간단한 팁 리스트 (1-2분 목표로 수정)
         st.info("""
         **Quick Tips for Your Next Recording:**
-        1. 🎯 Aim for **about 2 minutes total** of speaking
+        1. 🎯 Aim for **about 1-2 minutes total** of speaking
         2. 🎤 Listen to the model pronunciation above
         3. 📝 Try to fix the grammar points
         4. 💡 Add details for both topics (summer vacation + plans in Korea)
@@ -335,7 +351,7 @@ def handle_feedback_step():
 
 
 def handle_second_recording_step():
-    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (2분 기준)"""
+    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (1-2분 기준)"""
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")
@@ -359,7 +375,7 @@ def handle_second_recording_step():
             <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Same Question - Second Attempt:</div>
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
-                    Please speak for about 2 minutes in total and talk about both topics below.<br>
+                    Please speak for about 1-2 minutes in total and talk about both topics below.<br>
                     <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly explain the reason.)</span>
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
@@ -374,9 +390,9 @@ def handle_second_recording_step():
         unsafe_allow_html=True
     )
     
-    # 2) 녹음 안내 추가 (2분 목표로 수정)
+    # 2) 녹음 안내 추가 (1-2분 목표로 수정)
     st.markdown(
-        "🔴 **Aim for about 2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
+        "🔴 **Aim for about 1-2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
     )
     
     st.write("🚀 Now try again! Apply the feedback you received to improve your answer.")
@@ -400,7 +416,7 @@ def handle_second_recording_step():
 
 
 def process_second_recording():
-    """두 번째 녹음 처리 + 즉시 데이터 저장"""
+    """두 번째 녹음 처리 + 즉시 데이터 저장 (연구용 데이터 생성 추가)"""
     with st.spinner("🎙️ Processing your improved recording..."):
         # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.second_audio_type == "upload":
@@ -424,6 +440,21 @@ def process_second_recording():
             
             display_success_message(f"Second attempt transcribed: {transcription}")
             
+            # 🆕 연구용 데이터 생성 (2차 시도)
+            try:
+                research_data_2 = get_research_analysis_data(
+                    transcript=transcription,
+                    grammar_issues=[],  # 2차 시도는 새로운 문법 분석이 없음
+                    duration_s=duration,
+                    feedback_data={},   # 1차 피드백 데이터는 사용하지 않음
+                    attempt_number=2
+                )
+                st.session_state.research_data_2 = research_data_2
+                print("✅ Research data for attempt 2 generated successfully")
+            except Exception as e:
+                print(f"⚠️ Research data generation failed for attempt 2: {e}")
+                st.session_state.research_data_2 = None
+            
             # 개선도 평가
             if st.session_state.feedback and st.session_state.transcription_1:
                 with st.spinner("📊 Analyzing your improvement ..."):
@@ -437,7 +468,7 @@ def process_second_recording():
                     # 개선도 요약 표시
                     display_improvement_summary(improvement_data)
             
-            # 🎯 즉시 데이터 저장 및 백업
+            # 🎯 즉시 데이터 저장 및 백업 (연구용 Excel 포함)
             st.markdown("---")
             with st.spinner("💾 Saving your experiment data..."):
                 save_result = save_and_backup_data()
@@ -447,6 +478,10 @@ def process_second_recording():
                     st.session_state.saved_files = save_result
                     st.success("✅ Your experiment data has been safely saved!")
                     st.info("📋 Next: Please complete the survey to help our research.")
+                    
+                    # 🆕 연구용 Excel 파일 확인
+                    if len(save_result) >= 2 and save_result[1]:  # excel_filename이 있으면
+                        st.success("🎯 Research analysis Excel file also generated for manual grading!")
                 else:
                     st.error("❌ Data save failed. Please try again or contact the researcher.")
                     if st.button("🔄 Retry Save"):
@@ -556,22 +591,22 @@ def handle_survey_step():
 
 
 def save_and_backup_data():
-    """데이터 저장 및 백업 (중복 저장 방지 포함)"""
+    """데이터 저장 및 백업 (중복 저장 방지 포함 + 연구용 Excel)"""
     # 중복 저장 방지
     if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
         if hasattr(st.session_state, 'saved_files'):
             return st.session_state.saved_files
     
-    # 새로운 저장 수행
+    # 새로운 저장 수행 (연구용 Excel 포함)
     result = save_session_data()
     if result[0]:  # csv_filename exists
-        # timestamp를 포함한 결과 언패킹
+        # timestamp를 포함한 결과 언패킹 (Excel 파일 추가됨)
         csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp = result
         
         # 세션에 timestamp 저장 (중복 저장 방지용)
         st.session_state.saved_timestamp = timestamp
         
-        # GCS 자동 업로드 (같은 timestamp 사용)
+        # GCS 자동 업로드 (같은 timestamp 사용, Excel 파일 포함된 ZIP)
         uploaded_files, errors = auto_backup_to_gcs(
             csv_filename, excel_filename, zip_filename, 
             st.session_state.session_id, 
@@ -593,6 +628,8 @@ def save_and_backup_data():
             st.info("💾 Your data is saved locally and can be downloaded below.")
         else:
             st.success("☁️ Data successfully backed up to cloud storage!")
+            if excel_filename:
+                st.success("🎯 Research Excel file included in backup!")
     
     return result
 
@@ -683,7 +720,7 @@ def test_gcs_connection_simple():
 
 
 def display_researcher_mode():
-    """연구자 모드 표시 (GCS 테스트 간소화 버전)"""
+    """연구자 모드 표시 (연구용 Excel 지원 추가)"""
     debug_mode = st.sidebar.checkbox("🔬 Researcher Mode", help="For research data access")
     if debug_mode:
         with st.expander("🔬 Researcher: Data Management", expanded=False):
@@ -718,20 +755,53 @@ def display_researcher_mode():
                     csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp = st.session_state.saved_files
                 else:
                     # 이전 버전 호환성을 위한 fallback
-                    csv_filename, excel_filename, audio_folder, saved_files, zip_filename = st.session_state.saved_files[:5]
+                    csv_filename = st.session_state.saved_files[0] if len(st.session_state.saved_files) > 0 else None
+                    excel_filename = st.session_state.saved_files[1] if len(st.session_state.saved_files) > 1 else None
+                    zip_filename = st.session_state.saved_files[4] if len(st.session_state.saved_files) > 4 else None
                 
-                # 다운로드 버튼들
+                # 다운로드 버튼들 (연구용 Excel 포함)
                 display_download_buttons(csv_filename, excel_filename, zip_filename)
                 
-                # 세션 상세 정보 (배경 정보 + 자기효능감 + GCS 상태 포함)
+                # 🆕 연구용 데이터 미리보기
+                if excel_filename:
+                    st.markdown("---")
+                    st.markdown("#### 🎯 Research Data Preview")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if hasattr(st.session_state, 'research_data_1'):
+                            st.markdown("**1차 시도 TOPIK 점수:**")
+                            data_1 = st.session_state.research_data_1
+                            scores_1 = data_1['summary_indicators']
+                            st.write(f"내용및과제수행: {scores_1.get('content_task_performance_score', 'N/A')}/5")
+                            st.write(f"언어사용: {scores_1.get('language_use_score', 'N/A')}/5")
+                            st.write(f"발화전달력: {scores_1.get('speech_delivery_score', 'N/A')}/5")
+                            st.write(f"전체: {scores_1.get('overall_auto_score', 'N/A')}/5")
+                    
+                    with col2:
+                        if hasattr(st.session_state, 'research_data_2'):
+                            st.markdown("**2차 시도 TOPIK 점수:**")
+                            data_2 = st.session_state.research_data_2
+                            scores_2 = data_2['summary_indicators']
+                            st.write(f"내용및과제수행: {scores_2.get('content_task_performance_score', 'N/A')}/5")
+                            st.write(f"언어사용: {scores_2.get('language_use_score', 'N/A')}/5")
+                            st.write(f"발화전달력: {scores_2.get('speech_delivery_score', 'N/A')}/5")
+                            st.write(f"전체: {scores_2.get('overall_auto_score', 'N/A')}/5")
+                            
+                            # 개선도 표시
+                            if hasattr(st.session_state, 'research_data_1'):
+                                improvement = scores_2['overall_auto_score'] - scores_1['overall_auto_score']
+                                st.write(f"**개선도: {improvement:+.1f}**")
+                
+                # 세션 상세 정보 (TOPIK 점수 포함)
                 display_session_details()
                 
-                # 데이터 품질 정보
+                # 데이터 품질 정보 (TOPIK 점수 포함)
                 display_data_quality_info()
 
 
 def main():
-    """메인 애플리케이션 함수 (분리된 단계 처리)"""
+    """메인 애플리케이션 함수 (연구용 Excel 통합)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
     
