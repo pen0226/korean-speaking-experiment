@@ -299,7 +299,7 @@ def create_score_comparison_sheet():
 
 def generate_research_data_for_attempt(attempt_number):
     """
-    특정 시도에 대한 연구 데이터 생성
+    특정 시도에 대한 연구 데이터 생성 (🔥 기존 데이터 우선 사용)
     
     Args:
         attempt_number: 시도 번호 (1 or 2)
@@ -308,6 +308,12 @@ def generate_research_data_for_attempt(attempt_number):
         dict: 연구 분석 데이터
     """
     try:
+        # 🔥 핵심 수정: 이미 생성된 데이터가 있으면 그것을 사용
+        if attempt_number == 1 and hasattr(st.session_state, 'research_data_1'):
+            return st.session_state.research_data_1
+        elif attempt_number == 2 and hasattr(st.session_state, 'research_data_2'):
+            return st.session_state.research_data_2
+        
         if attempt_number == 1:
             transcript = st.session_state.transcription_1
             duration = getattr(st.session_state, 'audio_duration_1', 0)
