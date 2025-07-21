@@ -104,10 +104,18 @@ def save_research_excel(timestamp):
                     analysis_df_2 = create_detailed_analysis_sheet(research_data_2, 2)
                     analysis_df_2.to_excel(writer, sheet_name='2차_상세분석', index=False)
             
-            # === 시트 4: TOPIK 점수 비교 ===
+            # === 시트 4: 세션 내 1차/2차 시도 비교 ===
             if st.session_state.transcription_1 and st.session_state.transcription_2:
-                comparison_df = create_score_comparison_sheet()
-                comparison_df.to_excel(writer, sheet_name='점수_비교', index=False)
+                comparison_df = create_session_attempt_comparison_sheet()
+                comparison_df.to_excel(writer, sheet_name='세션내_1차2차_비교', index=False)
+            elif st.session_state.transcription_1:
+                # 1차 시도만 있는 경우 안내 메시지
+                placeholder_df = pd.DataFrame([{
+                    "안내": "2차 시도 완료 후 1차/2차 비교 데이터가 표시됩니다",
+                    "현재상태": "1차 시도만 완료됨",
+                    "참고": "세션 간 비교는 연구자가 사후에 별도 분석"
+                }])
+                placeholder_df.to_excel(writer, sheet_name='세션내_1차2차_비교', index=False)
             
             # === 시트 5: 원본 데이터 ===
             original_session_data = build_session_data(timestamp)
@@ -198,12 +206,12 @@ def create_detailed_analysis_sheet(research_data, attempt_number):
         return pd.DataFrame()
 
 
-def create_score_comparison_sheet():
+def create_session_attempt_comparison_sheet():
     """
-    점수 비교 시트 생성
+    세션 내 1차/2차 시도 비교 시트 생성 (수정됨)
     
     Returns:
-        DataFrame: 점수 비교 데이터프레임
+        DataFrame: 세션 내 1차/2차 시도 비교 데이터프레임
     """
     try:
         research_data_1 = generate_research_data_for_attempt(1)
@@ -212,7 +220,7 @@ def create_score_comparison_sheet():
         if not research_data_1 or not research_data_2:
             return pd.DataFrame()
         
-        # 점수 비교 데이터
+        # 🔥 세션 내 1차/2차 시도 비교 데이터
         comparison_data = []
         
         # TOPIK 3영역 점수 비교
@@ -233,14 +241,14 @@ def create_score_comparison_sheet():
             
             comparison_data.append({
                 "TOPIK_영역": area_name,
-                "1차_자동점수": score_1,
-                "2차_자동점수": score_2,
+                f"세션{CURRENT_SESSION}_1차_자동점수": score_1,
+                f"세션{CURRENT_SESSION}_2차_자동점수": score_2,
                 "개선도": improvement,
                 "개선율": f"{(improvement/score_1*100):.1f}%" if score_1 > 0 else "N/A",
-                "1차_수동점수_채점자1": "",
-                "1차_수동점수_채점자2": "",
-                "2차_수동점수_채점자1": "",
-                "2차_수동점수_채점자2": "",
+                f"세션{CURRENT_SESSION}_1차_수동점수_채점자1": "",
+                f"세션{CURRENT_SESSION}_1차_수동점수_채점자2": "",
+                f"세션{CURRENT_SESSION}_2차_수동점수_채점자1": "",
+                f"세션{CURRENT_SESSION}_2차_수동점수_채점자2": "",
                 "수동점수_개선도": ""
             })
         
@@ -270,30 +278,55 @@ def create_score_comparison_sheet():
             
             detailed_comparison.append({
                 "세부_지표": metric_name,
-                "1차_값": value_1,
-                "2차_값": value_2,
+                f"세션{CURRENT_SESSION}_1차_값": value_1,
+                f"세션{CURRENT_SESSION}_2차_값": value_2,
                 "변화량": change,
                 "단위": unit,
                 "평가": evaluate_change(metric_name, change)
             })
         
-        # 두 데이터프레임 합치기
+        # 안내 메시지 추가
+        info_row = pd.DataFrame([{
+            "TOPIK_영역": f"=== 세션 {CURRENT_SESSION} 내 1차/2차 시도 비교 ===",
+            f"세션{CURRENT_SESSION}_1차_자동점수": "참고: 세션 간 비교는",
+            f"세션{CURRENT_SESSION}_2차_자동점수": "연구자가 사후에 별도 분석",
+            "개선도": "",
+            "개선율": "",
+            f"세션{CURRENT_SESSION}_1차_수동점수_채점자1": "",
+            f"세션{CURRENT_SESSION}_1차_수동점수_채점자2": "",
+            f"세션{CURRENT_SESSION}_2차_수동점수_채점자1": "",
+            f"세션{CURRENT_SESSION}_2차_수동점수_채점자2": "",
+            "수동점수_개선도": ""
+        }])
+        
+        # 세부 지표 구분선
+        separator = pd.DataFrame([{
+            "TOPIK_영역": "=== 세부 지표 비교 ===",
+            f"세션{CURRENT_SESSION}_1차_자동점수": "",
+            f"세션{CURRENT_SESSION}_2차_자동점수": "",
+            "개선도": "",
+            "개선율": "",
+            f"세션{CURRENT_SESSION}_1차_수동점수_채점자1": "",
+            f"세션{CURRENT_SESSION}_1차_수동점수_채점자2": "",
+            f"세션{CURRENT_SESSION}_2차_수동점수_채점자1": "",
+            f"세션{CURRENT_SESSION}_2차_수동점수_채점자2": "",
+            "수동점수_개선도": ""
+        }])
+        
+        # 데이터프레임들 합치기
         comparison_df = pd.DataFrame(comparison_data)
         detailed_df = pd.DataFrame(detailed_comparison)
         
-        # 빈 행으로 구분
-        separator = pd.DataFrame([{"TOPIK_영역": "=== 세부 지표 비교 ==="}])
-        
         # 컬럼 맞추기
         max_cols = max(len(comparison_df.columns), len(detailed_df.columns))
-        for df in [comparison_df, separator, detailed_df]:
+        for df in [info_row, comparison_df, separator, detailed_df]:
             while len(df.columns) < max_cols:
                 df[f"빈컬럼_{len(df.columns)}"] = ""
         
-        return pd.concat([comparison_df, separator, detailed_df], ignore_index=True)
+        return pd.concat([info_row, comparison_df, separator, detailed_df], ignore_index=True)
         
     except Exception as e:
-        print(f"Error creating score comparison sheet: {e}")
+        print(f"Error creating session attempt comparison sheet: {e}")
         return pd.DataFrame()
 
 
@@ -538,8 +571,6 @@ def generate_data_quality_notes():
     
     return "; ".join(notes)
 
-
-# === 기존 함수들 (수정 없음) ===
 
 def build_session_data(timestamp):
     """
@@ -869,7 +900,7 @@ First Recording Duration: {getattr(st.session_state, 'audio_duration_1', 0):.1f}
 Second Recording Duration: {getattr(st.session_state, 'audio_duration_2', 0):.1f} seconds
 Student UI Score: {st.session_state.feedback.get('interview_readiness_score', 'N/A')}/10
 
-=== TOPIK-BASED AUTO SCORES (NEW) ===
+=== TOPIK-BASED AUTO SCORES (Session {CURRENT_SESSION}) ===
 1차 시도: {topik_scores_1[0] if topik_scores_1 else 'N/A'}
 2차 시도: {topik_scores_2[0] if topik_scores_2 else 'N/A'}
 
@@ -893,10 +924,14 @@ Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 === FOR RESEARCHER ===
 This file contains the link between the anonymous ID and the original nickname.
 Data was automatically saved after second recording completion.
-NEW: TOPIK-based 3-area scoring system implemented for research analysis.
+TOPIK-based 3-area scoring system for Session {CURRENT_SESSION} analysis.
 Research Excel file includes detailed analysis sheets for manual grading.
 Self-efficacy scores (1-5 scale) collected before experiment.
 Consent form is stored as HTML file for Korean language compatibility.
+
+NOTE: Session-to-session comparison should be done post-hoc by researcher.
+Each session generates independent research data for cross-session analysis.
+
 Contact: pen0226@gmail.com for any data requests or questions.
 """
         
@@ -978,15 +1013,15 @@ Save Trigger: Auto-save after second recording completion
 Files included:
 - participant_info.txt: Participant details + Research scores + Self-efficacy scores + TOPIK auto scores
 - session_data_{timestamp}.csv: Complete session data with dual evaluation + TOPIK scores + self-efficacy data
-- research_analysis_{timestamp}.xlsx: ⭐ NEW: Comprehensive research analysis with TOPIK-based scoring
+- research_analysis_{timestamp}.xlsx: ⭐ Session {session_num} research analysis with TOPIK-based scoring
 - consent_form_{session_id}.html: Signed consent form (HTML format for Korean support)
 - audio/: All recorded audio files (student + model pronunciations)
 
-🆕 RESEARCH EXCEL SHEETS:
+🆕 RESEARCH EXCEL SHEETS (Session {session_num}):
 1. 채점자용_요약: Grading summary with auto/manual score columns (_auto, _rater1, _rater2)
 2. 1차_상세분석: Detailed analysis of first attempt (task performance, language use, speech delivery)
 3. 2차_상세분석: Detailed analysis of second attempt
-4. 점수_비교: Score comparison between attempts with improvement metrics  
+4. 세션내_1차2차_비교: Within-session attempt comparison with improvement metrics  
 5. 원본_세션데이터: Original session data for reference
 
 🎯 TOPIK-BASED AUTO SCORING (1-5 points each):
@@ -1004,16 +1039,17 @@ CONSENT FORM FORMAT:
 - Can be saved as PDF using browser print function (Ctrl+P)
 - Avoids character encoding issues that occurred with direct PDF generation
 
-DUAL EVALUATION SYSTEM:
-- Student UI Score: Educational feedback (GPT-generated with TOPIK criteria)
-- Research Auto Scores: TOPIK-based objective metrics for academic analysis
-- Manual Grading Support: Excel templates for human raters with reference data
+SESSION-TO-SESSION COMPARISON:
+- Each session generates independent research data
+- Cross-session comparison requires post-hoc analysis by researcher
+- Session {session_num} data ready for comparison with other session data
 
 RESEARCH WORKFLOW:
-1. Use research_analysis.xlsx for systematic manual grading
+1. Use research_analysis.xlsx for systematic manual grading of Session {session_num}
 2. Auto scores provide baseline reference for human raters
 3. Compare auto vs manual scores for reliability studies
-4. All raw data preserved for transparency
+4. Collect multiple session data for longitudinal analysis
+5. All raw data preserved for transparency
 
 IMPORTANT: Data was automatically saved after second recording completion.
 This ensures no data loss even if survey is not completed.
@@ -1035,15 +1071,13 @@ Contact researcher: pen0226@gmail.com
                 except:
                     pass
         
-        print(f"✅ Comprehensive backup ZIP created with research Excel: {zip_filename}")
+        print(f"✅ Comprehensive backup ZIP created with Session {session_num} research Excel: {zip_filename}")
         return zip_filename
         
     except Exception as e:
         st.error(f"❌ Error creating comprehensive backup ZIP: {e}")
         return None
 
-
-# === GCS 관련 함수들 (수정 없음) ===
 
 def get_gcs_client():
     """
@@ -1151,7 +1185,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
             
             if blob_url:
                 uploaded_files.append(blob_name)
-                print(f"✅ ZIP with HTML consent + self-efficacy + research Excel uploaded: {blob_name}")
+                print(f"✅ Session {session_num} ZIP with HTML consent + self-efficacy + research Excel uploaded: {blob_name}")
             else:
                 errors.append(f"ZIP upload failed: {result_msg}")
                 
@@ -1260,16 +1294,17 @@ Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
 Dual Evaluation: {dual_eval_used} (Research scores: Accuracy={accuracy_score}, Fluency={fluency_score})
 Self-Efficacy: Average {efficacy_avg}/5.0 (6 items collected)
-        TOPIK Auto Scores: 1차={topik_1}/5, 2차={topik_2}/5 (NEW: 3-area scoring system)
-GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP with research Excel)
+TOPIK Auto Scores: 1차={topik_1}/5, 2차={topik_2}/5 (Session {session_num} 3-area scoring)
+GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP with Session {session_num} research Excel)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: Secured before survey step
-Research Excel: TOPIK-based analysis with grading support included
-Research Data: TOPIK 3-area auto scores + self-efficacy calculated and stored
+Research Excel: Session {session_num} TOPIK-based analysis with grading support included
+Research Data: Session {session_num} TOPIK 3-area auto scores + self-efficacy calculated and stored
 Consent Format: HTML (Korean language support) - Fixed backup inclusion
+Cross-Session Analysis: Post-hoc researcher analysis required for session comparison
 {'='*80}
 """
         
@@ -1291,7 +1326,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         zip_filename: ZIP 파일 경로
     """
     if GCS_ENABLED:
-        st.info("📤 ZIP file (including research Excel + HTML consent + self-efficacy data) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
+        st.info(f"📤 Session {CURRENT_SESSION} ZIP file (including research Excel + HTML consent + self-efficacy data) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
     else:
         st.warning("⚠️ GCS upload is disabled. Use these download buttons to save your data.")
     
@@ -1307,9 +1342,9 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
                 with open(zip_filename, 'rb') as f:
                     zip_data = f.read()
                 st.download_button(
-                    label="📦 Complete Backup ZIP (w/ Research Excel)",
+                    label=f"📦 Session {session_num} Complete Backup ZIP",
                     data=zip_data,
-                    file_name=f"{st.session_state.session_id}_{timestamp_str}.zip",
+                    file_name=f"session{session_num}_{st.session_state.session_id}_{timestamp_str}.zip",
                     mime='application/zip',
                     use_container_width=True
                 )
@@ -1325,9 +1360,9 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
                 with open(excel_filename, 'rb') as f:
                     excel_data = f.read()
                 st.download_button(
-                    label="📊 Research Analysis Excel",
+                    label=f"📊 Session {session_num} Research Excel",
                     data=excel_data,
-                    file_name=f"research_analysis_{st.session_state.session_id}_{timestamp_str}.xlsx",
+                    file_name=f"research_session{session_num}_{st.session_state.session_id}_{timestamp_str}.xlsx",
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     use_container_width=True
                 )
@@ -1354,7 +1389,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         else:
             st.info("CSV unavailable")
     
-    st.caption("ℹ️ 🆕 Research Excel includes TOPIK-based analysis with manual grading templates. ZIP contains all files. HTML consent + self-efficacy data included.")
+    st.caption(f"ℹ️ Session {CURRENT_SESSION} Research Excel includes TOPIK-based analysis with manual grading templates. ZIP contains all files. Session-to-session comparison requires post-hoc analysis.")
 
 
 def display_session_details():
@@ -1389,7 +1424,7 @@ def display_session_details():
                     st.write(f"Item {i}: {score}/5")
     
     # 🆕 TOPIK 자동 점수 정보 표시
-    st.markdown("**🎯 TOPIK-Based Auto Scores (NEW):**")
+    st.markdown(f"**🎯 Session {CURRENT_SESSION} TOPIK-Based Auto Scores:**")
     topik_data_1 = generate_research_data_for_attempt(1)
     topik_data_2 = generate_research_data_for_attempt(2)
     
@@ -1422,14 +1457,15 @@ def display_session_details():
     # GCS 연동 상태 표시
     st.markdown("**☁️ Google Cloud Storage Status:**")
     if GCS_ENABLED:
-        st.success("✅ GCS upload is enabled (Service Account method - ZIP with research Excel)")
+        st.success(f"✅ GCS upload is enabled (Service Account method - ZIP with Session {CURRENT_SESSION} research Excel)")
         if GCS_BUCKET_NAME:
             st.write(f"Bucket: {GCS_BUCKET_NAME}")
             st.write(f"Storage method: ZIP archives + nickname mapping")
-            st.write(f"Research Excel: TOPIK-based analysis with grading support")
+            st.write(f"Research Excel: Session {CURRENT_SESSION} TOPIK-based analysis with grading support")
             st.write(f"Consent format: HTML (Korean language support)")
             st.write(f"Self-efficacy: 6 items (1-5 scale) included")
             st.write(f"Save timing: Auto-save after 2nd recording")
+            st.write(f"Cross-session analysis: Post-hoc researcher comparison required")
         else:
             st.warning("⚠️ No bucket specified")
         
@@ -1470,7 +1506,7 @@ def display_data_quality_info():
         # 🆕 TOPIK 자동 점수 (1차)
         topik_data_1 = generate_research_data_for_attempt(1)
         if topik_data_1:
-            st.write("**🎯 TOPIK Auto (1차):**")
+            st.write(f"**🎯 Session {CURRENT_SESSION} TOPIK Auto (1차):**")
             scores = topik_data_1['summary_indicators']
             st.write(f"내용: {scores.get('content_task_performance_score', 'N/A')}/5")
             st.write(f"언어: {scores.get('language_use_score', 'N/A')}/5")
@@ -1503,17 +1539,17 @@ def display_data_quality_info():
         # 🆕 TOPIK 자동 점수 (2차)
         topik_data_2 = generate_research_data_for_attempt(2)
         if topik_data_2:
-            st.write("**🎯 TOPIK Auto (2차):**")
+            st.write(f"**🎯 Session {CURRENT_SESSION} TOPIK Auto (2차):**")
             scores = topik_data_2['summary_indicators']
             st.write(f"내용: {scores.get('content_task_performance_score', 'N/A')}/5")
             st.write(f"언어: {scores.get('language_use_score', 'N/A')}/5")
             st.write(f"전달: {scores.get('speech_delivery_score', 'N/A')}/5")
             
-            # 개선도 표시
+            # 세션 내 개선도 표시
             if topik_data_1:
                 scores_1 = topik_data_1['summary_indicators']
                 improvement = scores['overall_auto_score'] - scores_1['overall_auto_score']
-                st.write(f"전체 개선: {improvement:+.1f}")
+                st.write(f"**세션 내 개선: {improvement:+.1f}**")
         
         if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
             st.write("💾 **Data Status:** ✅ Safely saved")
