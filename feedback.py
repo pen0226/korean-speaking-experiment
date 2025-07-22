@@ -359,11 +359,11 @@ def preprocess_long_transcript(transcript):
         return preprocess_long_transcript_fallback(cleaned)
 
 
-# === 간소화된 오류 분류 함수 (3개 주요 유형 + 기타) ===
+# === 개선된 오류 분류 함수 (3개 주요 유형 + 기타) ===
 def classify_error_type(issue_text):
     """
     피드백 텍스트를 분석하여 4개 오류 타입 중 하나 반환
-    - 3개 주요 유형: Particle, Verb Ending, Verb Tense
+    - 3개 주요 유형: Particle, Verb Ending, Verb Tense (모두 동등하게 중요)
     - 기타: Others (모든 다른 문법 오류)
     
     Args:
@@ -375,63 +375,87 @@ def classify_error_type(issue_text):
     """
     issue_lower = issue_text.lower()
     
-    # Original과 Fix 부분 추출
+    # Original과 Fix 부분 추출 (개선된 파싱)
     original_text = ""
     fix_text = ""
-    if "Original:" in issue_text and "→" in issue_text:
+    
+    # GPT 피드백에서 original과 fix 추출
+    if "❌" in issue_text and "✅" in issue_text:
+        try:
+            # ❌ 가족이랑 부산여행 갔다. ✅ 가족이랑 부산여행 갔어요. 형태
+            parts = issue_text.split("❌")[1].split("✅")
+            if len(parts) >= 2:
+                original_text = parts[0].strip().strip(".")
+                fix_text = parts[1].split("💡")[0].strip().strip(".")
+        except:
+            pass
+    elif "Original:" in issue_text and "→" in issue_text:
         try:
             original_text = issue_text.split("Original:")[1].split("→")[0].strip().strip("'\"")
             if "Fix:" in issue_text:
-                fix_text = issue_text.split("Fix:")[1].strip().strip("'\"")
+                fix_text = issue_text.split("Fix:")[1].split("💡")[0].strip().strip("'\"")
             else:
-                fix_text = issue_text.split("→")[1].strip().strip("'\"")
+                fix_text = issue_text.split("→")[1].split("💡")[0].strip().strip("'\"")
         except:
             pass
+    
+    print(f"🔍 Debug - Original: '{original_text}' | Fix: '{fix_text}'")  # 디버깅용
     
     # 1. 초급자 자주 틀리는 패턴 우선 확인
     for pattern_info in COMMON_BEGINNER_ERRORS.values():
         if pattern_info["pattern"] in original_text and pattern_info["correct"] in fix_text:
+            print(f"✅ {pattern_info['type']} (common pattern): {pattern_info['pattern']} → {pattern_info['correct']}")
             return pattern_info["type"]
     
     # 2. Particle 확인
     for particle in INDIVIDUAL_PARTICLES:
         if f"'{particle}'" in issue_text or f" {particle} " in issue_text:
+            print(f"✅ Particle detected: keyword '{particle}'")
             return "Particle"
-        if particle in fix_text and particle not in original_text:
-            return "Particle"
+        if original_text and fix_text:
+            if particle in fix_text and particle not in original_text:
+                print(f"✅ Particle detected: added '{particle}'")
+                return "Particle"
     
     if "particle" in issue_lower or "조사" in issue_text:
+        print(f"✅ Particle detected: keyword")
         return "Particle"
     
     # 3. Verb Tense 확인 (시간 표현이 있는 경우)
     for indicator in TIME_INDICATORS + TENSE_MARKERS:
         if indicator in issue_text:
+            print(f"✅ Verb Tense detected: time indicator '{indicator}'")
             return "Verb Tense"
     
-    if "tense" in issue_lower or "시제" in issue_text:
+    if "tense" in issue_lower or "시제" in issue_text or "past tense" in issue_lower:
+        print(f"✅ Verb Tense detected: keyword")
         return "Verb Tense"
     
-    # 4. Verb Ending 확인 - 들여쓰기 수정
+    # 4. Verb Ending 확인
     for ending in VERB_ENDINGS:
         if ending in issue_text:
+            print(f"✅ Verb Ending detected: ending '{ending}'")
             return "Verb Ending"
 
-    # 반말 → 존댓말 패턴 확인
+    # 반말 → 존댓말 패턴 확인 (정확한 어미 확인)
     if original_text and fix_text:
-        # 반말 어미가 원본에 있고, 존댓말 어미가 수정본에 있는 경우
-        informal_endings = ["다", "ㄴ다", "는다", "냐", "나", "지"]
-        formal_endings = ["요", "습니다", "세요"]
+        informal_endings = ["다", "ㄴ다", "는다", "냐", "나", "지", "야"]
+        formal_endings = ["요", "습니다", "세요", "어요", "아요", "이에요", "예요"]
         
-        original_has_informal = any(ending in original_text for ending in informal_endings)
-        fix_has_formal = any(ending in fix_text for ending in formal_endings)
+        # 원본이 반말로 끝나고, 수정본이 존댓말로 끝나는 경우
+        original_has_informal = any(original_text.endswith(ending) for ending in informal_endings)
+        fix_has_formal = any(fix_text.endswith(ending) for ending in formal_endings)
         
         if original_has_informal and fix_has_formal:
+            print(f"✅ Verb Ending detected: {original_text} → {fix_text} (informal to formal)")
             return "Verb Ending"
 
     if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
+        print(f"✅ Verb Ending detected: keyword")
         return "Verb Ending"
     
-    # 🔥 5. 3개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
+    # 🔥 3개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
+    print(f"❓ No specific type detected, will be classified as 'Others'")
     return None
 
 
