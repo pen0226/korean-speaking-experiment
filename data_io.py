@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (연구용 TOPIK 분석 시트 추가)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (단순화됨)
 """
 
 import os
@@ -22,18 +22,14 @@ from config import (
     CURRENT_SESSION,
     SESSION_LABELS
 )
-from research_scoring import (
-    get_research_analysis_data,
-    generate_grading_summary_row
-)
 
 
 def save_session_data():
     """
-    세션 데이터를 CSV + 연구용 Excel로 저장 (자기효능감 + TOPIK 분석 포함)
+    세션 데이터를 CSV로 저장 (단순화됨)
     
     Returns:
-        tuple: (csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp)
+        tuple: (csv_filename, None, audio_folder, saved_files, zip_filename, timestamp)
     """
     try:
         # 중복 저장 방지
@@ -51,525 +47,14 @@ def save_session_data():
         session_data = build_session_data(timestamp)
         csv_filename = save_to_csv(session_data, timestamp)
         
-        # 🆕 연구용 Excel 파일 생성
-        excel_filename = save_research_excel(timestamp)
-        
         audio_folder, saved_files = save_audio_files(timestamp)
         zip_filename = create_comprehensive_backup_zip(st.session_state.session_id, timestamp)
         
-        return csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp
+        return csv_filename, None, audio_folder, saved_files, zip_filename, timestamp
     
     except Exception as e:
         st.error(f"❌ Error saving session data: {str(e)}")
         return None, None, None, [], None, None
-
-
-def save_research_excel(timestamp):
-    """
-    연구용 TOPIK 분석 Excel 파일 생성
-    
-    Args:
-        timestamp: 타임스탬프
-        
-    Returns:
-        str: Excel 파일 경로
-    """
-    try:
-        session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
-        excel_filename = os.path.join(
-            FOLDERS["data"], 
-            f"research_analysis_session{session_num}_{st.session_state.session_id}_{timestamp}.xlsx"
-        )
-        
-        # Excel 작성기 생성
-        with pd.ExcelWriter(excel_filename, engine='openpyxl') as writer:
-            
-            # === 시트 1: 채점자용 요약 테이블 ===
-            grading_summary = create_grading_summary_sheet()
-            if grading_summary:
-                grading_df = pd.DataFrame([grading_summary])
-                grading_df.to_excel(writer, sheet_name='채점자용_요약', index=False)
-            
-            # === 시트 2: 1차 시도 상세 분석 ===
-            if st.session_state.transcription_1:
-                research_data_1 = generate_research_data_for_attempt(1)
-                if research_data_1:
-                    analysis_df_1 = create_detailed_analysis_sheet(research_data_1, 1)
-                    analysis_df_1.to_excel(writer, sheet_name='1차_상세분석', index=False)
-            
-            # === 시트 3: 2차 시도 상세 분석 ===
-            if st.session_state.transcription_2:
-                research_data_2 = generate_research_data_for_attempt(2)
-                if research_data_2:
-                    analysis_df_2 = create_detailed_analysis_sheet(research_data_2, 2)
-                    analysis_df_2.to_excel(writer, sheet_name='2차_상세분석', index=False)
-            
-            # === 시트 4: 세션 내 1차/2차 시도 비교 ===
-            if st.session_state.transcription_1 and st.session_state.transcription_2:
-                comparison_df = create_session_attempt_comparison_sheet()
-                comparison_df.to_excel(writer, sheet_name='세션내_1차2차_비교', index=False)
-            elif st.session_state.transcription_1:
-                # 1차 시도만 있는 경우 안내 메시지
-                placeholder_df = pd.DataFrame([{
-                    "안내": "2차 시도 완료 후 1차/2차 비교 데이터가 표시됩니다",
-                    "현재상태": "1차 시도만 완료됨",
-                    "참고": "세션 간 비교는 연구자가 사후에 별도 분석"
-                }])
-                placeholder_df.to_excel(writer, sheet_name='세션내_1차2차_비교', index=False)
-            
-            # === 시트 5: 원본 데이터 ===
-            original_session_data = build_session_data(timestamp)
-            original_df = pd.DataFrame([original_session_data])
-            original_df.to_excel(writer, sheet_name='원본_세션데이터', index=False)
-        
-        print(f"✅ Research Excel created: {excel_filename}")
-        return excel_filename
-        
-    except Exception as e:
-        st.error(f"❌ Error creating research Excel: {str(e)}")
-        return None
-
-
-def create_grading_summary_sheet():
-    """
-    채점자용 요약 시트 데이터 생성
-    
-    Returns:
-        dict: 채점자용 요약 데이터
-    """
-    try:
-        # 1차, 2차 연구 데이터 생성
-        research_data_1 = generate_research_data_for_attempt(1) if st.session_state.transcription_1 else None
-        research_data_2 = generate_research_data_for_attempt(2) if st.session_state.transcription_2 else None
-        
-        if research_data_1:
-            # 채점자용 요약 행 생성
-            summary_row = generate_grading_summary_row(research_data_1, research_data_2)
-            
-            # 추가 메타데이터
-            summary_row.update({
-                "experiment_question": EXPERIMENT_QUESTION,
-                "learning_duration": getattr(st.session_state, 'learning_duration', ''),
-                "speaking_confidence": getattr(st.session_state, 'speaking_confidence', ''),
-                "self_efficacy_average": calculate_self_efficacy_average(),
-                "consent_given": getattr(st.session_state, 'consent_given', False),
-                "data_quality_notes": generate_data_quality_notes()
-            })
-            
-            return summary_row
-        
-        return None
-        
-    except Exception as e:
-        print(f"Error creating grading summary: {e}")
-        return None
-
-
-def create_detailed_analysis_sheet(research_data, attempt_number):
-    """
-    상세 분석 시트 데이터 생성
-    
-    Args:
-        research_data: 연구 분석 데이터
-        attempt_number: 시도 번호
-        
-    Returns:
-        DataFrame: 상세 분석 데이터프레임
-    """
-    try:
-        # 분석 데이터를 플랫하게 변환
-        flattened_data = flatten_research_data(research_data, attempt_number)
-        
-        # 데이터프레임 생성 (세로 형태로 키-값 쌍)
-        analysis_rows = []
-        for category, data in flattened_data.items():
-            if isinstance(data, dict):
-                for key, value in data.items():
-                    analysis_rows.append({
-                        "카테고리": category,
-                        "항목": key,
-                        "값": str(value),
-                        "설명": get_item_description(category, key)
-                    })
-            else:
-                analysis_rows.append({
-                    "카테고리": category,
-                    "항목": category,
-                    "값": str(data),
-                    "설명": get_item_description(category, category)
-                })
-        
-        return pd.DataFrame(analysis_rows)
-        
-    except Exception as e:
-        print(f"Error creating detailed analysis sheet: {e}")
-        return pd.DataFrame()
-
-
-def create_session_attempt_comparison_sheet():
-    """
-    세션 내 1차/2차 시도 비교 시트 생성 (수정됨)
-    
-    Returns:
-        DataFrame: 세션 내 1차/2차 시도 비교 데이터프레임
-    """
-    try:
-        research_data_1 = generate_research_data_for_attempt(1)
-        research_data_2 = generate_research_data_for_attempt(2)
-        
-        if not research_data_1 or not research_data_2:
-            return pd.DataFrame()
-        
-        # 🔥 세션 내 1차/2차 시도 비교 데이터
-        comparison_data = []
-        
-        # TOPIK 3영역 점수 비교
-        scores_1 = research_data_1['summary_indicators']
-        scores_2 = research_data_2['summary_indicators']
-        
-        topik_areas = [
-            ("내용 및 과제 수행", "content_task_performance_score"),
-            ("언어 사용", "language_use_score"),
-            ("발화 전달력", "speech_delivery_score"),
-            ("전체 평균", "overall_auto_score")
-        ]
-        
-        for area_name, score_key in topik_areas:
-            score_1 = scores_1.get(score_key, 0)
-            score_2 = scores_2.get(score_key, 0)
-            improvement = score_2 - score_1
-            
-            comparison_data.append({
-                "TOPIK_영역": area_name,
-                f"세션{CURRENT_SESSION}_1차_자동점수": score_1,
-                f"세션{CURRENT_SESSION}_2차_자동점수": score_2,
-                "개선도": improvement,
-                "개선율": f"{(improvement/score_1*100):.1f}%" if score_1 > 0 else "N/A",
-                f"세션{CURRENT_SESSION}_1차_수동점수_채점자1": "",
-                f"세션{CURRENT_SESSION}_1차_수동점수_채점자2": "",
-                f"세션{CURRENT_SESSION}_2차_수동점수_채점자1": "",
-                f"세션{CURRENT_SESSION}_2차_수동점수_채점자2": "",
-                "수동점수_개선도": ""
-            })
-        
-        # 세부 지표 비교
-        detailed_comparison = []
-        
-        # 기본 지표들
-        basic_metrics = [
-            ("녹음 길이", "duration_seconds", "초"),
-            ("단어 수", lambda d: d['task_performance']['content_richness']['total_words'], "개"),
-            ("문장 수", lambda d: d['task_performance']['content_richness']['sentences_count'], "개"),
-            ("문법 오류", lambda d: d['language_use']['grammar_accuracy']['total_grammar_errors'], "개"),
-            ("오류율", lambda d: d['language_use']['grammar_accuracy']['error_rate'], "%"),
-            ("어휘 다양성", lambda d: d['language_use']['vocabulary_usage']['vocabulary_diversity'], "비율"),
-            ("분당 단어수", lambda d: d['speech_delivery_indicators']['fluency_indicators']['words_per_minute'], "wpm")
-        ]
-        
-        for metric_name, metric_key, unit in basic_metrics:
-            if callable(metric_key):
-                value_1 = metric_key(research_data_1)
-                value_2 = metric_key(research_data_2)
-            else:
-                value_1 = research_data_1.get(metric_key, 0)
-                value_2 = research_data_2.get(metric_key, 0)
-            
-            change = value_2 - value_1
-            
-            detailed_comparison.append({
-                "세부_지표": metric_name,
-                f"세션{CURRENT_SESSION}_1차_값": value_1,
-                f"세션{CURRENT_SESSION}_2차_값": value_2,
-                "변화량": change,
-                "단위": unit,
-                "평가": evaluate_change(metric_name, change)
-            })
-        
-        # 안내 메시지 추가
-        info_row = pd.DataFrame([{
-            "TOPIK_영역": f"=== 세션 {CURRENT_SESSION} 내 1차/2차 시도 비교 ===",
-            f"세션{CURRENT_SESSION}_1차_자동점수": "참고: 세션 간 비교는",
-            f"세션{CURRENT_SESSION}_2차_자동점수": "연구자가 사후에 별도 분석",
-            "개선도": "",
-            "개선율": "",
-            f"세션{CURRENT_SESSION}_1차_수동점수_채점자1": "",
-            f"세션{CURRENT_SESSION}_1차_수동점수_채점자2": "",
-            f"세션{CURRENT_SESSION}_2차_수동점수_채점자1": "",
-            f"세션{CURRENT_SESSION}_2차_수동점수_채점자2": "",
-            "수동점수_개선도": ""
-        }])
-        
-        # 세부 지표 구분선
-        separator = pd.DataFrame([{
-            "TOPIK_영역": "=== 세부 지표 비교 ===",
-            f"세션{CURRENT_SESSION}_1차_자동점수": "",
-            f"세션{CURRENT_SESSION}_2차_자동점수": "",
-            "개선도": "",
-            "개선율": "",
-            f"세션{CURRENT_SESSION}_1차_수동점수_채점자1": "",
-            f"세션{CURRENT_SESSION}_1차_수동점수_채점자2": "",
-            f"세션{CURRENT_SESSION}_2차_수동점수_채점자1": "",
-            f"세션{CURRENT_SESSION}_2차_수동점수_채점자2": "",
-            "수동점수_개선도": ""
-        }])
-        
-        # 데이터프레임들 합치기
-        comparison_df = pd.DataFrame(comparison_data)
-        detailed_df = pd.DataFrame(detailed_comparison)
-        
-        # 컬럼 맞추기
-        max_cols = max(len(comparison_df.columns), len(detailed_df.columns))
-        for df in [info_row, comparison_df, separator, detailed_df]:
-            while len(df.columns) < max_cols:
-                df[f"빈컬럼_{len(df.columns)}"] = ""
-        
-        return pd.concat([info_row, comparison_df, separator, detailed_df], ignore_index=True)
-        
-    except Exception as e:
-        print(f"Error creating session attempt comparison sheet: {e}")
-        return pd.DataFrame()
-
-
-def generate_research_data_for_attempt(attempt_number):
-    """
-    특정 시도에 대한 연구 데이터 생성 (🔥 기존 데이터 우선 사용)
-    
-    Args:
-        attempt_number: 시도 번호 (1 or 2)
-        
-    Returns:
-        dict: 연구 분석 데이터
-    """
-    try:
-        # 🔥 핵심 수정: 이미 생성된 데이터가 있으면 그것을 사용
-        if attempt_number == 1 and hasattr(st.session_state, 'research_data_1'):
-            return st.session_state.research_data_1
-        elif attempt_number == 2 and hasattr(st.session_state, 'research_data_2'):
-            return st.session_state.research_data_2
-        
-        if attempt_number == 1:
-            transcript = st.session_state.transcription_1
-            duration = getattr(st.session_state, 'audio_duration_1', 0)
-        elif attempt_number == 2:
-            transcript = st.session_state.transcription_2
-            duration = getattr(st.session_state, 'audio_duration_2', 0)
-        else:
-            return None
-        
-        if not transcript:
-            return None
-        
-        # GPT 피드백 데이터
-        feedback_data = st.session_state.feedback if attempt_number == 1 else {}
-        grammar_issues = feedback_data.get('grammar_issues', [])
-        
-        # 연구 분석 데이터 생성
-        research_data = get_research_analysis_data(
-            transcript=transcript,
-            grammar_issues=grammar_issues,
-            duration_s=duration,
-            feedback_data=feedback_data,
-            attempt_number=attempt_number
-        )
-        
-        return research_data
-        
-    except Exception as e:
-        print(f"Error generating research data for attempt {attempt_number}: {e}")
-        return None
-
-
-def flatten_research_data(research_data, attempt_number):
-    """
-    연구 데이터를 플랫한 구조로 변환
-    
-    Args:
-        research_data: 연구 분석 데이터
-        attempt_number: 시도 번호
-        
-    Returns:
-        dict: 플랫한 구조의 데이터
-    """
-    flattened = {
-        f"기본정보_시도{attempt_number}": {
-            "세션ID": research_data.get("session_id", ""),
-            "시도번호": research_data.get("attempt", ""),
-            "분석시간": research_data.get("timestamp", ""),
-            "녹음길이": f"{research_data.get('duration_seconds', 0)}초"
-        },
-        
-        "과제수행_분석": {
-            "여름방학_언급": research_data["task_performance"]["topics_mentioned"]["summer_vacation"],
-            "한국계획_언급": research_data["task_performance"]["topics_mentioned"]["korea_plans"],
-            "양주제_완료": research_data["task_performance"]["topics_mentioned"]["both_topics_covered"],
-            "이유제시_완성도": research_data["task_performance"]["reasoning_provided"]["reasoning_completeness"],
-            "총단어수": research_data["task_performance"]["content_richness"]["total_words"],
-            "고유단어수": research_data["task_performance"]["content_richness"]["unique_words"],
-            "문장수": research_data["task_performance"]["content_richness"]["sentences_count"],
-            "세부사항_개수": research_data["task_performance"]["content_richness"]["detail_count"],
-            "담화구성_점수": research_data["task_performance"]["discourse_organization"]["organization_score"]
-        },
-        
-        "언어사용_분석": {
-            "문법오류_총개수": research_data["language_use"]["grammar_accuracy"]["total_grammar_errors"],
-            "오류율": f"{research_data['language_use']['grammar_accuracy']['error_rate']}%",
-            "정확성_점수": research_data["language_use"]["grammar_accuracy"]["accuracy_score"],
-            "어휘다양성": research_data["language_use"]["vocabulary_usage"]["vocabulary_diversity"],
-            "존댓말_수준": research_data["language_use"]["language_appropriateness"]["speech_level"],
-            "존댓말_일관성": research_data["language_use"]["language_appropriateness"]["consistency"]
-        },
-        
-        "발화전달력_분석": {
-            "분당단어수": research_data["speech_delivery_indicators"]["fluency_indicators"]["words_per_minute"],
-            "망설임표지": ", ".join(research_data["speech_delivery_indicators"]["fluency_indicators"]["hesitation_markers"]),
-            "반복횟수": research_data["speech_delivery_indicators"]["fluency_indicators"]["repetition_count"],
-            "평균문장길이": research_data["speech_delivery_indicators"]["speech_patterns"]["average_sentence_length"],
-            "미완성문장수": research_data["speech_delivery_indicators"]["speech_patterns"]["incomplete_sentences"]
-        },
-        
-        "TOPIK_자동점수": {
-            "내용및과제수행": research_data["summary_indicators"]["content_task_performance_score"],
-            "언어사용": research_data["summary_indicators"]["language_use_score"],
-            "발화전달력": research_data["summary_indicators"]["speech_delivery_score"],
-            "전체평균": research_data["summary_indicators"]["overall_auto_score"]
-        },
-        
-        "세부점수": research_data["summary_indicators"]["detailed_scores"],
-        
-        "채점참고사항": {
-            "주요특징": "; ".join(research_data["summary_indicators"]["grading_notes"]),
-            "주의사항": "; ".join(research_data["summary_indicators"]["attention_points"]),
-            "발화분석": research_data["summary_indicators"]["speech_delivery_breakdown"]["delivery_explanation"]
-        }
-    }
-    
-    return flattened
-
-
-def get_item_description(category, key):
-    """
-    항목별 설명 반환
-    
-    Args:
-        category: 카테고리
-        key: 키
-        
-    Returns:
-        str: 설명
-    """
-    descriptions = {
-        "과제수행_분석": {
-            "여름방학_언급": "여름방학 관련 내용 언급 여부",
-            "한국계획_언급": "한국에서의 계획 관련 내용 언급 여부",
-            "양주제_완료": "두 주제 모두 다룸 여부",
-            "이유제시_완성도": "각 주제에 대한 이유 설명 완성도 (both/partial/none)",
-            "세부사항_개수": "구체적인 세부사항의 개수",
-            "담화구성_점수": "담화 조직성 점수 (1-5점)"
-        },
-        "언어사용_분석": {
-            "오류율": "총 단어 수 대비 문법 오류 비율",
-            "어휘다양성": "고유 단어 수 / 총 단어 수",
-            "존댓말_수준": "주로 사용한 존댓말 수준"
-        },
-        "발화전달력_분석": {
-            "분당단어수": "말하기 속도 지표 (60-80이 적절)",
-            "망설임표지": "음, 어, 그 등의 망설임 표현",
-            "평균문장길이": "문장당 평균 단어 수"
-        },
-        "TOPIK_자동점수": {
-            "내용및과제수행": "과제 완성도 + 내용 풍부함 + 담화 구성 (1-5점)",
-            "언어사용": "문법 정확성 + 어휘 다양성 (1-5점)",
-            "발화전달력": "속도 + 유창성 + 일관성 간접 지표 (1-5점)"
-        }
-    }
-    
-    return descriptions.get(category, {}).get(key, "")
-
-
-def evaluate_change(metric_name, change):
-    """
-    변화량 평가
-    
-    Args:
-        metric_name: 지표명
-        change: 변화량
-        
-    Returns:
-        str: 평가 결과
-    """
-    if metric_name in ["녹음 길이", "단어 수", "문장 수", "어휘 다양성", "분당 단어수"]:
-        # 증가가 좋은 지표들
-        if change > 0:
-            return "개선"
-        elif change == 0:
-            return "동일"
-        else:
-            return "감소"
-    elif metric_name in ["문법 오류", "오류율"]:
-        # 감소가 좋은 지표들
-        if change < 0:
-            return "개선"
-        elif change == 0:
-            return "동일"
-        else:
-            return "증가"
-    else:
-        return "변화"
-
-
-def calculate_self_efficacy_average():
-    """
-    자기효능감 평균 계산
-    
-    Returns:
-        float: 자기효능감 평균 (1-5점)
-    """
-    efficacy_scores = []
-    for i in range(1, 7):
-        score = getattr(st.session_state, f'self_efficacy_{i}', 0)
-        if score and isinstance(score, (int, float)) and 1 <= score <= 5:
-            efficacy_scores.append(score)
-    
-    return round(sum(efficacy_scores) / len(efficacy_scores), 2) if efficacy_scores else 0
-
-
-def generate_data_quality_notes():
-    """
-    데이터 품질 참고사항 생성
-    
-    Returns:
-        str: 품질 참고사항
-    """
-    notes = []
-    
-    # 녹음 길이 체크
-    duration_1 = getattr(st.session_state, 'audio_duration_1', 0)
-    duration_2 = getattr(st.session_state, 'audio_duration_2', 0)
-    
-    if duration_1 >= 90:
-        notes.append("1차녹음 우수길이")
-    elif duration_1 >= 60:
-        notes.append("1차녹음 적정길이")
-    else:
-        notes.append("1차녹음 짧음")
-    
-    if duration_2 >= 90:
-        notes.append("2차녹음 우수길이")
-    elif duration_2 >= 60:
-        notes.append("2차녹음 적정길이")
-    else:
-        notes.append("2차녹음 짧음")
-    
-    # 자기효능감 체크
-    efficacy_avg = calculate_self_efficacy_average()
-    if efficacy_avg > 0:
-        notes.append(f"자기효능감 {efficacy_avg}/5.0")
-    
-    # 동의서 체크
-    if getattr(st.session_state, 'consent_given', False):
-        notes.append("동의완료")
-    
-    return "; ".join(notes)
 
 
 def build_session_data(timestamp):
@@ -686,16 +171,6 @@ def build_session_data(timestamp):
         'gpt_attempts': st.session_state.gpt_debug_info.get('attempts', 0),
         'dual_evaluation_used': st.session_state.gpt_debug_info.get('dual_evaluation', False),
         
-        # 🆕 TOPIK 자동 점수 추가
-        'topik_content_task_auto_1': get_topik_score(1, 'content_task_performance_score'),
-        'topik_language_use_auto_1': get_topik_score(1, 'language_use_score'),
-        'topik_speech_delivery_auto_1': get_topik_score(1, 'speech_delivery_score'),
-        'topik_overall_auto_1': get_topik_score(1, 'overall_auto_score'),
-        'topik_content_task_auto_2': get_topik_score(2, 'content_task_performance_score'),
-        'topik_language_use_auto_2': get_topik_score(2, 'language_use_score'),
-        'topik_speech_delivery_auto_2': get_topik_score(2, 'speech_delivery_score'),
-        'topik_overall_auto_2': get_topik_score(2, 'overall_auto_score'),
-        
         # 오디오 파일 정보
         'audio_folder': f"{FOLDERS['audio_recordings']}/{getattr(st.session_state, 'session_number', CURRENT_SESSION)}_{st.session_state.session_id}_{timestamp}",
         
@@ -710,26 +185,6 @@ def build_session_data(timestamp):
     }
     
     return session_data
-
-
-def get_topik_score(attempt_number, score_type):
-    """
-    특정 시도의 TOPIK 점수 반환
-    
-    Args:
-        attempt_number: 시도 번호 (1 or 2)
-        score_type: 점수 타입
-        
-    Returns:
-        float: TOPIK 점수
-    """
-    try:
-        research_data = generate_research_data_for_attempt(attempt_number)
-        if research_data:
-            return research_data['summary_indicators'].get(score_type, 0)
-        return 0
-    except:
-        return 0
 
 
 def get_audio_quality_label(duration):
@@ -750,6 +205,22 @@ def get_audio_quality_label(duration):
         return 'fair'
     else:
         return 'very_short'
+
+
+def calculate_self_efficacy_average():
+    """
+    자기효능감 평균 계산
+    
+    Returns:
+        float: 자기효능감 평균 (1-5점)
+    """
+    efficacy_scores = []
+    for i in range(1, 7):
+        score = getattr(st.session_state, f'self_efficacy_{i}', 0)
+        if score and isinstance(score, (int, float)) and 1 <= score <= 5:
+            efficacy_scores.append(score)
+    
+    return round(sum(efficacy_scores) / len(efficacy_scores), 2) if efficacy_scores else 0
 
 
 def save_to_csv(session_data, timestamp):
@@ -834,7 +305,7 @@ def save_audio_files(timestamp):
 
 def create_participant_info_file(session_id, timestamp):
     """
-    참여자 정보 파일 생성 (자기효능감 + TOPIK 점수 포함)
+    참여자 정보 파일 생성 (자기효능감 포함)
     
     Args:
         session_id: 세션 ID
@@ -858,20 +329,6 @@ def create_participant_info_file(session_id, timestamp):
             efficacy_scores.append(f"Item {i}: {score}/5")
         
         efficacy_avg = calculate_self_efficacy_average()
-        
-        # TOPIK 자동 점수 정보
-        topik_scores_1 = []
-        topik_scores_2 = []
-        
-        for attempt in [1, 2]:
-            research_data = generate_research_data_for_attempt(attempt)
-            if research_data:
-                scores = research_data['summary_indicators']
-                score_text = f"내용및과제수행: {scores.get('content_task_performance_score', 'N/A')}/5, 언어사용: {scores.get('language_use_score', 'N/A')}/5, 발화전달력: {scores.get('speech_delivery_score', 'N/A')}/5, 전체: {scores.get('overall_auto_score', 'N/A')}/5"
-                if attempt == 1:
-                    topik_scores_1.append(score_text)
-                else:
-                    topik_scores_2.append(score_text)
         
         research_scores = getattr(st.session_state, 'research_scores', {})
         accuracy_score = research_scores.get('accuracy_score', 'N/A')
@@ -900,11 +357,7 @@ First Recording Duration: {getattr(st.session_state, 'audio_duration_1', 0):.1f}
 Second Recording Duration: {getattr(st.session_state, 'audio_duration_2', 0):.1f} seconds
 Student UI Score: {st.session_state.feedback.get('interview_readiness_score', 'N/A')}/10
 
-=== TOPIK-BASED AUTO SCORES (Session {CURRENT_SESSION}) ===
-1차 시도: {topik_scores_1[0] if topik_scores_1 else 'N/A'}
-2차 시도: {topik_scores_2[0] if topik_scores_2 else 'N/A'}
-
-=== RESEARCH SCORES (LEGACY) ===
+=== RESEARCH SCORES ===
 Accuracy Score: {accuracy_score}/10 (Error rate: {error_rate}%)
 Fluency Score: {fluency_score}/10 (Word count: {word_count})
 Dual Evaluation System: {getattr(st.session_state, 'gpt_debug_info', {}).get('dual_evaluation', False)}
@@ -918,19 +371,14 @@ Consent File Type: HTML (Korean language support)
 
 === DATA MANAGEMENT ===
 Data Retention Until: {(datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')}
-Storage Method: GCS ZIP Archive + Research Excel (Auto-save after 2nd recording)
+Storage Method: GCS ZIP Archive (Auto-save after 2nd recording)
 Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 === FOR RESEARCHER ===
 This file contains the link between the anonymous ID and the original nickname.
 Data was automatically saved after second recording completion.
-TOPIK-based 3-area scoring system for Session {CURRENT_SESSION} analysis.
-Research Excel file includes detailed analysis sheets for manual grading.
 Self-efficacy scores (1-5 scale) collected before experiment.
 Consent form is stored as HTML file for Korean language compatibility.
-
-NOTE: Session-to-session comparison should be done post-hoc by researcher.
-Each session generates independent research data for cross-session analysis.
 
 Contact: pen0226@gmail.com for any data requests or questions.
 """
@@ -946,7 +394,7 @@ Contact: pen0226@gmail.com for any data requests or questions.
 
 def create_comprehensive_backup_zip(session_id, timestamp):
     """
-    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (연구용 Excel 포함)
+    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (단순화됨)
     
     Args:
         session_id: 세션 ID
@@ -974,12 +422,6 @@ def create_comprehensive_backup_zip(session_id, timestamp):
             if os.path.exists(csv_file):
                 zipf.write(csv_file, f"session_data_{timestamp}.csv")
             
-            # 🆕 연구용 Excel 파일 추가
-            excel_file = os.path.join(FOLDERS["data"], f"research_analysis_session{session_num}_{session_id}_{timestamp}.xlsx")
-            if os.path.exists(excel_file):
-                zipf.write(excel_file, f"research_analysis_{timestamp}.xlsx")
-                print(f"✅ Research Excel included: research_analysis_{timestamp}.xlsx")
-            
             # HTML 동의서 파일 추가
             consent_html = os.path.join(FOLDERS["data"], f"{session_id}_consent.html")
             if os.path.exists(consent_html):
@@ -987,12 +429,6 @@ def create_comprehensive_backup_zip(session_id, timestamp):
                 print(f"✅ Consent HTML file included: {session_id}_consent.html")
             else:
                 print(f"⚠️ Consent HTML file not found: {session_id}_consent.html")
-            
-            # 혹시나 PDF 파일도 있다면 함께 포함 (하위 호환성)
-            consent_pdf = os.path.join(FOLDERS["data"], f"{session_id}_consent.pdf")
-            if os.path.exists(consent_pdf):
-                zipf.write(consent_pdf, f"consent_form_{session_id}.pdf")
-                print(f"✅ Consent PDF file also included: {session_id}_consent.pdf")
             
             # 음성 파일들 추가
             audio_folder = os.path.join(FOLDERS["audio_recordings"], f"session{session_num}_{session_id}_{timestamp}")
@@ -1011,23 +447,10 @@ Participant: {session_id} (Session {session_num})
 Save Trigger: Auto-save after second recording completion
 
 Files included:
-- participant_info.txt: Participant details + Research scores + Self-efficacy scores + TOPIK auto scores
-- session_data_{timestamp}.csv: Complete session data with dual evaluation + TOPIK scores + self-efficacy data
-- research_analysis_{timestamp}.xlsx: ⭐ Session {session_num} research analysis with TOPIK-based scoring
+- participant_info.txt: Participant details + Research scores + Self-efficacy scores
+- session_data_{timestamp}.csv: Complete session data with dual evaluation + self-efficacy data
 - consent_form_{session_id}.html: Signed consent form (HTML format for Korean support)
 - audio/: All recorded audio files (student + model pronunciations)
-
-🆕 RESEARCH EXCEL SHEETS (Session {session_num}):
-1. 채점자용_요약: Grading summary with auto/manual score columns (_auto, _rater1, _rater2)
-2. 1차_상세분석: Detailed analysis of first attempt (task performance, language use, speech delivery)
-3. 2차_상세분석: Detailed analysis of second attempt
-4. 세션내_1차2차_비교: Within-session attempt comparison with improvement metrics  
-5. 원본_세션데이터: Original session data for reference
-
-🎯 TOPIK-BASED AUTO SCORING (1-5 points each):
-- 내용 및 과제 수행: Task completion + content richness + discourse organization
-- 언어 사용: Grammar accuracy + vocabulary diversity + appropriateness
-- 발화 전달력: Speaking pace + fluency indicators + consistency (indirect measures)
 
 SELF-EFFICACY DATA:
 - 6 items measured on 1-5 scale
@@ -1039,17 +462,10 @@ CONSENT FORM FORMAT:
 - Can be saved as PDF using browser print function (Ctrl+P)
 - Avoids character encoding issues that occurred with direct PDF generation
 
-SESSION-TO-SESSION COMPARISON:
-- Each session generates independent research data
-- Cross-session comparison requires post-hoc analysis by researcher
-- Session {session_num} data ready for comparison with other session data
-
 RESEARCH WORKFLOW:
-1. Use research_analysis.xlsx for systematic manual grading of Session {session_num}
-2. Auto scores provide baseline reference for human raters
-3. Compare auto vs manual scores for reliability studies
-4. Collect multiple session data for longitudinal analysis
-5. All raw data preserved for transparency
+1. Use CSV data for basic analysis
+2. Raw audio files available for manual grading
+3. All raw data preserved for transparency
 
 IMPORTANT: Data was automatically saved after second recording completion.
 This ensures no data loss even if survey is not completed.
@@ -1071,7 +487,7 @@ Contact researcher: pen0226@gmail.com
                 except:
                     pass
         
-        print(f"✅ Comprehensive backup ZIP created with Session {session_num} research Excel: {zip_filename}")
+        print(f"✅ Comprehensive backup ZIP created: {zip_filename}")
         return zip_filename
         
     except Exception as e:
@@ -1159,7 +575,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
     
     Args:
         csv_filename: CSV 파일 경로
-        excel_filename: Excel 파일 경로 (연구용)
+        excel_filename: Excel 파일 경로 (사용안함)
         zip_filename: ZIP 파일 경로
         session_id: 세션 ID
         timestamp: 타임스탬프
@@ -1177,7 +593,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
     session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
     session_folder = GCS_SIMPLE_STRUCTURE.get(session_num, GCS_SIMPLE_STRUCTURE[1])
     
-    # ZIP 파일 업로드 (연구용 Excel 포함)
+    # ZIP 파일 업로드
     if zip_filename and os.path.exists(zip_filename):
         try:
             blob_name = f"{session_folder}{session_id}_{timestamp}.zip"
@@ -1185,7 +601,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
             
             if blob_url:
                 uploaded_files.append(blob_name)
-                print(f"✅ Session {session_num} ZIP with HTML consent + self-efficacy + research Excel uploaded: {blob_name}")
+                print(f"✅ Session {session_num} ZIP uploaded: {blob_name}")
             else:
                 errors.append(f"ZIP upload failed: {result_msg}")
                 
@@ -1248,7 +664,7 @@ def test_gcs_connection():
 
 def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=False):
     """
-    GCS 업로드 결과를 로그 파일에 기록 (연구용 Excel 정보 포함)
+    GCS 업로드 결과를 로그 파일에 기록
     
     Args:
         session_id: 세션 ID
@@ -1281,10 +697,6 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
         # 자기효능감 평균 계산 (6개)
         efficacy_avg = calculate_self_efficacy_average()
         
-        # TOPIK 점수 정보
-        topik_1 = get_topik_score(1, 'overall_auto_score')
-        topik_2 = get_topik_score(2, 'overall_auto_score')
-        
         upload_status = "SUCCESS" if uploaded_files and not errors else "PARTIAL" if uploaded_files else "FAILED"
         
         log_entry = f"""
@@ -1294,17 +706,13 @@ Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
 Dual Evaluation: {dual_eval_used} (Research scores: Accuracy={accuracy_score}, Fluency={fluency_score})
 Self-Efficacy: Average {efficacy_avg}/5.0 (6 items collected)
-TOPIK Auto Scores: 1차={topik_1}/5, 2차={topik_2}/5 (Session {session_num} 3-area scoring)
-GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP with Session {session_num} research Excel)
+GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP backup only)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: Secured before survey step
-Research Excel: Session {session_num} TOPIK-based analysis with grading support included
-Research Data: Session {session_num} TOPIK 3-area auto scores + self-efficacy calculated and stored
-Consent Format: HTML (Korean language support) - Fixed backup inclusion
-Cross-Session Analysis: Post-hoc researcher analysis required for session comparison
+Consent Format: HTML (Korean language support)
 {'='*80}
 """
         
@@ -1318,15 +726,15 @@ Cross-Session Analysis: Post-hoc researcher analysis required for session compar
 
 def display_download_buttons(csv_filename, excel_filename, zip_filename):
     """
-    연구자용 다운로드 버튼들 표시 (연구용 Excel 포함)
+    연구자용 다운로드 버튼들 표시 (단순화됨)
     
     Args:
         csv_filename: CSV 파일 경로
-        excel_filename: Excel 파일 경로 (연구용)
+        excel_filename: Excel 파일 경로 (사용안함)
         zip_filename: ZIP 파일 경로
     """
     if GCS_ENABLED:
-        st.info(f"📤 Session {CURRENT_SESSION} ZIP file (including research Excel + HTML consent + self-efficacy data) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
+        st.info(f"📤 Session {CURRENT_SESSION} ZIP file should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
     else:
         st.warning("⚠️ GCS upload is disabled. Use these download buttons to save your data.")
     
@@ -1354,24 +762,6 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
             st.info("ZIP unavailable")
     
     with col2:
-        # 🆕 연구용 Excel 다운로드
-        if excel_filename and os.path.exists(excel_filename):
-            try:
-                with open(excel_filename, 'rb') as f:
-                    excel_data = f.read()
-                st.download_button(
-                    label=f"📊 Session {session_num} Research Excel",
-                    data=excel_data,
-                    file_name=f"research_session{session_num}_{st.session_state.session_id}_{timestamp_str}.xlsx",
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    use_container_width=True
-                )
-            except:
-                st.info("Research Excel unavailable")
-        else:
-            st.info("Research Excel unavailable")
-    
-    with col3:
         # CSV 다운로드
         if csv_filename and os.path.exists(csv_filename):
             try:
@@ -1389,12 +779,15 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
         else:
             st.info("CSV unavailable")
     
-    st.caption(f"ℹ️ Session {CURRENT_SESSION} Research Excel includes TOPIK-based analysis with manual grading templates. ZIP contains all files. Session-to-session comparison requires post-hoc analysis.")
+    with col3:
+        st.info("📊 Reference scores saved separately")
+    
+    st.caption(f"ℹ️ Session {CURRENT_SESSION} data includes self-efficacy scores and consent form. ZIP contains all files.")
 
 
 def display_session_details():
     """
-    연구자용 세션 상세 정보 표시 (TOPIK 점수 포함)
+    연구자용 세션 상세 정보 표시
     """
     st.markdown("**📋 Session Details:**")
     display_name = getattr(st.session_state, 'original_nickname', st.session_state.session_id)
@@ -1423,26 +816,10 @@ def display_session_details():
                 if score:
                     st.write(f"Item {i}: {score}/5")
     
-    # 🆕 TOPIK 자동 점수 정보 표시
-    st.markdown(f"**🎯 Session {CURRENT_SESSION} TOPIK-Based Auto Scores:**")
-    topik_data_1 = generate_research_data_for_attempt(1)
-    topik_data_2 = generate_research_data_for_attempt(2)
-    
-    if topik_data_1:
-        scores_1 = topik_data_1['summary_indicators']
-        st.write(f"1차 시도: 내용및과제수행 {scores_1.get('content_task_performance_score', 'N/A')}/5, 언어사용 {scores_1.get('language_use_score', 'N/A')}/5, 발화전달력 {scores_1.get('speech_delivery_score', 'N/A')}/5")
-    
-    if topik_data_2:
-        scores_2 = topik_data_2['summary_indicators']
-        st.write(f"2차 시도: 내용및과제수행 {scores_2.get('content_task_performance_score', 'N/A')}/5, 언어사용 {scores_2.get('language_use_score', 'N/A')}/5, 발화전달력 {scores_2.get('speech_delivery_score', 'N/A')}/5")
-    
-    if not topik_data_1 and not topik_data_2:
-        st.write("❌ TOPIK auto scores not calculated")
-    
-    # 기존 연구용 점수 정보 표시
+    # 연구용 점수 정보 표시
     research_scores = getattr(st.session_state, 'research_scores', {})
     if research_scores:
-        st.markdown("**🔬 Legacy Research Scores:**")
+        st.markdown("**🔬 Research Scores:**")
         accuracy = research_scores.get('accuracy_score', 'N/A')
         fluency = research_scores.get('fluency_score', 'N/A')
         error_rate = research_scores.get('error_rate', 'N/A')
@@ -1452,20 +829,18 @@ def display_session_details():
         dual_eval = getattr(st.session_state, 'gpt_debug_info', {}).get('dual_evaluation', False)
         st.write(f"Dual Evaluation System: {'✅ Active' if dual_eval else '❌ Not used'}")
     else:
-        st.write("**🔬 Legacy Research Scores:** ❌ Not calculated")
+        st.write("**🔬 Research Scores:** ❌ Not calculated")
     
     # GCS 연동 상태 표시
     st.markdown("**☁️ Google Cloud Storage Status:**")
     if GCS_ENABLED:
-        st.success(f"✅ GCS upload is enabled (Service Account method - ZIP with Session {CURRENT_SESSION} research Excel)")
+        st.success(f"✅ GCS upload is enabled (Service Account method)")
         if GCS_BUCKET_NAME:
             st.write(f"Bucket: {GCS_BUCKET_NAME}")
             st.write(f"Storage method: ZIP archives + nickname mapping")
-            st.write(f"Research Excel: Session {CURRENT_SESSION} TOPIK-based analysis with grading support")
             st.write(f"Consent format: HTML (Korean language support)")
             st.write(f"Self-efficacy: 6 items (1-5 scale) included")
             st.write(f"Save timing: Auto-save after 2nd recording")
-            st.write(f"Cross-session analysis: Post-hoc researcher comparison required")
         else:
             st.warning("⚠️ No bucket specified")
         
@@ -1480,7 +855,7 @@ def display_session_details():
 
 def display_data_quality_info():
     """
-    데이터 품질 정보 표시 (TOPIK 점수 포함)
+    데이터 품질 정보 표시
     """
     st.markdown("**📊 Data Quality:**")
     col1, col2 = st.columns(2)
@@ -1502,15 +877,6 @@ def display_data_quality_info():
             
             student_score = st.session_state.feedback.get('interview_readiness_score', 'N/A')
             st.write(f"Student UI Score: {student_score}/10")
-        
-        # 🆕 TOPIK 자동 점수 (1차)
-        topik_data_1 = generate_research_data_for_attempt(1)
-        if topik_data_1:
-            st.write(f"**🎯 Session {CURRENT_SESSION} TOPIK Auto (1차):**")
-            scores = topik_data_1['summary_indicators']
-            st.write(f"내용: {scores.get('content_task_performance_score', 'N/A')}/5")
-            st.write(f"언어: {scores.get('language_use_score', 'N/A')}/5")
-            st.write(f"전달: {scores.get('speech_delivery_score', 'N/A')}/5")
         
         # 자기효능감 요약 (6개)
         efficacy_avg = calculate_self_efficacy_average()
@@ -1535,21 +901,6 @@ def display_data_quality_info():
             issues = len(improvement.get('remaining_issues', []))
             st.write(f"Improvements: {improvements}")
             st.write(f"Remaining issues: {issues}")
-        
-        # 🆕 TOPIK 자동 점수 (2차)
-        topik_data_2 = generate_research_data_for_attempt(2)
-        if topik_data_2:
-            st.write(f"**🎯 Session {CURRENT_SESSION} TOPIK Auto (2차):**")
-            scores = topik_data_2['summary_indicators']
-            st.write(f"내용: {scores.get('content_task_performance_score', 'N/A')}/5")
-            st.write(f"언어: {scores.get('language_use_score', 'N/A')}/5")
-            st.write(f"전달: {scores.get('speech_delivery_score', 'N/A')}/5")
-            
-            # 세션 내 개선도 표시
-            if topik_data_1:
-                scores_1 = topik_data_1['summary_indicators']
-                improvement = scores['overall_auto_score'] - scores_1['overall_auto_score']
-                st.write(f"**세션 내 개선: {improvement:+.1f}**")
         
         if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
             st.write("💾 **Data Status:** ✅ Safely saved")

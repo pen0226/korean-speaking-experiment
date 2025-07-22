@@ -7,14 +7,14 @@ import streamlit as st
 from datetime import datetime
 import re
 
-# 모듈 imports (연구용 scoring 모듈 추가)
+# 모듈 imports (간단한 참고용 점수 모듈 추가)
 from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
 from consent import handle_consent_only, handle_background_info_only
 from data_io import save_session_data, auto_backup_to_gcs, log_upload_status, display_download_buttons, display_session_details, display_data_quality_info
-from research_scoring import get_research_analysis_data  # 🆕 연구용 모듈 추가
+from save_reference_score import save_reference_score  # 🆕 간단한 참고용 점수 모듈
 from utils import (
     show_progress_indicator, display_question, record_audio,
     display_transcription_with_highlights, display_model_sentence_with_highlights,
@@ -161,20 +161,13 @@ def process_first_recording():
                 st.session_state.feedback = feedback
             
             if feedback:
-                # 🆕 연구용 데이터 생성 (1차 시도)
-                try:
-                    research_data_1 = get_research_analysis_data(
-                        transcript=transcription,
-                        grammar_issues=feedback.get('grammar_issues', []),
-                        duration_s=duration,
-                        feedback_data=feedback,
-                        attempt_number=1
-                    )
-                    st.session_state.research_data_1 = research_data_1
-                    print("✅ Research data for attempt 1 generated successfully")
-                except Exception as e:
-                    print(f"⚠️ Research data generation failed for attempt 1: {e}")
-                    st.session_state.research_data_1 = None
+                # 🆕 간단한 참고용 점수 저장
+                save_reference_score(
+                    st.session_state.session_id, 
+                    attempt=1, 
+                    transcript=transcription,
+                    duration=duration
+                )
                 
                 # TTS 생성
                 model_audio = process_feedback_audio(feedback)
@@ -416,7 +409,7 @@ def handle_second_recording_step():
 
 
 def process_second_recording():
-    """두 번째 녹음 처리 + 즉시 데이터 저장 (연구용 데이터 생성 추가)"""
+    """두 번째 녹음 처리 + 즉시 데이터 저장 (연구용 데이터 생성 수정)"""
     with st.spinner("🎙️ Processing your improved recording..."):
         # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.second_audio_type == "upload":
@@ -438,20 +431,13 @@ def process_second_recording():
             st.session_state.transcription_2 = transcription
             st.session_state.audio_duration_2 = duration
             
-            # 🆕 연구용 데이터 생성 (2차 시도) - 🚀 핵심 수정 부분
-            try:
-                research_data_2 = get_research_analysis_data(
-                    transcript=transcription,
-                    grammar_issues=[],  # 빈 리스트
-                    duration_s=duration,
-                    feedback_data={},   # 빈 딕셔너리
-                    attempt_number=2
-                )
-                st.session_state.research_data_2 = research_data_2
-                print("✅ Research data for attempt 2 generated successfully")
-            except Exception as e:
-                print(f"⚠️ Research data generation failed for attempt 2: {e}")
-                st.session_state.research_data_2 = None
+            # 🆕 간단한 참고용 점수 저장
+            save_reference_score(
+                st.session_state.session_id,
+                attempt=2,
+                transcript=transcription, 
+                duration=duration
+            )
             
             display_success_message(f"Second attempt transcribed: {transcription}")
             
@@ -478,10 +464,6 @@ def process_second_recording():
                     st.session_state.saved_files = save_result
                     st.success("✅ Your experiment data has been safely saved!")
                     st.info("📋 Next: Please complete the survey to help our research.")
-                    
-                    # 🆕 연구용 Excel 파일 확인
-                    if len(save_result) >= 2 and save_result[1]:  # excel_filename이 있으면
-                        st.success("🎯 Research analysis Excel file also generated for manual grading!")
                 else:
                     st.error("❌ Data save failed. Please try again or contact the researcher.")
                     if st.button("🔄 Retry Save"):
@@ -628,8 +610,6 @@ def save_and_backup_data():
             st.info("💾 Your data is saved locally and can be downloaded below.")
         else:
             st.success("☁️ Data successfully backed up to cloud storage!")
-            if excel_filename:
-                st.success("🎯 Research Excel file included in backup!")
     
     return result
 
@@ -876,53 +856,17 @@ def display_researcher_mode():
             st.markdown("---")
             
             if hasattr(st.session_state, 'saved_files'):
-                # timestamp가 추가되었으므로 언패킹 수정
-                if len(st.session_state.saved_files) >= 6:
-                    csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp = st.session_state.saved_files
-                else:
-                    # 이전 버전 호환성을 위한 fallback
-                    csv_filename = st.session_state.saved_files[0] if len(st.session_state.saved_files) > 0 else None
-                    excel_filename = st.session_state.saved_files[1] if len(st.session_state.saved_files) > 1 else None
-                    zip_filename = st.session_state.saved_files[4] if len(st.session_state.saved_files) > 4 else None
+                # 기존 CSV 파일들만 처리
+                csv_filename = st.session_state.saved_files[0] if len(st.session_state.saved_files) > 0 else None
+                zip_filename = st.session_state.saved_files[4] if len(st.session_state.saved_files) > 4 else None
                 
-                # 다운로드 버튼들 (연구용 Excel 포함)
-                display_download_buttons(csv_filename, excel_filename, zip_filename)
+                # 다운로드 버튼들 (간단한 버전)
+                display_download_buttons(csv_filename, None, zip_filename)
                 
-                # 🆕 연구용 데이터 미리보기
-                if excel_filename:
-                    st.markdown("---")
-                    st.markdown("#### 🎯 Research Data Preview")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if hasattr(st.session_state, 'research_data_1'):
-                            st.markdown("**1차 시도 TOPIK 점수:**")
-                            data_1 = st.session_state.research_data_1
-                            scores_1 = data_1['summary_indicators']
-                            st.write(f"내용및과제수행: {scores_1.get('content_task_performance_score', 'N/A')}/5")
-                            st.write(f"언어사용: {scores_1.get('language_use_score', 'N/A')}/5")
-                            st.write(f"발화전달력: {scores_1.get('speech_delivery_score', 'N/A')}/5")
-                            st.write(f"전체: {scores_1.get('overall_auto_score', 'N/A')}/5")
-                    
-                    with col2:
-                        if hasattr(st.session_state, 'research_data_2'):
-                            st.markdown("**2차 시도 TOPIK 점수:**")
-                            data_2 = st.session_state.research_data_2
-                            scores_2 = data_2['summary_indicators']
-                            st.write(f"내용및과제수행: {scores_2.get('content_task_performance_score', 'N/A')}/5")
-                            st.write(f"언어사용: {scores_2.get('language_use_score', 'N/A')}/5")
-                            st.write(f"발화전달력: {scores_2.get('speech_delivery_score', 'N/A')}/5")
-                            st.write(f"전체: {scores_2.get('overall_auto_score', 'N/A')}/5")
-                            
-                            # 개선도 표시
-                            if hasattr(st.session_state, 'research_data_1'):
-                                improvement = scores_2['overall_auto_score'] - scores_1['overall_auto_score']
-                                st.write(f"**개선도: {improvement:+.1f}**")
-                
-                # 세션 상세 정보 (TOPIK 점수 포함)
+                # 세션 상세 정보
                 display_session_details()
                 
-                # 데이터 품질 정보 (TOPIK 점수 포함)
+                # 데이터 품질 정보
                 display_data_quality_info()
 
 
