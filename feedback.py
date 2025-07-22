@@ -27,7 +27,7 @@ from config import (
 # === 간소화된 오류 분류 상수 ===
 INDIVIDUAL_PARTICLES = ["을", "를", "은", "는", "이", "가", "에서", "에게", "에", "와", "과", "의", "로", "으로"]
 TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에"]
-VERB_ENDINGS = ["예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다"]
+VERB_ENDINGS = ["예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다", "다", "ㄴ다", "는다"]
 TENSE_MARKERS = ["했어요", "할 거예요", "하고 있어요", "한 적이", "했었어요", "할게요"]
 
 # 초급 학습자 자주 틀리는 패턴
@@ -413,11 +413,23 @@ def classify_error_type(issue_text):
     
     # 4. Verb Ending 확인
     for ending in VERB_ENDINGS:
-        if ending in issue_text:
-            return "Verb Ending"
-    
-    if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
+    if ending in issue_text:
         return "Verb Ending"
+
+    # 반말 → 존댓말 패턴 확인
+    if original_text and fix_text:
+    # 반말 어미가 원본에 있고, 존댓말 어미가 수정본에 있는 경우
+    informal_endings = ["다", "ㄴ다", "는다", "냐", "나", "지"]
+    formal_endings = ["요", "습니다", "세요"]
+    
+    original_has_informal = any(ending in original_text for ending in informal_endings)
+    fix_has_formal = any(ending in fix_text for ending in formal_endings)
+    
+    if original_has_informal and fix_has_formal:
+        return "Verb Ending"
+
+    if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
+    return "Verb Ending"
     
     # 🔥 5. 3개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
     return None
