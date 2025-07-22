@@ -189,7 +189,7 @@ def generate_model_audio(text):
                 model_audio["normal"] = normal_audio
         
         # 느린 속도 생성 (voice_settings로만 차이, 띄어쓰기 정상)
-        with st.spinner("🐌 Creating slow speed version (fixed spacing)..."):
+        with st.spinner("🐌 Creating slow speed version..."):
             slow_audio = synthesize_audio(text, "slow")
             if slow_audio:
                 model_audio["slow"] = slow_audio
@@ -439,7 +439,7 @@ def display_audio_generation_progress():
     # 단계별 진행상황 시뮬레이션 (2025 API 반영)
     steps = [
         "🔊 Initializing ...",
-        "🎯 Processing Korean text with improved intonation...", 
+        "🎯 Processing Korean text...", 
         "🚀 Generating natural speed audio ...",
         "🐌 Generating slow speed audio...",
         "✅ Audio generation complete!"
