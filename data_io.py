@@ -1,6 +1,6 @@
 """
 data_io.py
-실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (간단한 참고용 엑셀 통합)
+실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (TOPIK 엑셀 ZIP 포함 보장)
 """
 
 import os
@@ -56,11 +56,17 @@ def save_session_data():
         
         audio_folder, saved_files = save_audio_files(timestamp)
         
-        # 🔥 참고용 엑셀 파일 경로 가져오기
+        # 🔥 참고용 엑셀 파일 경로 가져오기 (ZIP 생성 전에 확인)
         from save_reference_score import get_latest_reference_file
         reference_excel_filename = get_latest_reference_file(timestamp)
         
-        zip_filename = create_comprehensive_backup_zip(st.session_state.session_id, timestamp)
+        # 🔥 엑셀 파일이 존재하는지 확인 후 ZIP 생성
+        if reference_excel_filename and os.path.exists(reference_excel_filename):
+            print(f"✅ Reference Excel found before ZIP creation: {reference_excel_filename}")
+        else:
+            print(f"⚠️ Reference Excel not found before ZIP creation: {reference_excel_filename}")
+        
+        zip_filename = create_comprehensive_backup_zip(st.session_state.session_id, timestamp, reference_excel_filename)
         
         return csv_filename, reference_excel_filename, audio_folder, saved_files, zip_filename, timestamp
     
@@ -391,7 +397,7 @@ This file contains the link between the anonymous ID and the original nickname.
 Data was automatically saved after second recording completion.
 Self-efficacy scores (1-5 scale) collected before experiment.
 Consent form is stored as HTML file for Korean language compatibility.
-Reference TOPIK scores stored in separate Excel file: reference_scores_{timestamp}.xlsx
+TOPIK reference scores (3 areas) stored in Excel file: reference_scores_{timestamp}.xlsx
 
 Contact: pen0226@gmail.com for any data requests or questions.
 """
@@ -405,13 +411,14 @@ Contact: pen0226@gmail.com for any data requests or questions.
         return None
 
 
-def create_comprehensive_backup_zip(session_id, timestamp):
+def create_comprehensive_backup_zip(session_id, timestamp, reference_excel_filename=None):
     """
-    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (참고용 엑셀 포함)
+    모든 세션 데이터를 포함한 완전한 백업 ZIP 생성 (TOPIK 엑셀 포함 보장)
     
     Args:
         session_id: 세션 ID
         timestamp: 타임스탬프
+        reference_excel_filename: 참고용 엑셀 파일 경로 (명시적 전달)
         
     Returns:
         str: ZIP 파일 경로 또는 None
@@ -434,14 +441,47 @@ def create_comprehensive_backup_zip(session_id, timestamp):
             csv_file = os.path.join(FOLDERS["data"], f"korean_session{session_num}_{session_id}_{timestamp}.csv")
             if os.path.exists(csv_file):
                 zipf.write(csv_file, f"session_data_{timestamp}.csv")
+                print(f"✅ CSV file included: session_data_{timestamp}.csv")
             
-            # 🔥 참고용 엑셀 파일 추가
-            reference_excel_file = os.path.join(FOLDERS["data"], f"reference_scores_{timestamp}.xlsx")
-            if os.path.exists(reference_excel_file):
-                zipf.write(reference_excel_file, f"reference_scores_{timestamp}.xlsx")
-                print(f"✅ Reference Excel file included: reference_scores_{timestamp}.xlsx")
-            else:
-                print(f"⚠️ Reference Excel file not found: reference_scores_{timestamp}.xlsx")
+            # 🔥 TOPIK 참고용 엑셀 파일 추가 (확실한 경로 확인)
+            excel_included = False
+            
+            # 방법 1: 명시적으로 전달받은 경로 사용
+            if reference_excel_filename and os.path.exists(reference_excel_filename):
+                zipf.write(reference_excel_filename, f"reference_scores_{timestamp}.xlsx")
+                print(f"✅ Reference Excel file included (method 1): reference_scores_{timestamp}.xlsx")
+                excel_included = True
+            
+            # 방법 2: 직접 경로 구성해서 찾기
+            if not excel_included:
+                reference_excel_direct = os.path.join(FOLDERS["data"], f"reference_scores_{timestamp}.xlsx")
+                if os.path.exists(reference_excel_direct):
+                    zipf.write(reference_excel_direct, f"reference_scores_{timestamp}.xlsx")
+                    print(f"✅ Reference Excel file included (method 2): reference_scores_{timestamp}.xlsx")
+                    excel_included = True
+            
+            # 방법 3: 패턴 매칭으로 찾기
+            if not excel_included:
+                import glob
+                pattern = os.path.join(FOLDERS["data"], f"reference_scores_*.xlsx")
+                excel_files = glob.glob(pattern)
+                if excel_files:
+                    # 가장 최신 파일 또는 timestamp 매칭하는 파일 사용
+                    matching_files = [f for f in excel_files if timestamp in f]
+                    if matching_files:
+                        latest_excel = matching_files[0]
+                    else:
+                        latest_excel = max(excel_files, key=os.path.getctime)
+                    
+                    zipf.write(latest_excel, f"reference_scores_{timestamp}.xlsx")
+                    print(f"✅ Reference Excel file included (method 3): reference_scores_{timestamp}.xlsx")
+                    excel_included = True
+            
+            if not excel_included:
+                print(f"⚠️ Reference Excel file NOT FOUND for inclusion in ZIP")
+                print(f"   Checked paths:")
+                print(f"   - {reference_excel_filename}")
+                print(f"   - {os.path.join(FOLDERS['data'], f'reference_scores_{timestamp}.xlsx')}")
             
             # HTML 동의서 파일 추가
             consent_html = os.path.join(FOLDERS["data"], f"{session_id}_consent.html")
@@ -457,6 +497,7 @@ def create_comprehensive_backup_zip(session_id, timestamp):
                 for file in os.listdir(audio_folder):
                     file_path = os.path.join(audio_folder, file)
                     zipf.write(file_path, f"audio/{file}")
+                print(f"✅ Audio files included from: {audio_folder}")
             
             # ZIP 내용 요약 파일 추가
             research_scores = getattr(st.session_state, 'research_scores', {})
@@ -470,7 +511,7 @@ Save Trigger: Auto-save after second recording completion
 Files included:
 - participant_info.txt: Participant details + Research scores + Self-efficacy scores
 - session_data_{timestamp}.csv: Complete session data with dual evaluation + self-efficacy data
-- reference_scores_{timestamp}.xlsx: Simple TOPIK reference scores for both attempts
+- reference_scores_{timestamp}.xlsx: TOPIK 3-area reference scores for both attempts {'✅ INCLUDED' if excel_included else '❌ MISSING'}
 - consent_form_{session_id}.html: Signed consent form (HTML format for Korean support)
 - audio/: All recorded audio files (student + model pronunciations)
 
@@ -479,10 +520,11 @@ SELF-EFFICACY DATA:
 - Average self-efficacy score: {efficacy_avg}/5.0
 - Individual scores stored in CSV under self_efficacy_1 through self_efficacy_6
 
-REFERENCE TOPIK SCORES:
-- Simple automated scoring for both attempts
-- Stored in Excel format for easy analysis
-- Based on duration, word count, and topic completion
+TOPIK REFERENCE SCORES:
+- 3-area detailed scoring: Content/Task, Language Use, Delivery (STT-based)
+- Each area scored 1-5 points
+- Overall score calculated with weighted average
+- Excel format for easy analysis
 
 CONSENT FORM FORMAT:
 - HTML format for perfect Korean language support
@@ -491,7 +533,7 @@ CONSENT FORM FORMAT:
 
 RESEARCH WORKFLOW:
 1. Use CSV data for basic analysis
-2. Use Excel file for quick TOPIK reference scores
+2. Use Excel file for TOPIK reference scores (3 areas)
 3. Raw audio files available for manual grading
 4. All raw data preserved for transparency
 
@@ -599,11 +641,11 @@ def upload_to_gcs(local_path, blob_name):
 
 def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, timestamp):
     """
-    ZIP 파일과 참고용 엑셀 파일을 GCS에 자동 백업 + nickname_mapping.csv 백업
+    ZIP 파일만 GCS에 자동 백업 (엑셀 개별 업로드 제거) + nickname_mapping.csv 백업
     
     Args:
         csv_filename: CSV 파일 경로
-        excel_filename: 참고용 엑셀 파일 경로
+        excel_filename: 참고용 엑셀 파일 경로 (사용하지 않음 - ZIP에 포함됨)
         zip_filename: ZIP 파일 경로
         session_id: 세션 ID
         timestamp: 타임스탬프
@@ -621,7 +663,7 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
     session_num = getattr(st.session_state, 'session_number', CURRENT_SESSION)
     session_folder = GCS_SIMPLE_STRUCTURE.get(session_num, GCS_SIMPLE_STRUCTURE[1])
     
-    # ZIP 파일 업로드
+    # ZIP 파일만 업로드 (엑셀은 ZIP 안에 포함됨)
     if zip_filename and os.path.exists(zip_filename):
         try:
             blob_name = f"{session_folder}{session_id}_{timestamp}.zip"
@@ -638,22 +680,8 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
     else:
         errors.append("ZIP file not found for upload")
     
-    # 🔥 참고용 엑셀 파일 개별 업로드
-    if excel_filename and os.path.exists(excel_filename):
-        try:
-            excel_blob_name = f"{session_folder}reference_scores_{session_id}_{timestamp}.xlsx"
-            blob_url, result_msg = upload_to_gcs(excel_filename, excel_blob_name)
-            
-            if blob_url:
-                uploaded_files.append(excel_blob_name)
-                print(f"✅ Session {session_num} Reference Excel uploaded: {excel_blob_name}")
-            else:
-                errors.append(f"Reference Excel upload failed: {result_msg}")
-                
-        except Exception as e:
-            errors.append(f"Reference Excel upload error: {str(e)}")
-    else:
-        print(f"⚠️ Reference Excel file not found for upload: {excel_filename}")
+    # 🔥 엑셀 파일 개별 업로드 제거됨 (ZIP에 포함되므로 불필요)
+    # 이제 엑셀 파일은 ZIP 안에서만 확인 가능
     
     # nickname_mapping.csv 백업
     mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
@@ -751,14 +779,15 @@ Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
 Dual Evaluation: {dual_eval_used} (Research scores: Accuracy={accuracy_score}, Fluency={fluency_score})
 Self-Efficacy: Average {efficacy_avg}/5.0 (6 items collected)
-Reference Scores: TOPIK reference scores saved to Excel
-GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP + Excel backup)
+TOPIK Scores: 3-area reference scores included in ZIP
+GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP-only backup)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: Secured before survey step
 Consent Format: HTML (Korean language support)
+Excel Format: TOPIK 3-area scores included in ZIP only
 {'='*80}
 """
         
@@ -772,15 +801,15 @@ Consent Format: HTML (Korean language support)
 
 def display_download_buttons(csv_filename, excel_filename, zip_filename):
     """
-    연구자용 다운로드 버튼들 표시 (참고용 엑셀 포함)
+    연구자용 다운로드 버튼들 표시 (TOPIK 엑셀은 ZIP에만 포함)
     
     Args:
         csv_filename: CSV 파일 경로
-        excel_filename: 참고용 엑셀 파일 경로 (사용안함 - ZIP에 포함됨)
+        excel_filename: 참고용 엑셀 파일 경로 (ZIP에 포함됨)
         zip_filename: ZIP 파일 경로
     """
     if GCS_ENABLED:
-        st.info(f"📤 Session {CURRENT_SESSION} ZIP file (with reference Excel) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
+        st.info(f"📤 Session {CURRENT_SESSION} ZIP file (with TOPIK Excel inside) should be automatically uploaded to Google Cloud Storage. Use these downloads as backup only.")
     else:
         st.warning("⚠️ GCS upload is disabled. Use these download buttons to save your data.")
     
@@ -826,9 +855,9 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
             st.info("CSV unavailable")
     
     with col3:
-        st.info("📊 Reference scores in ZIP")
+        st.info("📊 TOPIK scores inside ZIP")
     
-    st.caption(f"ℹ️ Session {CURRENT_SESSION} data includes self-efficacy scores, reference TOPIK scores (Excel), and consent form. ZIP contains all files.")
+    st.caption(f"ℹ️ Session {CURRENT_SESSION} data includes self-efficacy scores, TOPIK 3-area scores (Excel inside ZIP), and consent form.")
 
 
 def display_session_details():
@@ -877,16 +906,17 @@ def display_session_details():
     else:
         st.write("**🔬 Research Scores:** ❌ Not calculated")
     
-    # 🔥 참고용 TOPIK 점수 정보 추가
-    st.markdown("**📊 Reference TOPIK Scores:**")
+    # 🔥 TOPIK 참고용 점수 정보 추가
+    st.markdown("**📊 TOPIK Reference Scores:**")
     timestamp = getattr(st.session_state, 'saved_timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
     reference_file = f"data/reference_scores_{timestamp}.xlsx"
     if os.path.exists(reference_file):
-        st.write(f"✅ Reference scores saved to Excel")
+        st.write(f"✅ TOPIK 3-area scores saved to Excel")
         st.write(f"File: reference_scores_{timestamp}.xlsx")
-        st.write(f"Contains: Simple TOPIK scores for both attempts")
+        st.write(f"Contains: Content/Task, Language Use, Delivery scores (1-5 each)")
+        st.write(f"Location: Inside ZIP file only")
     else:
-        st.write("❌ Reference scores not found")
+        st.write("❌ TOPIK reference scores not found")
     
     # GCS 연동 상태 표시
     st.markdown("**☁️ Google Cloud Storage Status:**")
@@ -894,10 +924,10 @@ def display_session_details():
         st.success(f"✅ GCS upload is enabled (Service Account method)")
         if GCS_BUCKET_NAME:
             st.write(f"Bucket: {GCS_BUCKET_NAME}")
-            st.write(f"Storage method: ZIP archives + individual Excel files")
+            st.write(f"Storage method: ZIP archives only")
             st.write(f"Consent format: HTML (Korean language support)")
             st.write(f"Self-efficacy: 6 items (1-5 scale) included")
-            st.write(f"Reference scores: TOPIK Excel file included")
+            st.write(f"TOPIK scores: 3-area Excel inside ZIP")
             st.write(f"Save timing: Auto-save after 2nd recording")
         else:
             st.warning("⚠️ No bucket specified")
