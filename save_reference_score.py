@@ -1,6 +1,6 @@
 """
 save_reference_score.py
-TOPIK 참고용 점수 저장 모듈 (3영역 세부 채점 포함)
+TOPIK 참고용 점수 저장 모듈 (홀리스틱 루브릭 - 채점자 감각 기반 + 이유 컬럼 추가)
 """
 
 import pandas as pd
@@ -8,166 +8,158 @@ import os
 import re
 from datetime import datetime
 
-def calculate_content_task_score(transcript):
+def calculate_content_task_score_holistic(transcript):
     """
-    내용 및 과제 수행 점수 계산 (5점 만점)
+    내용 및 과제 수행 점수 계산 (홀리스틱 방식 1-5점 + 이유)
     
     Args:
         transcript: STT 전사 텍스트
         
     Returns:
-        int: 내용 및 과제 수행 점수 (1-5점)
+        tuple: (점수, 이유) - (int, str)
     """
     if not transcript or not transcript.strip():
-        return 1
+        return 1, "No meaningful content detected"
     
-    score = 1  # 기본 1점
-    text = transcript.lower()
-    
-    # 1. 여름방학 주제 언급 (1점)
+    # 기본 키워드 확인
     summer_keywords = ["여름", "방학", "휴가", "여행"]
-    summer_mentioned = any(keyword in transcript for keyword in summer_keywords)
-    if summer_mentioned:
-        score += 1
-    
-    # 2. 한국계획 주제 언급 (1점)
     korea_keywords = ["한국", "계획", "할 거예요", "하려고", "갈 거예요", "공부할", "배울"]
+    reason_keywords = ["왜냐하면", "때문에", "해서", "좋아해서", "재미있어서", "아름다워서", "맛있어서", "하고 싶어서"]
+    
+    summer_mentioned = any(keyword in transcript for keyword in summer_keywords)
     korea_mentioned = any(keyword in transcript for keyword in korea_keywords)
-    if korea_mentioned:
-        score += 1
+    reason_mentioned = any(keyword in transcript for keyword in reason_keywords)
     
-    # 3. 여름방학 이유 설명 (1점)
-    reason_keywords = ["왜냐하면", "때문에", "해서", "좋아해서", "재미있어서", "아름다워서", "맛있어서"]
-    summer_with_reason = summer_mentioned and any(keyword in transcript for keyword in reason_keywords)
-    if summer_with_reason:
-        score += 1
+    word_count = len(transcript.split())
+    sentence_count = len([s for s in transcript.split('.') if s.strip()])
     
-    # 4. 담화 구성 - 두 주제가 모두 언급되고 적절한 길이 (1점)
-    if summer_mentioned and korea_mentioned and len(transcript.split()) >= 30:
-        score += 1
-    
-    return min(5, score)
+    # 홀리스틱 평가 (전체적 인상 기반)
+    if summer_mentioned and korea_mentioned and reason_mentioned and word_count >= 60:
+        # 5점: 두 주제 완전히 다루고, 이유도 명확, 체계적 구성
+        if word_count >= 80 and sentence_count >= 4:
+            return 5, f"Both topics fully covered with clear reasons and good structure ({word_count} words, {sentence_count} sentences)"
+        # 4점: 두 주제 다루지만 한쪽이 약간 부족하거나 이유가 약함
+        else:
+            return 4, f"Both topics covered but one side slightly lacking or weak reasons ({word_count} words)"
+    elif summer_mentioned and korea_mentioned and word_count >= 40:
+        # 3점: 두 주제 언급하지만 내용이 얕거나 구성이 어색
+        reason_text = " with some reasons" if reason_mentioned else " but lacks clear reasons"
+        return 3, f"Both topics mentioned but shallow content ({word_count} words){reason_text}"
+    elif (summer_mentioned or korea_mentioned) and word_count >= 20:
+        # 2점: 한 주제만 제대로 다루거나 매우 짧음
+        topic_text = "summer vacation" if summer_mentioned else "Korea plans" if korea_mentioned else "limited topic"
+        return 2, f"Only {topic_text} covered adequately ({word_count} words)"
+    else:
+        # 1점: 최소한의 응답만 시도
+        return 1, f"Minimal response attempt ({word_count} words, incomplete task)"
 
 
-def calculate_language_use_score(transcript):
+def calculate_language_use_score_holistic(transcript):
     """
-    언어 사용 점수 계산 (5점 만점)
+    언어 사용 점수 계산 (홀리스틱 방식 1-5점 + 이유)
     
     Args:
         transcript: STT 전사 텍스트
         
     Returns:
-        int: 언어 사용 점수 (1-5점)
+        tuple: (점수, 이유) - (int, str)
     """
     if not transcript or not transcript.strip():
-        return 1
+        return 1, "No language use detected"
     
-    score = 1  # 기본 1점
     words = transcript.split()
     word_count = len(words)
     
-    # 1. 기본 문법 정확성 추정 (2점) - 단어 수와 문장 완성도 기반
-    if word_count >= 40:
-        # 기본적인 문법 패턴 확인
-        basic_patterns = ["했어요", "갔어요", "할 거예요", "이에요", "예요", "습니다"]
-        pattern_count = sum(1 for pattern in basic_patterns if pattern in transcript)
-        
-        if pattern_count >= 3:  # 다양한 문법 패턴 사용
-            score += 2
-        elif pattern_count >= 1:  # 기본적인 문법 패턴 사용
-            score += 1
+    # 기본적인 문법 패턴 확인
+    basic_patterns = ["했어요", "갔어요", "할 거예요", "이에요", "예요", "습니다", "해요", "와요", "봤어요"]
+    pattern_count = sum(1 for pattern in basic_patterns if pattern in transcript)
     
-    # 2. 어휘 정확성 및 다양성 (2점)
-    if word_count >= 30:
-        # 어휘 다양성 확인 (중복 단어 비율)
-        unique_words = set(words)
-        diversity_ratio = len(unique_words) / word_count
-        
-        if diversity_ratio >= 0.7:  # 높은 어휘 다양성
-            score += 2
-        elif diversity_ratio >= 0.5:  # 적당한 어휘 다양성
-            score += 1
+    # 어휘 다양성 확인
+    unique_words = set(words)
+    diversity_ratio = len(unique_words) / word_count if word_count > 0 else 0
     
-    return min(5, score)
+    # 홀리스틱 평가 (전체적 인상 기반)
+    if word_count >= 60 and pattern_count >= 4 and diversity_ratio >= 0.75:
+        # 5점: 문법 정확하고 어휘 풍부, 자연스러운 표현
+        return 5, f"Accurate grammar with rich vocabulary and natural expressions ({word_count} words, {pattern_count} patterns, {diversity_ratio:.2f} diversity)"
+    elif word_count >= 50 and pattern_count >= 3 and diversity_ratio >= 0.65:
+        # 4점: 대체로 정확하지만 몇 가지 실수
+        return 4, f"Mostly accurate with minor mistakes ({word_count} words, {pattern_count} patterns, {diversity_ratio:.2f} diversity)"
+    elif word_count >= 30 and pattern_count >= 2 and diversity_ratio >= 0.50:
+        # 3점: 의사소통 가능하지만 문법/어휘 오류 눈에 띔
+        return 3, f"Communicable but grammar/vocabulary errors noticeable ({word_count} words, {pattern_count} patterns, {diversity_ratio:.2f} diversity)"
+    elif word_count >= 20 and pattern_count >= 1:
+        # 2점: 기본 의사소통 가능하지만 오류 많음
+        return 2, f"Basic communication possible but many errors ({word_count} words, {pattern_count} patterns)"
+    else:
+        # 1점: 매우 기초적, 오류로 인해 이해 어려움
+        return 1, f"Very basic, errors hinder understanding ({word_count} words, {pattern_count} patterns)"
 
 
-def calculate_delivery_score(transcript, duration):
+def calculate_delivery_score_holistic(transcript, duration):
     """
-    발화 전달력 점수 계산 (5점 만점) - STT 기반 추론 (수정된 엄격한 기준)
+    발화 전달력 점수 계산 (홀리스틱 방식 1-5점 + 이유) - 60초/70초 기준
     
     Args:
         transcript: STT 전사 텍스트
         duration: 발화 길이 (초)
         
     Returns:
-        int: 발화 전달력 점수 (1-5점)
+        tuple: (점수, 이유) - (int, str)
     """
     if not transcript or not transcript.strip() or duration <= 0:
-        return 1
+        return 1, "No delivery detected or invalid duration"
     
-    score = 1  # 기본 1점
     word_count = len(transcript.split())
     
-    # 🔥 1. 발화 길이 (2점) - 60초 이상만 점수 부여 (엄격한 기준)
-    if duration >= 60:
-        score += 2
-    elif duration >= 45:
-        score += 0  # 45-60초는 점수 없음
-    else:
-        score += 0  # 45초 미만도 점수 없음
+    # 🔥 핵심: 60초 미만은 최대 2점만 가능
+    if duration < 60:
+        if duration >= 45:
+            return 2, f"Length insufficient for higher scores ({duration:.1f}s, 45-60s range, max 2 points)"
+        else:
+            return 1, f"Extremely short delivery ({duration:.1f}s, under 45s)"
     
-    # 🔥 2. 유창성 - 분당 단어수 (2점) - 기준 상향 조정
+    # 60초 이상부터 3-5점 가능
     words_per_minute = (word_count / duration) * 60 if duration > 0 else 0
     
-    if words_per_minute >= 70:  # 상향된 기준: 70wpm
-        score += 2
-    elif words_per_minute >= 50:  # 상향된 기준: 50wpm
-        score += 1
-    else:  # 50wpm 미만은 점수 없음
-        score += 0
-    
-    # 🔥 3. 명확성 추정 (1점) - 강화된 기준: 50단어, 4문장
+    # 문장 완성도 추정 (STT 기반)
     sentences = transcript.count('.') + transcript.count('!') + transcript.count('?')
-    if sentences == 0:  # 문장 부호가 없으면 문장 길이로 추정
-        sentences = len([s for s in transcript.split() if s.endswith(('요', '다', '까'))])
+    if sentences == 0:  # 문장 부호가 없으면 어미로 추정
+        sentences = len([s for s in transcript.split() if s.endswith(('요', '다', '까', '어요', '아요'))])
     
-    # 강화된 기준: 50단어 이상, 4문장 이상
-    if sentences >= 4 and word_count >= 50:
-        score += 1
+    # 홀리스틱 평가
+    if duration >= 70:
+        # 70초 이상: 4-5점 가능
+        if words_per_minute >= 60 and sentences >= 4 and word_count >= 60:
+            # 5점: 충분한 길이, 유창하고 자연스러움
+            return 5, f"Sufficient length, fluent and natural ({duration:.1f}s, {words_per_minute:.1f} wpm, {sentences} sentences)"
+        else:
+            # 4점: 충분한 길이, 약간의 망설임은 있지만 전반적으로 자연스러움
+            return 4, f"Sufficient length, minor hesitation but generally natural ({duration:.1f}s, {words_per_minute:.1f} wpm)"
     else:
-        score += 0
-    
-    return min(5, score)
+        # 60-70초: 3점
+        # 3점: 기본 요구 충족, 내용은 전달되지만 어색함이나 짧은 멈춤
+        return 3, f"Adequate length but some awkwardness or short pauses ({duration:.1f}s, 60-70s range)"
 
 
-def calculate_simple_topik_score(transcript, duration):
+def calculate_total_topik_score(content_score, language_score, delivery_score):
     """
-    전체 TOPIK 점수 계산 (1-5점) - 3영역 평균 기반
+    전체 TOPIK 점수 계산 (단순 합산)
     
     Args:
-        transcript: STT 전사 텍스트
-        duration: 길이 (초)
+        content_score: 내용 점수 (1-5)
+        language_score: 언어 점수 (1-5)
+        delivery_score: 전달력 점수 (1-5)
         
     Returns:
-        float: TOPIK 전체 점수 (1-5점)
+        int: 전체 점수 (3-15점)
     """
-    if not transcript or not transcript.strip():
-        return 1.0
-    
-    # 3영역 점수 계산
-    content_score = calculate_content_task_score(transcript)
-    language_score = calculate_language_use_score(transcript)
-    delivery_score = calculate_delivery_score(transcript, duration)
-    
-    # 가중 평균 (내용 40%, 언어 40%, 전달력 20%)
-    overall_score = (content_score * 0.4) + (language_score * 0.4) + (delivery_score * 0.2)
-    
-    return round(overall_score, 1)
+    return content_score + language_score + delivery_score
 
 
 def save_reference_score(session_id, attempt, transcript, duration, timestamp=None):
     """
-    TOPIK 참고용 점수 저장 (3영역 세부 점수 포함)
+    TOPIK 참고용 점수 저장 (홀리스틱 루브릭 적용 + 이유 컬럼 추가)
     
     Args:
         session_id: 세션 ID
@@ -182,25 +174,28 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     if not timestamp:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # 3영역 세부 점수 계산
-    content_task_score = calculate_content_task_score(transcript)
-    language_use_score = calculate_language_use_score(transcript)
-    delivery_score = calculate_delivery_score(transcript, duration)
-    overall_score = calculate_simple_topik_score(transcript, duration)
+    # 홀리스틱 방식으로 3영역 점수 + 이유 계산
+    content_task_score, content_task_reason = calculate_content_task_score_holistic(transcript)
+    language_use_score, language_use_reason = calculate_language_use_score_holistic(transcript)
+    delivery_score, delivery_reason = calculate_delivery_score_holistic(transcript, duration)
+    total_score = calculate_total_topik_score(content_task_score, language_use_score, delivery_score)
     
     # timestamp 기반 파일명
     filename = f"data/reference_scores_{timestamp}.xlsx"
     
-    # 새 데이터 (컬럼 순서 정리)
+    # 새 데이터 (홀리스틱 루브릭 컬럼 + 이유 컬럼)
     new_data = {
         'session_id': session_id,
         'attempt': attempt,
         'transcript': transcript,
         'duration_s': duration,
-        'topik_overall_auto': overall_score,
         'topik_content_task_score_auto': content_task_score,
+        'topik_content_task_reason': content_task_reason,
         'topik_language_use_score_auto': language_use_score,
+        'topik_language_use_reason': language_use_reason,
         'topik_delivery_score(stt)_auto': delivery_score,
+        'topik_delivery_reason': delivery_reason,
+        'topik_total_score_auto': total_score,  # 3-15점 총합
         'timestamp': timestamp
     }
     
@@ -215,14 +210,44 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
             df = pd.DataFrame([new_data])
         
         df.to_excel(filename, index=False)
-        print(f"✅ Reference scores saved: {filename}")
-        print(f"   📊 Content/Task: {content_task_score}/5, Language: {language_use_score}/5, Delivery: {delivery_score}/5, Overall: {overall_score}/5")
-        print(f"   ⏱️ Duration: {duration:.1f}s ({'✅ 60s+' if duration >= 60 else '❌ <60s'}), Words: {len(transcript.split())}")
+        
+        # 홀리스틱 점수 로그 출력
+        duration_status = "✅ 60s+" if duration >= 60 else "❌ <60s"
+        quality_level = get_score_quality_description(total_score)
+        
+        print(f"✅ Holistic TOPIK scores with reasons saved: {filename}")
+        print(f"   📊 Content: {content_task_score}/5 ({content_task_reason})")
+        print(f"   📊 Language: {language_use_score}/5 ({language_use_reason})")
+        print(f"   📊 Delivery: {delivery_score}/5 ({delivery_reason})")
+        print(f"   🎯 Total: {total_score}/15 ({quality_level})")
+        print(f"   ⏱️ Duration: {duration:.1f}s ({duration_status}), Words: {len(transcript.split())}")
         return filename
         
     except Exception as e:
         print(f"⚠️ Reference score save failed: {e}")
         return None
+
+
+def get_score_quality_description(total_score):
+    """
+    총점에 따른 품질 설명 반환
+    
+    Args:
+        total_score: 총 점수 (3-15)
+        
+    Returns:
+        str: 품질 설명
+    """
+    if total_score >= 13:
+        return "Excellent"
+    elif total_score >= 11:
+        return "Good"
+    elif total_score >= 8:
+        return "Fair"
+    elif total_score >= 6:
+        return "Poor"
+    else:
+        return "Very Poor"
 
 
 def get_latest_reference_file(timestamp=None):
@@ -252,17 +277,23 @@ def get_latest_reference_file(timestamp=None):
 
 def display_score_summary(session_id, attempt, scores):
     """
-    점수 요약 출력 (디버깅용) - 수정된 루브릭 반영
+    점수 요약 출력 (홀리스틱 루브릭 + 이유 반영)
     
     Args:
         session_id: 세션 ID
         attempt: 시도 번호
         scores: 점수 딕셔너리
     """
-    print(f"\n📊 TOPIK Reference Scores - {session_id} (Attempt {attempt})")
-    print(f"   Overall: {scores.get('topik_overall_auto', 0)}/5")
+    total_score = scores.get('topik_total_score_auto', 0)
+    quality_desc = get_score_quality_description(total_score)
+    
+    print(f"\n📊 Holistic TOPIK Scores with Reasons - {session_id} (Attempt {attempt})")
     print(f"   Content & Task: {scores.get('topik_content_task_score_auto', 0)}/5")
+    print(f"   → {scores.get('topik_content_task_reason', 'No reason available')}")
     print(f"   Language Use: {scores.get('topik_language_use_score_auto', 0)}/5")
+    print(f"   → {scores.get('topik_language_use_reason', 'No reason available')}")
     print(f"   Delivery (STT): {scores.get('topik_delivery_score(stt)_auto', 0)}/5")
-    print(f"   📏 New Rubric: 60s+ required for 5/5 Delivery score")
-    print("=" * 50)
+    print(f"   → {scores.get('topik_delivery_reason', 'No reason available')}")
+    print(f"   📈 Total: {total_score}/15 ({quality_desc})")
+    print(f"   🎯 Holistic Rubric: Overall impression-based scoring with detailed reasoning")
+    print("=" * 80)

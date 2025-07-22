@@ -511,7 +511,7 @@ Save Trigger: Auto-save after second recording completion
 Files included:
 - participant_info.txt: Participant details + Research scores + Self-efficacy scores
 - session_data_{timestamp}.csv: Complete session data with dual evaluation + self-efficacy data
-- reference_scores_{timestamp}.xlsx: TOPIK 3-area reference scores for both attempts {'✅ INCLUDED' if excel_included else '❌ MISSING'}
+- reference_scores_{timestamp}.xlsx: TOPIK holistic reference scores for both attempts {'✅ INCLUDED' if excel_included else '❌ MISSING'}
 - consent_form_{session_id}.html: Signed consent form (HTML format for Korean support)
 - audio/: All recorded audio files (student + model pronunciations)
 
@@ -521,10 +521,9 @@ SELF-EFFICACY DATA:
 - Individual scores stored in CSV under self_efficacy_1 through self_efficacy_6
 
 TOPIK REFERENCE SCORES:
-- 3-area detailed scoring: Content/Task, Language Use, Delivery (STT-based)
-- Each area scored 1-5 points
-- Overall score calculated with weighted average
-- Excel format for easy analysis
+- Holistic rubric scoring: Content/Task, Language Use, Delivery (STT-based)
+- Each area scored 1-5 points (holistic impression-based)
+- Total score: simple sum (3-15 points)
 
 CONSENT FORM FORMAT:
 - HTML format for perfect Korean language support
