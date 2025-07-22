@@ -93,7 +93,7 @@ def calculate_language_use_score(transcript):
 
 def calculate_delivery_score(transcript, duration):
     """
-    발화 전달력 점수 계산 (5점 만점) - STT 기반 추론
+    발화 전달력 점수 계산 (5점 만점) - STT 기반 추론 (수정된 엄격한 기준)
     
     Args:
         transcript: STT 전사 텍스트
@@ -108,28 +108,34 @@ def calculate_delivery_score(transcript, duration):
     score = 1  # 기본 1점
     word_count = len(transcript.split())
     
-    # 1. 발화 길이 (2점) - 60초 이상이면 모두 좋음
+    # 🔥 1. 발화 길이 (2점) - 60초 이상만 점수 부여 (엄격한 기준)
     if duration >= 60:
         score += 2
     elif duration >= 45:
-        score += 1
+        score += 0  # 45-60초는 점수 없음
+    else:
+        score += 0  # 45초 미만도 점수 없음
     
-    # 2. 유창성 - 분당 단어수 (2점)
+    # 🔥 2. 유창성 - 분당 단어수 (2점) - 기준 상향 조정
     words_per_minute = (word_count / duration) * 60 if duration > 0 else 0
     
-    if words_per_minute >= 60:  # 자연스러운 속도
+    if words_per_minute >= 70:  # 상향된 기준: 70wpm
         score += 2
-    elif words_per_minute >= 40:  # 적당한 속도
+    elif words_per_minute >= 50:  # 상향된 기준: 50wpm
         score += 1
+    else:  # 50wpm 미만은 점수 없음
+        score += 0
     
-    # 3. 명확성 추정 (1점) - STT 품질과 문장 완성도로 추론
+    # 🔥 3. 명확성 추정 (1점) - 강화된 기준: 50단어, 4문장
     sentences = transcript.count('.') + transcript.count('!') + transcript.count('?')
     if sentences == 0:  # 문장 부호가 없으면 문장 길이로 추정
         sentences = len([s for s in transcript.split() if s.endswith(('요', '다', '까'))])
     
-    # 적절한 문장 수와 길이
-    if sentences >= 3 and word_count >= 30:
+    # 강화된 기준: 50단어 이상, 4문장 이상
+    if sentences >= 4 and word_count >= 50:
         score += 1
+    else:
+        score += 0
     
     return min(5, score)
 
@@ -211,6 +217,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
         df.to_excel(filename, index=False)
         print(f"✅ Reference scores saved: {filename}")
         print(f"   📊 Content/Task: {content_task_score}/5, Language: {language_use_score}/5, Delivery: {delivery_score}/5, Overall: {overall_score}/5")
+        print(f"   ⏱️ Duration: {duration:.1f}s ({'✅ 60s+' if duration >= 60 else '❌ <60s'}), Words: {len(transcript.split())}")
         return filename
         
     except Exception as e:
@@ -245,7 +252,7 @@ def get_latest_reference_file(timestamp=None):
 
 def display_score_summary(session_id, attempt, scores):
     """
-    점수 요약 출력 (디버깅용)
+    점수 요약 출력 (디버깅용) - 수정된 루브릭 반영
     
     Args:
         session_id: 세션 ID
@@ -257,4 +264,5 @@ def display_score_summary(session_id, attempt, scores):
     print(f"   Content & Task: {scores.get('topik_content_task_score_auto', 0)}/5")
     print(f"   Language Use: {scores.get('topik_language_use_score_auto', 0)}/5")
     print(f"   Delivery (STT): {scores.get('topik_delivery_score(stt)_auto', 0)}/5")
+    print(f"   📏 New Rubric: 60s+ required for 5/5 Delivery score")
     print("=" * 50)

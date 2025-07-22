@@ -597,7 +597,7 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
 
 **ADVANCED PATTERN (1-2 suggestions max):**
 - Choose 1-2 most relevant patterns based on what student missed:
-  • Pattern 1: 'X와/과 함께 Y했어요' (if simple past experiences)
+  • Pattern 1: 'X하고 Y했어요' (if simple past experiences)
   • Pattern 2: 'X고 싶어서 Y할 거예요' (if plans without reasons)  
   • Pattern 3: 'X에는 Y했어요' (if no time expressions)
 - Only suggest patterns the student didn't use well
@@ -721,10 +721,10 @@ def validate_and_fix_feedback(feedback):
     
     # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤)
     required_fields = {
-        "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "content_expansion_suggestions": [
-            "💬 Topic: Summer vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+            "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
             "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁
@@ -840,12 +840,12 @@ def get_default_grammar_issues():
 def get_fallback_feedback():
     """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤)"""
     return {
-        "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "grammar_issues": get_default_grammar_issues(),
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함
         "content_expansion_suggestions": [
-            "💬 Topic: Summer vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+            "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
             "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
