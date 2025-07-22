@@ -306,9 +306,9 @@ Student answered "{question}": {transcript}
 }}
 
 **Scoring Guide:**
-- Score 8 to 10: Spoke 90s+, rich personal content, only minor errors
-- Score 6 to 7: Spoke 75-90s, good content, some errors but understandable
-- Score 4 to 5: Spoke 60-75s, basic content, several errors
+- Score 8 to 10: Spoke 60s+, rich personal content, only minor errors
+- Score 6 to 7: Spoke 60s+, good content, some errors but understandable
+- Score 4 to 5: Spoke 60s+, basic content, several errors
 - Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
 
 # 🔥 개선도 평가 프롬프트 템플릿 (1-2분 기준)
@@ -330,7 +330,7 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 6. Did they maintain allowed speech styles ({allowed_styles})?
 
 **Scoring Guide:**
-- Score 8 to 10: Major improvement - much longer (closer to 90s+), richer content, applied feedback well
+- Score 8 to 10: Major improvement - much longer (closer to 70s+), richer content, applied feedback well
 - Score 6 to 7: Good improvement - somewhat longer, some new content, tried to apply feedback
 - Score 4 to 5: Some improvement - slight changes, minimal new content
 - Score 1 to 3: Little/no improvement - similar or shorter

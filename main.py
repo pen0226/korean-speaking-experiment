@@ -438,15 +438,13 @@ def process_second_recording():
             st.session_state.transcription_2 = transcription
             st.session_state.audio_duration_2 = duration
             
-            display_success_message(f"Second attempt transcribed: {transcription}")
-            
-            # 🆕 연구용 데이터 생성 (2차 시도)
+            # 🆕 연구용 데이터 생성 (2차 시도) - 🚀 핵심 수정 부분
             try:
                 research_data_2 = get_research_analysis_data(
                     transcript=transcription,
-                    grammar_issues=[],  # 2차 시도는 새로운 문법 분석이 없음
+                    grammar_issues=[],  # 빈 리스트
                     duration_s=duration,
-                    feedback_data={},   # 1차 피드백 데이터는 사용하지 않음
+                    feedback_data={},   # 빈 딕셔너리
                     attempt_number=2
                 )
                 st.session_state.research_data_2 = research_data_2
@@ -454,6 +452,8 @@ def process_second_recording():
             except Exception as e:
                 print(f"⚠️ Research data generation failed for attempt 2: {e}")
                 st.session_state.research_data_2 = None
+            
+            display_success_message(f"Second attempt transcribed: {transcription}")
             
             # 개선도 평가
             if st.session_state.feedback and st.session_state.transcription_1:
@@ -695,16 +695,18 @@ def display_optional_progress_view():
 
 
 def display_improvement_metrics_personal(improvement):
-    """개선도 메트릭 표시 (2인칭 톤으로 수정)"""
+    """개선도 메트릭 표시 (원래 점수 사용)"""
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        first_score = improvement.get('first_attempt_score', 0)
-        st.metric("Your First Attempt", f"{first_score}/10")
+        # 🔥 수정: 원래 1차 녹음에서 받은 실제 점수 사용
+        original_first_score = st.session_state.feedback.get('interview_readiness_score', 0)
+        st.metric("Your First Attempt", f"{original_first_score}/10")
     
     with col2:
         second_score = improvement.get('second_attempt_score', 0)
-        difference = improvement.get('score_difference', 0)
+        # 🔥 수정: 실제 점수 차이로 계산
+        difference = second_score - original_first_score
         st.metric("Your Second Attempt", f"{second_score}/10", f"{difference:+.1f}")
     
     with col3:
