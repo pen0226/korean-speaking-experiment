@@ -136,7 +136,7 @@ EXPERIMENT_STEPS = {
     'feedback': ('Step 4', 'AI Feedback'),
     'second_recording': ('Step 5', 'Second Recording'),
     'survey': ('Step 6', 'Required Survey'),
-    'completion': ('Step 7', 'Complete')
+    'completion': ('Complete', 'Thank You!')  # ← Step 7 → Complete로 수정
 }
 
 # 설문조사 URL

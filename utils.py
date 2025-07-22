@@ -307,14 +307,35 @@ def display_vocabulary_tips_simplified(feedback):
 
 def show_progress_indicator(current_step):
     """
-    현재 단계를 표시하는 진행 상황 인디케이터
+    현재 단계를 표시하는 진행 상황 인디케이터 (completion 단계 수정)
     
     Args:
         current_step: 현재 단계 키
     """
     current_info = EXPERIMENT_STEPS.get(current_step, ('Step ?', 'Unknown'))
     
-    # 단계 번호 추출
+    # 🔥 completion 단계 특별 처리
+    if current_step == 'completion':
+        st.markdown(
+            f"""
+            <div style='margin-bottom: 20px; padding: 15px; background-color: {UI_COLORS['background']}; border-radius: 10px; border-left: 4px solid {UI_COLORS['success']};'>
+                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                    <div>
+                        <strong style='color: {UI_COLORS['success']}; font-size: 16px;'>{current_info[0]}: {current_info[1]}</strong>
+                    </div>
+                    <div style='color: #64748b; font-size: 14px;'>
+                        Progress: Complete ✅
+                    </div>
+                </div>
+                <div style='margin-top: 10px; background-color: {UI_COLORS['success']}; height: 6px; border-radius: 3px; width: 100%;'>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        return
+    
+    # 일반 단계 처리 (Step 1-6)
     try:
         step_num = int(current_info[0].split()[1])
     except:
