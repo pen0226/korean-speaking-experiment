@@ -68,7 +68,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
         attempt: 시도 번호 (1 or 2)
         transcript: 전사 텍스트
         duration: 길이 (초)
-        timestamp: 타임스탬프 (선택적)
+        timestamp: 타임스탬프 (필수 - main.py에서 전달)
         
     Returns:
         str: 저장된 파일명
@@ -79,6 +79,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     # 간단한 TOPIK 점수 계산
     topik_score = calculate_simple_topik_score(transcript, duration)
     
+    # 🔥 timestamp 기반 파일명으로 수정
     filename = f"data/reference_scores_{timestamp}.xlsx"
     
     # 새 데이터
@@ -108,3 +109,28 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     except Exception as e:
         print(f"⚠️ Reference score save failed: {e}")
         return None
+
+
+def get_latest_reference_file(timestamp=None):
+    """
+    timestamp에 해당하는 reference 파일 경로 반환
+    
+    Args:
+        timestamp: 타임스탬프
+        
+    Returns:
+        str: 파일 경로 또는 None
+    """
+    if timestamp:
+        filename = f"data/reference_scores_{timestamp}.xlsx"
+        if os.path.exists(filename):
+            return filename
+    
+    # timestamp가 없거나 파일이 없으면 가장 최신 파일 찾기
+    import glob
+    pattern = "data/reference_scores_*.xlsx"
+    files = glob.glob(pattern)
+    if files:
+        return max(files, key=os.path.getctime)
+    
+    return None

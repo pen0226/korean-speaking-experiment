@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (연구용 TOPIK 분석 통합)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (참고용 TOPIK 점수 통합)
 """
 
 import streamlit as st
@@ -133,7 +133,7 @@ def handle_first_recording_step():
 
 
 def process_first_recording():
-    """첫 번째 녹음 처리 (연구용 데이터 생성 추가)"""
+    """첫 번째 녹음 처리 (참고용 TOPIK 점수 생성 추가)"""
     with st.spinner("🎙️ Processing your recording..."):
         # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.first_audio_type == "upload":
@@ -155,18 +155,23 @@ def process_first_recording():
             st.session_state.transcription_1 = transcription
             st.session_state.audio_duration_1 = duration
             
+            # 🔥 timestamp 생성 (나중에 모든 파일에서 같은 timestamp 사용)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            st.session_state.current_timestamp = timestamp
+            
             # GPT 피드백 생성 (duration 정보 포함)
             with st.spinner("🧠 Getting AI feedback..."):
                 feedback = get_gpt_feedback(transcription, attempt_number=1, duration=duration)
                 st.session_state.feedback = feedback
             
             if feedback:
-                # 🆕 간단한 참고용 점수 저장
+                # 🆕 간단한 참고용 점수 저장 (timestamp 전달)
                 save_reference_score(
                     st.session_state.session_id, 
                     attempt=1, 
                     transcript=transcription,
-                    duration=duration
+                    duration=duration,
+                    timestamp=timestamp
                 )
                 
                 # TTS 생성
@@ -409,7 +414,7 @@ def handle_second_recording_step():
 
 
 def process_second_recording():
-    """두 번째 녹음 처리 + 즉시 데이터 저장 (연구용 데이터 생성 수정)"""
+    """두 번째 녹음 처리 + 즉시 데이터 저장 (참고용 TOPIK 점수 생성 추가)"""
     with st.spinner("🎙️ Processing your improved recording..."):
         # 🔥 업로드 파일이면 바이트로 변환하되 파일명도 같이 저장
         if st.session_state.second_audio_type == "upload":
@@ -431,12 +436,16 @@ def process_second_recording():
             st.session_state.transcription_2 = transcription
             st.session_state.audio_duration_2 = duration
             
-            # 🆕 간단한 참고용 점수 저장
+            # 🔥 첫 번째 녹음에서 생성한 timestamp 재사용 (파일들 간 일관성 유지)
+            timestamp = getattr(st.session_state, 'current_timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
+            
+            # 🆕 간단한 참고용 점수 저장 (같은 timestamp 사용)
             save_reference_score(
                 st.session_state.session_id,
                 attempt=2,
                 transcript=transcription, 
-                duration=duration
+                duration=duration,
+                timestamp=timestamp
             )
             
             display_success_message(f"Second attempt transcribed: {transcription}")
@@ -454,7 +463,7 @@ def process_second_recording():
                     # 개선도 요약 표시
                     display_improvement_summary(improvement_data)
             
-            # 🎯 즉시 데이터 저장 및 백업 (연구용 Excel 포함)
+            # 🎯 즉시 데이터 저장 및 백업 (참고용 엑셀 포함)
             st.markdown("---")
             with st.spinner("💾 Saving your experiment data..."):
                 save_result = save_and_backup_data()
@@ -573,24 +582,24 @@ def handle_survey_step():
 
 
 def save_and_backup_data():
-    """데이터 저장 및 백업 (중복 저장 방지 포함 + 연구용 Excel)"""
+    """데이터 저장 및 백업 (중복 저장 방지 포함 + 참고용 엑셀)"""
     # 중복 저장 방지
     if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
         if hasattr(st.session_state, 'saved_files'):
             return st.session_state.saved_files
     
-    # 새로운 저장 수행 (연구용 Excel 포함)
+    # 새로운 저장 수행 (참고용 엑셀 포함)
     result = save_session_data()
     if result[0]:  # csv_filename exists
-        # timestamp를 포함한 결과 언패킹 (Excel 파일 추가됨)
-        csv_filename, excel_filename, audio_folder, saved_files, zip_filename, timestamp = result
+        # 🔥 참고용 엑셀 파일이 포함된 결과 언패킹
+        csv_filename, reference_excel_filename, audio_folder, saved_files, zip_filename, timestamp = result
         
         # 세션에 timestamp 저장 (중복 저장 방지용)
         st.session_state.saved_timestamp = timestamp
         
-        # GCS 자동 업로드 (같은 timestamp 사용, Excel 파일 포함된 ZIP)
+        # 🔥 GCS 자동 업로드 (참고용 엑셀 파일도 포함)
         uploaded_files, errors = auto_backup_to_gcs(
-            csv_filename, excel_filename, zip_filename, 
+            csv_filename, reference_excel_filename, zip_filename, 
             st.session_state.session_id, 
             timestamp  # 새로 생성하지 않고 기존 timestamp 사용
         )
@@ -676,7 +685,7 @@ def display_optional_progress_view():
 
 def display_improvement_metrics_personal(improvement):
     """개선도 메트릭 표시 (원래 점수 사용)"""
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         # 🔥 수정: 원래 1차 녹음에서 받은 실제 점수 사용
@@ -689,10 +698,6 @@ def display_improvement_metrics_personal(improvement):
         difference = second_score - original_first_score
         st.metric("Your Second Attempt", f"{second_score}/10", f"{difference:+.1f}")
     
-    with col3:
-        improvement_score = improvement.get('improvement_score', 0)
-        st.metric("Your Improvement Score", f"{improvement_score}/10")
-
 
 def display_improvement_details_personal(improvement):
     """개선도 상세 정보 표시 (2인칭 톤으로 수정)"""
@@ -826,7 +831,7 @@ def test_gcs_connection_simple():
 
 
 def display_researcher_mode():
-    """연구자 모드 표시 (연구용 Excel 지원 추가)"""
+    """연구자 모드 표시 (참고용 엑셀 지원 추가)"""
     debug_mode = st.sidebar.checkbox("🔬 Researcher Mode", help="For research data access")
     if debug_mode:
         with st.expander("🔬 Researcher: Data Management", expanded=False):
@@ -856,12 +861,13 @@ def display_researcher_mode():
             st.markdown("---")
             
             if hasattr(st.session_state, 'saved_files'):
-                # 기존 CSV 파일들만 처리
+                # 🔥 참고용 엑셀 파일 포함하여 처리
                 csv_filename = st.session_state.saved_files[0] if len(st.session_state.saved_files) > 0 else None
+                reference_excel_filename = st.session_state.saved_files[1] if len(st.session_state.saved_files) > 1 else None
                 zip_filename = st.session_state.saved_files[4] if len(st.session_state.saved_files) > 4 else None
                 
-                # 다운로드 버튼들 (간단한 버전)
-                display_download_buttons(csv_filename, None, zip_filename)
+                # 다운로드 버튼들 (참고용 엑셀 정보 포함)
+                display_download_buttons(csv_filename, reference_excel_filename, zip_filename)
                 
                 # 세션 상세 정보
                 display_session_details()
@@ -871,7 +877,7 @@ def display_researcher_mode():
 
 
 def main():
-    """메인 애플리케이션 함수 (연구용 Excel 통합)"""
+    """메인 애플리케이션 함수 (참고용 TOPIK 점수 통합)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
     
