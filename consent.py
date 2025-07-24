@@ -32,6 +32,12 @@ def enhanced_consent_section():
         🎙️ First Record → 🤖 AI Feedback → 🎙️ Second Record → 📝 Survey
         
         **💻 Optional:** 15-min Zoom chat about your experience
+        
+        🔔 **Notice**
+        This activity is part of a real research study.
+        Please try to speak clearly and naturally in each recording.
+        Your recordings will help this research a lot.
+        감사합니다!
         """)
     
     with tab2:

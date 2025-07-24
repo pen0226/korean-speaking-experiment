@@ -92,7 +92,7 @@ def handle_first_recording_step():
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
                     Please speak for about 1-2 minutes in total and talk about both topics below.<br>
-                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly explain the reason.)</span>
+                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly <u>explain the reason</u>.)</span>
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
                     1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
@@ -374,7 +374,7 @@ def handle_second_recording_step():
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
                     Please speak for about 1-2 minutes in total and talk about both topics below.<br>
-                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly explain the reason.)</span>
+                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly <u>explain the reason</u>.)</span>
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
                     1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
