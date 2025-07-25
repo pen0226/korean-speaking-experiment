@@ -91,14 +91,13 @@ def handle_first_recording_step():
             <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Interview Question:</div>
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
-                    Please speak for about 1-2 minutes in total and talk about both topics below.<br>
-                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly <u>explain the reason</u>.)</span>
+                    Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
                     1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
-                    2️⃣ <strong>한국에서 뭐 할 거예요?</strong>
+                    2️⃣ <strong>한국에서 뭐 할 거예요? 왜요?</strong>
                 </div>
             </div>
         </div>
@@ -108,7 +107,7 @@ def handle_first_recording_step():
     
     # 2) 녹음 안내를 간결하게 (1-2분 목표로 수정)
     st.markdown(
-        "🔴 **Aim for about 1-2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
+        "🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
     )
     
     # 3) 녹음 단계 제목
@@ -272,7 +271,7 @@ def handle_feedback_step():
         content_suggestions = feedback.get('content_expansion_suggestions', [])
         if content_suggestions:
             with st.expander("💡 Content Ideas - Make Your Answer Longer", expanded=False):
-                st.markdown("*You can add these topics to speak for at least 1-2 minutes (90+ seconds):*")
+                st.markdown("*You can add these topics to speak for at least 1~2 minutes (90+ seconds):*")
                 for i, suggestion in enumerate(content_suggestions[:2], 1):  # 최대 2개만
                     # Content suggestion 줄바꿈 처리
                     formatted_suggestion = format_content_ideas(suggestion)
@@ -284,7 +283,7 @@ def handle_feedback_step():
                     if i < len(content_suggestions[:2]):
                         st.markdown("")
                 
-                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1-2 minutes (90+ seconds)!")
+                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1~2 minutes (90+ seconds)!")
         
         # Advanced Grammar Pattern (접을 수 있는 형태) - 포맷 개선
         if feedback.get('grammar_expression_tip'):
@@ -308,22 +307,23 @@ def handle_feedback_step():
                     st.write(feedback['fluency_comment'])
             
             with col2:
-                if feedback.get('interview_readiness_reason'):
+                if feedback.get('detailed_feedback'):
                     st.markdown("#### 📋 Detailed Feedback")
-                    st.write(feedback['interview_readiness_reason'])
+                    st.markdown("*Interview preparation guidance from your Korean teacher:*")
+                    st.markdown(feedback['detailed_feedback'])
             
             # 🔥 녹음 시간 정보 (1-2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
             if duration > 0:
                 st.markdown("#### ⏱️ Speaking Duration")
                 if duration >= 90:
-                    st.success(f"{duration:.1f} seconds - Excellent! Met the 1-2 minute goal!")
+                    st.success(f"{duration:.1f} seconds - Excellent! Met the 1~2 minute goal!")
                 elif duration >= 75:
-                    st.info(f"{duration:.1f} seconds - Good, try to reach about 1-2 minutes (90+ seconds)!")
+                    st.info(f"{duration:.1f} seconds - Good, try to reach about 1~2 minutes (90+ seconds)!")
                 elif duration >= 60:
-                    st.warning(f"{duration:.1f} seconds - Fair, aim for about 1-2 minutes (90+ seconds) next time!")
+                    st.warning(f"{duration:.1f} seconds - Fair, aim for about 1~2 minutes (90+ seconds) next time!")
                 else:
-                    st.error(f"{duration:.1f} seconds - Too short, aim for about 1-2 minutes (90+ seconds)!")
+                    st.error(f"{duration:.1f} seconds - Too short, aim for about 1~2 minutes (90+ seconds)!")
         
         st.markdown("---")
         
@@ -333,10 +333,10 @@ def handle_feedback_step():
         # 🔥 간단한 팁 리스트 (1-2분 목표로 수정)
         st.info("""
         **Quick Tips for Your Next Recording:**
-        1. 🎯 Aim for **about 1-2 minutes total** of speaking
+        1. 🎯 Aim for **about 1~2 minutes total** of speaking
         2. 🎤 Listen to the model pronunciation above
         3. 📝 Try to fix the grammar points
-        4. 💡 Add details for both topics (summer vacation + plans in Korea)
+        4. 💡 Add details for both topics (summer vacation + plans in Korea with reasons)
         """)
         
         # 다음 단계 버튼
@@ -373,14 +373,13 @@ def handle_second_recording_step():
             <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Same Question - Second Attempt:</div>
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
-                    Please speak for about 1-2 minutes in total and talk about both topics below.<br>
-                    <span style='font-size: 16px; color: inherit; font-style: italic;'>(For each topic, also briefly <u>explain the reason</u>.)</span>
+                    Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
                     1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
                 </div>
                 <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
-                    2️⃣ <strong>한국에서 뭐 할 거예요?</strong>
+                    2️⃣ <strong>한국에서 뭐 할 거예요? 왜요?</strong>
                 </div>
             </div>
         </div>
@@ -390,7 +389,7 @@ def handle_second_recording_step():
     
     # 2) 녹음 안내 추가 (1-2분 목표로 수정)
     st.markdown(
-        "🔴 **Aim for about 1-2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
+        "🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
     )
     
     st.write("🚀 Now try again! Apply the feedback you received to improve your answer.")

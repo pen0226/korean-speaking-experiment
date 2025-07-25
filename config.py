@@ -51,11 +51,11 @@ SESSION_LABELS = {
 }
 
 # 실험 설정
-EXPERIMENT_QUESTION = "Please speak for about 1-2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?"
+EXPERIMENT_QUESTION = "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요? 왜요?"
 
 # 세션별 질문 설정
 SESSION_QUESTIONS = {
-    1: "Please speak for about 1-2 minutes in total and talk about both topics below. (For each topic, also briefly explain the reason.) 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요?",
+    1: "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요? 왜요?",
     2: "이번 여름에 한국에서 뭐 하려고 하세요? 특별한 계획이 있으세요?"
 }
 

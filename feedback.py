@@ -614,7 +614,7 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     if len(transcript) != len(processed_transcript):
         st.info(f"📝 Text processed: {len(transcript)} → {len(processed_transcript)} characters for better AI analysis")
     
-    # 🔥 duration 정보를 포함한 프롬프트 생성 + TOPIK 기준 점수 가이드 + 2인칭 톤
+    # 🔥 duration 정보를 포함한 프롬프트 생성 + TOPIK 기준 점수 가이드 + 2인칭 톤 + detailed_feedback 추가
     enhanced_prompt_template = FEEDBACK_PROMPT_TEMPLATE + f"""
 
 **STUDENT SPEAKING DURATION:** {duration:.1f} seconds
@@ -624,6 +624,27 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
 - Write feedback as if you're a warm Korean teacher talking directly to the student
 - Be encouraging and personal: "Great job! You spoke for..." instead of "The student spoke for..."
 - Use friendly, supportive language throughout all feedback sections
+
+**📋 DETAILED FEEDBACK INSTRUCTIONS:**
+You are a supportive Korean language teacher.
+You are helping a student who is preparing for a Korean language center speaking interview (TOPIK level 1~2).
+Look at the student's entire spoken answer (from STT) and also consider the grammar/vocabulary issues you identified.
+Give feedback as if you are their teacher, focusing on what will help them improve for the interview.
+
+Format your detailed feedback as follows:
+- Start with one short encouragement about what the student did well
+- Provide 2–3 practical interview tips with specific examples
+- Quote phrases from their actual answer and suggest improvements
+- Include simple Korean phrases they can directly use
+- Write in English but provide Korean phrases for practice
+
+Example output:
+📋 Detailed Feedback:
+- Great job using past tense like "배웠어요"! It's clear you're trying to use what you've learned.
+- You can expand your answer by adding why you started learning Korean. For example: "특히 한국 드라마가 재미있어서 관심이 생겼어요."
+- Instead of saying "좋아해요" many times, try "흥미가 있어요" or "관심이 많아요" for variety.
+
+(Do not copy the example sentences directly; adapt them to the student's actual answer and issues identified.)
 
 **VOCABULARY SUGGESTIONS (vs format for educational comparison):**
 - Only suggest if you find word choice issues that need comparison
@@ -639,9 +660,9 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
 - Only suggest patterns the student didn't use well
 
 **Scoring Guide (Based on TOPIK Speaking Standards):**
-- Score 8 to 10: Excellent task completion (both topics fully addressed with clear reasons), rich personal content, accurate and appropriate language use with some variety in expressions, usually 90+ seconds
-- Score 6 to 7: Good task completion (both topics covered with reasons), adequate personal content, mostly accurate language with minor errors, 60+ seconds
-- Score 4 to 5: Basic task completion (topics addressed but limited detail), some personal content, several language errors but communication remains clear, 60+ seconds
+- Score 8 to 10: Excellent task completion (summer vacation experiences + Korea plans with clear reasons), rich personal content, accurate and appropriate language use with some variety in expressions, usually 90+ seconds
+- Score 6 to 7: Good task completion (both topics covered, Korea plans with reasons), adequate personal content, mostly accurate language with minor errors, 60+ seconds
+- Score 4 to 5: Basic task completion (topics addressed but limited detail or missing reasons for Korea plans), some personal content, several language errors but communication remains clear, 60+ seconds
 - Score 2 to 3: Poor task completion (incomplete coverage of topics), very limited content, frequent language errors affecting communication, any duration
 - Score 1: Very poor task completion, minimal content, major communication breakdown, any duration
 **Duration Requirement:** Responses under 60 seconds cannot score above 5. Focus primarily on content quality and language accuracy for higher scores.
@@ -755,7 +776,7 @@ def parse_gpt_response(raw_content):
 def validate_and_fix_feedback(feedback):
     """피드백 구조를 검증하고 누락된 필수 필드를 추가"""
     
-    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤)
+    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback)
     required_fields = {
         "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
@@ -766,7 +787,7 @@ def validate_and_fix_feedback(feedback):
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
-        "interview_readiness_reason": "You're making good progress! Focus on speaking longer (60+ seconds) with more personal details and address both topics with clear reasons.",
+        "detailed_feedback": "Great job attempting both topics! You can make your answer stronger by: • Adding specific details about your summer activities • Using more varied expressions like '즐거웠어요' instead of just '좋았어요' • Explaining your Korean study goals more clearly with phrases like '한국 문화를 이해하고 싶어서 공부해요'",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
     
@@ -874,7 +895,7 @@ def get_default_grammar_issues():
 
 
 def get_fallback_feedback():
-    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤)"""
+    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함)"""
     return {
         "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
@@ -887,7 +908,7 @@ def get_fallback_feedback():
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
         "fluency_comment": "Keep practicing! Try to speak for at least 60+ seconds to build fluency.",
         "interview_readiness_score": 5,
-        "interview_readiness_reason": "You're making progress! Focus on speaking for at least 60+ seconds and address both topics with clear reasons.",
+        "detailed_feedback": "Good effort attempting both topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do? • Practice connecting your ideas with phrases like '그리고' and '그래서' to sound more natural",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
 
