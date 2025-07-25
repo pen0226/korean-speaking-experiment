@@ -701,7 +701,7 @@ Student answered "{question}": {transcript}
     "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences from their response]\\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",
     "interview_readiness_score": [1-10],
     "interview_readiness_reason": "Encouraging explanation of score with specific praise and improvements",
-    "detailed_feedback": "🌟 What You Did Well: [specific praise based on student's answer]\\n🎯 Key Improvements: [2-3 specific improvements]\\n📝 Improved Examples: [student-based example sentences]"
+    "detailed_feedback": "🌟 What You Did Well\\n- [specific praise point 1 with example from their answer]\\n- [specific praise point 2] 👍\\n\\n🎯 Things to Improve\\n- [specific grammar issue with concrete example: 'Instead of X, try Y']\\n- [specific suggestion with clear example]\\n- [specific content suggestion with example]\\n\\n📝 Try This Next Time\\n1. [actionable tip 1]\\n2. [actionable tip 2]\\n3. [actionable tip 3]"
 }}
 
 **Scoring Guide:**
@@ -867,7 +867,7 @@ def validate_and_fix_feedback(feedback):
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
         "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
-        "detailed_feedback": "Great job attempting both topics! You can make your answer stronger by: • Adding specific details about your summer activities • Using more varied expressions like '즐거웠어요' (I had fun/it was enjoyable) instead of just '좋았어요' • Explaining your Korean study goals more clearly with phrases like '한국 문화를 이해하고 싶어서 공부해요' (I study because I want to understand Korean culture)",
+        "detailed_feedback": "🌟 What You Did Well\\n- You answered both parts of the question really well!\\n- Your motivation was clear when you said 'I like Korean culture' - that part was great! 👍\\n\\n🎯 Things to Improve\\n- Some sentences were missing particles (을/를). For example, instead of '친구 만났어요', try '친구를 만났어요' to sound more natural.\\n- Try to be more consistent with past tense when talking about experiences.\\n- When giving reasons, add specific examples to make it richer. Like 'I watched Korean dramas and got interested, especially 'OOO' drama.'\\n\\n📝 Try This Next Time\\n1. Double-check particles (을/를, 에/에서) when preparing your answer\\n2. Add one specific activity or experience when explaining reasons\\n3. Use expressions like '-고 싶어서' or '-게 되어서' to make longer sentences",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
     

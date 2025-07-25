@@ -293,9 +293,39 @@ def handle_feedback_step():
                 
                 # Advanced Pattern 섹션
                 if feedback.get('grammar_expression_tip'):
-                    st.markdown("### ✨ **Advanced Pattern**")
-                    formatted_tip = format_content_ideas(feedback['grammar_expression_tip'])
-                    st.markdown(formatted_tip, unsafe_allow_html=True)
+                    st.markdown("**✨ Advanced Pattern**")
+                    
+                    # Advanced Pattern을 HTML 스타일로 통일
+                    grammar_tip = feedback['grammar_expression_tip']
+                    
+                    # 기본 파싱 (간단한 구조 가정)
+                    if "Try this:" in grammar_tip and "Example:" in grammar_tip and "When to use:" in grammar_tip:
+                        lines = grammar_tip.replace('\\n', '\n').split('\n')
+                        pattern_line = ""
+                        example_line = ""
+                        usage_line = ""
+                        
+                        for line in lines:
+                            line = line.strip()
+                            if line.startswith('🚀 Try this:') or line.startswith('🚀 Try:'):
+                                pattern_line = line.replace('🚀 Try this:', '').replace('🚀 Try:', '').strip()
+                            elif line.startswith('📝 Example:'):
+                                example_line = line.replace('📝 Example:', '').strip()
+                            elif line.startswith('💡 When to use:'):
+                                usage_line = line.replace('💡 When to use:', '').strip()
+                        
+                        # HTML로 통일된 스타일 적용
+                        st.markdown(f"""
+                        <div style='font-size: 16px; line-height: 1.5; color: #1f2937;'>
+                            <strong>🚀 Try this:</strong> {pattern_line}<br>
+                            <strong>📝 Example:</strong> {example_line}<br>
+                            <span style='color: #6b7280; font-size: 14px;'>💡 {usage_line}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        # fallback: 기존 format_content_ideas 사용
+                        formatted_tip = format_content_ideas(grammar_tip)
+                        st.markdown(formatted_tip, unsafe_allow_html=True)
                     
                     # 구분선
                     if feedback.get('sentence_connection_tip'):
@@ -303,7 +333,7 @@ def handle_feedback_step():
                 
                 # Sentence Connection 섹션
                 if feedback.get('sentence_connection_tip'):
-                    st.markdown("### 🔗 **Sentence Connection**")
+                    st.markdown("**🔗 Sentence Connection**")
                     
                     # 문장 연결 팁 파싱 및 표시
                     from utils import parse_sentence_connection_tip
