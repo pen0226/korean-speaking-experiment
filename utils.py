@@ -651,23 +651,16 @@ def format_detailed_feedback(content):
         if not line:
             continue
             
-        # 섹션 헤더 감지
+        # 섹션 헤더 감지 - 헤더는 건너뛰기
         if '🌟' in line or 'What You Did Well' in line:
             current_section = 'what_you_did_well'
-            # 헤더 제거하고 내용만 저장
-            content_part = line.split('🌟')[-1].split('What You Did Well:')[-1].strip()
-            if content_part:
-                sections[current_section] += content_part + '\n'
+            continue  # 헤더는 건너뛰기
         elif '🎯' in line or 'Key Improvements' in line:
             current_section = 'key_improvements'
-            content_part = line.split('🎯')[-1].split('Key Improvements:')[-1].strip()
-            if content_part:
-                sections[current_section] += content_part + '\n'
-        elif '📝' in line or 'Improved Examples' in line:
+            continue  # 헤더는 건너뛰기
+        elif '📝' in line or 'Try This Next Time' in line:
             current_section = 'improved_examples'
-            content_part = line.split('📝')[-1].split('Improved Examples:')[-1].strip()
-            if content_part:
-                sections[current_section] += content_part + '\n'
+            continue  # 헤더는 건너뛰기
         else:
             # 현재 섹션에 내용 추가
             if current_section:
