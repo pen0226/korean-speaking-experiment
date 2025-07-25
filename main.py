@@ -286,52 +286,53 @@ def handle_feedback_step():
                 
                 st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1~2 minutes (90+ seconds)!")
         
-        # Advanced Grammar Pattern (접을 수 있는 형태) - 포맷 개선
-        if feedback.get('grammar_expression_tip'):
-            with st.expander("🚀 Advanced Grammar Pattern", expanded=False):
-                st.markdown("*A useful pattern to enhance your Korean:*")
-                # format_content_ideas 함수를 사용해서 깔끔하게 포맷팅
-                formatted_tip = format_content_ideas(feedback['grammar_expression_tip'])
-                st.markdown(formatted_tip, unsafe_allow_html=True)
+        # Grammar & Sentence Tips (통합된 형태) - 포맷 개선
+        if feedback.get('grammar_expression_tip') or feedback.get('sentence_connection_tip'):
+            with st.expander("🚀 Grammar & Sentence Tips", expanded=False):
+                st.markdown("*Use these patterns to make your Korean more natural and fluent!*")
+                
+                # Advanced Pattern 섹션
+                if feedback.get('grammar_expression_tip'):
+                    st.markdown("### ✨ **Advanced Pattern**")
+                    formatted_tip = format_content_ideas(feedback['grammar_expression_tip'])
+                    st.markdown(formatted_tip, unsafe_allow_html=True)
+                    
+                    # 구분선
+                    if feedback.get('sentence_connection_tip'):
+                        st.markdown("---")
+                
+                # Sentence Connection 섹션
+                if feedback.get('sentence_connection_tip'):
+                    st.markdown("### 🔗 **Sentence Connection**")
+                    
+                    # 문장 연결 팁 파싱 및 표시
+                    from utils import parse_sentence_connection_tip
+                    sentence_tip = feedback['sentence_connection_tip']
+                    parsed_tip = parse_sentence_connection_tip(sentence_tip)
+                    
+                    st.markdown(f"""
+                    <div style='font-size: 16px; line-height: 1.5; color: #1f2937;'>
+                        <strong>❌ Before:</strong> {parsed_tip['before_sentences']}<br>
+                        <strong>✅ After:</strong> {parsed_tip['after_sentence']}<br>
+                        <span style='color: #6b7280; font-size: 14px;'>💡 Use connectives like <strong>그리고</strong>, <strong>그래서</strong>, <strong>-고</strong>, <strong>-아서/어서</strong> to sound more natural</span>
+                    </div>
+                    """, unsafe_allow_html=True)
         
-        # Performance Summary (접을 수 있는 형태)
+        # Performance Summary (간소화된 형태)
         with st.expander("📊 Performance Summary", expanded=False):
             # Interview Readiness Score
             score = feedback.get('interview_readiness_score', 6)
             st.metric("Interview Readiness Score", f"{score}/10")
             
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if feedback.get('fluency_comment'):
-                    st.markdown("#### 🗣️ Speaking Flow")
-                    st.write(feedback['fluency_comment'])
-                    
-                    # 🔥 옵션 3 스타일로 문장 연결 팁 표시 (HTML 통일)
-                    sentence_tip = feedback.get('sentence_connection_tip', '')
-                    if sentence_tip:
-                        from utils import parse_sentence_connection_tip
-                        parsed_tip = parse_sentence_connection_tip(sentence_tip)
-                        
-                        st.markdown("")  # 간격 추가
-                        st.markdown(f"""
-                        <div style='font-size: 16px; line-height: 1.5; color: #1f2937; margin-top: 15px;'>
-                            🔗 <strong>Sentence Connection</strong><br>
-                            ❌ <strong>Before:</strong> {parsed_tip['before_sentences']}<br>
-                            ✅ <strong>After:</strong> {parsed_tip['after_sentence']}<br>
-                            <span style='color: #6b7280; font-size: 14px;'>💡 Use connectives like 그리고, 그래서, -고, -아서/어서</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-            
-            with col2:
-                if feedback.get('detailed_feedback'):
-                    st.markdown("#### 📋 Detailed Feedback")
-                    st.markdown("*Interview preparation guidance from your Korean teacher:*")
-                    
-                    # 🔥 구조화된 피드백 포맷팅 적용
-                    detailed_text = feedback['detailed_feedback']
-                    formatted_feedback = format_detailed_feedback(detailed_text)
-                    st.markdown(formatted_feedback, unsafe_allow_html=True)
+            # 📋 Teacher's Notes (전체 너비로 확장)
+            if feedback.get('detailed_feedback'):
+                st.markdown("#### 📋 Teacher's Notes")
+                st.markdown("*Interview preparation guidance from your Korean teacher:*")
+                
+                # 🔥 구조화된 피드백 포맷팅 적용
+                detailed_text = feedback['detailed_feedback']
+                formatted_feedback = format_detailed_feedback(detailed_text)
+                st.markdown(formatted_feedback, unsafe_allow_html=True)
             
             # 🔥 녹음 시간 정보 (1-2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
