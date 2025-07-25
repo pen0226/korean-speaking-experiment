@@ -590,7 +590,7 @@ def generate_prompt(template, **kwargs):
     return template.format(**kwargs)
 
 
-# === 🔥 개선된 피드백 프롬프트 템플릿 ===
+# === 🔥 개선된 피드백 프롬프트 템플릿 (문장 연결 팁 추가) ===
 IMPROVED_FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -659,6 +659,13 @@ Student answered "{question}": {transcript}
    - Must be appropriate for their level (TOPIK 1–2).
    - Connect to what the student actually said.
 
+5. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
+   - **학생이 실제로 사용한 짧은 문장들을 찾아서 연결 방법 제시**
+   - **연결어 활용**: 그리고, 그래서, -고, -아서/어서
+   - **Before/After 형식**으로 명확한 개선 예시 제공
+   - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
+   - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
+
 **GRAMMAR ERROR TYPES**
 - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
 - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
@@ -691,6 +698,7 @@ Student answered "{question}": {transcript}
         "💬 Topic: [English topic name]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'"
     ],
     "grammar_expression_tip": "🚀 Try this: '[pattern]' = '[meaning]'\\n📝 Example: '[Korean example]'\\n💡 When to use: [simple explanation]",
+    "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences from their response]\\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",
     "interview_readiness_score": [1-10],
     "interview_readiness_reason": "Encouraging explanation of score with specific praise and improvements",
     "detailed_feedback": "🌟 What You Did Well: [specific praise based on student's answer]\\n🎯 Key Improvements: [2-3 specific improvements]\\n📝 Improved Examples: [student-based example sentences]"
@@ -847,7 +855,7 @@ def parse_gpt_response(raw_content):
 def validate_and_fix_feedback(feedback):
     """피드백 구조를 검증하고 누락된 필수 필드를 추가"""
     
-    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback)
+    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback + sentence_connection_tip)
     required_fields = {
         "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
@@ -858,6 +866,7 @@ def validate_and_fix_feedback(feedback):
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
+        "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
         "detailed_feedback": "Great job attempting both topics! You can make your answer stronger by: • Adding specific details about your summer activities • Using more varied expressions like '즐거웠어요' (I had fun/it was enjoyable) instead of just '좋았어요' • Explaining your Korean study goals more clearly with phrases like '한국 문화를 이해하고 싶어서 공부해요' (I study because I want to understand Korean culture)",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
@@ -966,7 +975,7 @@ def get_default_grammar_issues():
 
 
 def get_fallback_feedback():
-    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함)"""
+    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함, sentence_connection_tip 추가)"""
     return {
         "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
@@ -977,6 +986,7 @@ def get_fallback_feedback():
             "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
+        "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
         "fluency_comment": "Keep practicing! Try to speak for at least 60+ seconds to build fluency.",
         "interview_readiness_score": 5,
         "detailed_feedback": "Good effort attempting both topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do? • Practice connecting your ideas with phrases like '그리고' (and) and '그래서' (so/therefore) to sound more natural",

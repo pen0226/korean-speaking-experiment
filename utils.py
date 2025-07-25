@@ -274,6 +274,97 @@ def parse_vocabulary_suggestion(suggestion):
     return result
 
 
+def parse_sentence_connection_tip(tip_text):
+    """
+    문장 연결 팁을 파싱하여 구성요소 추출
+    
+    Args:
+        tip_text: 문장 연결 팁 텍스트
+        
+    Returns:
+        dict: 파싱된 구성요소들
+    """
+    result = {
+        'title': "Tip for Longer Sentences",
+        'before_sentences': "Short sentences",
+        'after_sentence': "Combined sentence", 
+        'explanation': "Use connectives to sound more natural"
+    }
+    
+    try:
+        # 줄바꿈 처리
+        lines = tip_text.replace('\\n', '\n').split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            
+            if line.startswith('🎯') and 'Tip for Longer Sentences' in line:
+                # 제목 추출
+                result['title'] = "Tip for Longer Sentences"
+            
+            elif line.startswith('❌'):
+                # Before 문장들 추출
+                result['before_sentences'] = line.replace('❌ ', '').strip()
+            
+            elif line.startswith('✅'):
+                # After 문장 추출
+                result['after_sentence'] = line.replace('✅ ', '').strip()
+            
+            elif line.startswith('💡'):
+                # 설명 추출
+                result['explanation'] = line.replace('💡 ', '').strip()
+    
+    except Exception:
+        pass
+    
+    return result
+
+
+def display_sentence_connection_tip(feedback):
+    """
+    🔥 문장 연결 팁을 Speaking Flow 섹션에 표시
+    
+    Args:
+        feedback: 피드백 딕셔너리
+    """
+    sentence_tip = feedback.get('sentence_connection_tip', '')
+    
+    if not sentence_tip:
+        return
+    
+    # 문장 연결 팁 파싱
+    parsed = parse_sentence_connection_tip(sentence_tip)
+    
+    # 간단한 박스 형태로 표시
+    st.markdown(
+        f"""
+        <div style='
+            background-color: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        '>
+            <div style='font-weight: bold; color: #0369a1; margin-bottom: 8px; font-size: 15px;'>
+                🎯 {parsed['title']}
+            </div>
+            <div style='margin-bottom: 8px;'>
+                <span style='color: #ef4444; font-weight: bold;'>❌</span> 
+                <span style='color: #1f2937;'>{parsed['before_sentences']}</span>
+            </div>
+            <div style='margin-bottom: 8px;'>
+                <span style='color: #10b981; font-weight: bold;'>✅</span> 
+                <span style='color: #1f2937; font-weight: bold;'>{parsed['after_sentence']}</span>
+            </div>
+            <div style='color: #6b7280; font-size: 14px;'>
+                💡 {parsed['explanation']}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
 def display_vocabulary_tips_simplified(feedback):
     """
     어휘 팁을 간단한 텍스트 형태로 표시 (박스 제거, 텍스트 간소화)
@@ -571,6 +662,145 @@ def format_feedback_content(content):
     formatted = re.sub(r'(<br>\s*){3,}', '<br><br>', formatted)
     
     return formatted
+
+
+def format_detailed_feedback(content):
+    """
+    🔥 Detailed Feedback 전용 포맷팅 함수 (구조화된 박스 스타일)
+    
+    Args:
+        content: 원본 detailed feedback 텍스트
+        
+    Returns:
+        str: 구조화된 HTML 형태로 포맷팅된 내용
+    """
+    if not content:
+        return ""
+    
+    # 기본 줄바꿈 처리
+    formatted = content.replace('\\n', '\n')
+    
+    # 🌟, 🎯, 📝 섹션별로 분리
+    sections = {
+        'what_you_did_well': '',
+        'key_improvements': '',
+        'improved_examples': ''
+    }
+    
+    # 섹션 구분자로 텍스트 분리
+    current_section = None
+    lines = formatted.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # 섹션 헤더 감지
+        if '🌟' in line or 'What You Did Well' in line:
+            current_section = 'what_you_did_well'
+            # 헤더 제거하고 내용만 저장
+            content_part = line.split('🌟')[-1].split('What You Did Well:')[-1].strip()
+            if content_part:
+                sections[current_section] += content_part + '\n'
+        elif '🎯' in line or 'Key Improvements' in line:
+            current_section = 'key_improvements'
+            content_part = line.split('🎯')[-1].split('Key Improvements:')[-1].strip()
+            if content_part:
+                sections[current_section] += content_part + '\n'
+        elif '📝' in line or 'Improved Examples' in line:
+            current_section = 'improved_examples'
+            content_part = line.split('📝')[-1].split('Improved Examples:')[-1].strip()
+            if content_part:
+                sections[current_section] += content_part + '\n'
+        else:
+            # 현재 섹션에 내용 추가
+            if current_section:
+                sections[current_section] += line + '\n'
+    
+    # 섹션별로 HTML 구조화
+    html_parts = []
+    
+    # 🌟 What You Did Well 섹션
+    if sections['what_you_did_well'].strip():
+        well_content = format_bullet_points(sections['what_you_did_well'].strip())
+        html_parts.append(f"""
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; color: #059669; margin-bottom: 8px; font-size: 15px;">
+                🌟 What You Did Well:
+            </div>
+            <div style="color: #1f2937; line-height: 1.5;">
+                {well_content}
+            </div>
+        </div>
+        """)
+    
+    # 🎯 Key Improvements 섹션
+    if sections['key_improvements'].strip():
+        improvements_content = format_bullet_points(sections['key_improvements'].strip())
+        html_parts.append(f"""
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; color: #0369a1; margin-bottom: 8px; font-size: 15px;">
+                🎯 Key Improvements:
+            </div>
+            <div style="color: #1f2937; line-height: 1.5;">
+                {improvements_content}
+            </div>
+        </div>
+        """)
+    
+    # 📝 Improved Examples 섹션
+    if sections['improved_examples'].strip():
+        examples_content = format_bullet_points(sections['improved_examples'].strip())
+        html_parts.append(f"""
+        <div style="margin-bottom: 10px;">
+            <div style="font-weight: bold; color: #7c3aed; margin-bottom: 8px; font-size: 15px;">
+                📝 Improved Examples:
+            </div>
+            <div style="color: #1f2937; line-height: 1.5;">
+                {examples_content}
+            </div>
+        </div>
+        """)
+    
+    # 모든 섹션이 비어있으면 원본 텍스트 반환
+    if not any(sections.values()):
+        return format_bullet_points(formatted)
+    
+    return ''.join(html_parts)
+
+
+def format_bullet_points(text):
+    """
+    • 기호를 기준으로 리스트 형태로 포맷팅
+    
+    Args:
+        text: 원본 텍스트
+        
+    Returns:
+        str: 포맷팅된 HTML
+    """
+    if not text:
+        return ""
+    
+    # • 기호를 기준으로 분리
+    if '•' in text:
+        parts = text.split('•')
+        formatted_parts = []
+        
+        # 첫 번째 부분 (• 앞의 텍스트)
+        if parts[0].strip():
+            formatted_parts.append(parts[0].strip())
+        
+        # • 기호가 있는 부분들
+        for part in parts[1:]:
+            if part.strip():
+                formatted_parts.append(f"• {part.strip()}")
+        
+        return '<br>'.join(formatted_parts)
+    else:
+        # • 기호가 없으면 그대로 반환
+        return text.replace('\n', '<br>')
 
 
 def format_content_ideas(content):
