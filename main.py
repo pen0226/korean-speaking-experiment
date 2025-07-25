@@ -23,7 +23,8 @@ from utils import (
     create_styled_button,
     display_error_message, display_success_message, display_info_message,
     highlight_differences, format_content_ideas,
-    parse_grammar_issue, parse_vocabulary_suggestion, display_vocabulary_tips_simplified, display_grammar_tips_simplified
+    parse_grammar_issue, parse_vocabulary_suggestion, display_vocabulary_tips_simplified, display_grammar_tips_simplified,
+    display_sentence_connection_tip, format_detailed_feedback  # 🔥 새로 추가된 함수들
 )
 
 
@@ -244,6 +245,9 @@ def handle_feedback_step():
                 unsafe_allow_html=True
             )
             
+            # 🔥 새로 추가: 문장 연결 팁 표시
+            display_sentence_connection_tip(feedback)
+            
             # 모델 발음 표시 (중복 타이틀 제거됨)
             if st.session_state.model_audio:
                 display_model_audio(st.session_state.model_audio)
@@ -311,21 +315,10 @@ def handle_feedback_step():
                     st.markdown("#### 📋 Detailed Feedback")
                     st.markdown("*Interview preparation guidance from your Korean teacher:*")
                     
-                    # 줄바꿈 처리 개선 - 가독성 향상
+                    # 🔥 구조화된 피드백 포맷팅 적용
                     detailed_text = feedback['detailed_feedback']
-                    # • 기호를 기준으로 분리하여 리스트 형태로 표시
-                    if '•' in detailed_text:
-                        lines = detailed_text.split('•')
-                        # 첫 번째 부분 (격려 메시지)
-                        if lines[0].strip():
-                            st.markdown(lines[0].strip())
-                        # 나머지 팁들
-                        for line in lines[1:]:
-                            if line.strip():
-                                st.markdown(f"• {line.strip()}")
-                    else:
-                        # 백업: 일반 텍스트로 표시
-                        st.markdown(detailed_text.replace('\\n', '\n'))
+                    formatted_feedback = format_detailed_feedback(detailed_text)
+                    st.markdown(formatted_feedback, unsafe_allow_html=True)
             
             # 🔥 녹음 시간 정보 (1-2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
