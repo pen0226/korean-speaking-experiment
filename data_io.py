@@ -79,11 +79,32 @@ def build_session_data(timestamp):
     """
     세션 데이터 딕셔너리 구성 (자기효능감 필드 추가)
     
+    ===== CSV 데이터 구조 문서화 =====
+    이 함수는 실험 완료 후 저장되는 주요 CSV 파일의 모든 컬럼을 정의합니다.
+    파일명 형식: korean_session{N}_{session_id}_{timestamp}.csv
+    
+    📋 주요 데이터 카테고리:
+    1. 기본 식별 정보 (session_id, timestamp 등)
+    2. 배경 정보 및 사전 측정 (학습기간, 자신감, 자기효능감 6개 항목)
+    3. 실험 핵심 데이터 (질문, 1차/2차 전사, 음성 길이)
+    4. AI 피드백 분석 (JSON 원본 + 주요 필드 추출)
+    5. 연구용 정량 점수 (이중 평가 시스템: 정확성/유창성)
+    6. 개선도 평가 (1차→2차 변화 분석)
+    7. 동의서 및 윤리 정보 (GDPR 준수)
+    8. 데이터 품질 및 관리 (보관기간, 품질 라벨)
+    
+    📊 활용 목적:
+    - 피드백 시스템 효과성 분석 (1차→2차 개선도)
+    - 자기효능감과 학습 성과 상관관계 분석  
+    - 발화 길이 최적화 (목표: 60-120초)
+    - AI vs 전문가 채점 비교 연구
+    - 학습자 유형별 맞춤 피드백 개발
+    
     Args:
         timestamp: 타임스탬프
         
     Returns:
-        dict: 완성된 세션 데이터
+        dict: 완성된 세션 데이터 (CSV 저장용)
     """
     research_scores = getattr(st.session_state, 'research_scores', {})
     
@@ -102,104 +123,102 @@ def build_session_data(timestamp):
             research_scores[key] = default_value
 
     session_data = {
-        'session_id': st.session_state.session_id,
-        'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),
-        'session_label': getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1")),
-        'original_nickname': getattr(st.session_state, 'original_nickname', ''),
-        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        # ===== 1. 기본 식별 정보 =====
+        'session_id': st.session_state.session_id,  # 실험 세션 고유번호 (익명화된 ID)
+        'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),  # 세션 차수 (1 or 2)
+        'session_label': getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1")),  # 세션 라벨
+        'original_nickname': getattr(st.session_state, 'original_nickname', ''),  # 참여자가 입력한 원래 닉네임 (연구자 참조용)
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 실험 완료 시각
         
-        # 배경 정보
-        'learning_duration': getattr(st.session_state, 'learning_duration', ''),
-        'speaking_confidence': getattr(st.session_state, 'speaking_confidence', ''),
+        # ===== 2. 배경 정보 및 사전 측정 =====
+        'learning_duration': getattr(st.session_state, 'learning_duration', ''),  # 한국어 학습 기간 선택지
+        'speaking_confidence': getattr(st.session_state, 'speaking_confidence', ''),  # 말하기 자신감 5점 척도
         
-        # 자기효능감 점수 6개 추가
-        'self_efficacy_1': getattr(st.session_state, 'self_efficacy_1', ''),
-        'self_efficacy_2': getattr(st.session_state, 'self_efficacy_2', ''),
-        'self_efficacy_3': getattr(st.session_state, 'self_efficacy_3', ''),
-        'self_efficacy_4': getattr(st.session_state, 'self_efficacy_4', ''),
-        'self_efficacy_5': getattr(st.session_state, 'self_efficacy_5', ''),
-        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),
+        # 자기효능감 6개 항목 (각 1-5점 리커트 척도)
+        'self_efficacy_1': getattr(st.session_state, 'self_efficacy_1', ''),  # "I can use grammar accurately when speaking Korean"
+        'self_efficacy_2': getattr(st.session_state, 'self_efficacy_2', ''),  # "I can use appropriate words when speaking Korean"
+        'self_efficacy_3': getattr(st.session_state, 'self_efficacy_3', ''),  # "I can deliver what I want to say in Korean with confidence"
+        'self_efficacy_4': getattr(st.session_state, 'self_efficacy_4', ''),  # "I can express my ideas clearly in Korean"
+        'self_efficacy_5': getattr(st.session_state, 'self_efficacy_5', ''),  # "I can answer related questions well in Korean"
+        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),  # "I can improve my speaking on my own through feedback"
         
-        # 강화된 동의 추적 (HTML 파일로 수정)
-        'consent_given': getattr(st.session_state, 'consent_given', False),
-        'consent_timestamp': getattr(st.session_state, 'consent_timestamp', ''),
-        'consent_participation': getattr(st.session_state, 'consent_participation', False),
-        'consent_audio_ai': getattr(st.session_state, 'consent_audio_ai', False),
-        'consent_data_storage': getattr(st.session_state, 'consent_data_storage', False),
-        'consent_privacy_rights': getattr(st.session_state, 'consent_privacy_rights', False),
-        'consent_final_confirmation': getattr(st.session_state, 'consent_final_confirmation', False),
-        'consent_zoom_interview': getattr(st.session_state, 'consent_zoom_interview', False),
-        'gdpr_compliant': getattr(st.session_state, 'gdpr_compliant', False),
-        'consent_file_generated': getattr(st.session_state, 'consent_file', '') != '',
-        'consent_file_filename': getattr(st.session_state, 'consent_file', ''),
-        'consent_file_type': 'html',
+        # ===== 3. 동의서 및 윤리 정보 =====
+        'consent_given': getattr(st.session_state, 'consent_given', False),  # 동의서 작성 완료 여부
+        'consent_timestamp': getattr(st.session_state, 'consent_timestamp', ''),  # 동의서 작성 시각
+        'consent_participation': getattr(st.session_state, 'consent_participation', False),  # 연구 참여 동의
+        'consent_audio_ai': getattr(st.session_state, 'consent_audio_ai', False),  # 음성 AI 분석 동의
+        'consent_data_storage': getattr(st.session_state, 'consent_data_storage', False),  # 데이터 저장 동의
+        'consent_privacy_rights': getattr(st.session_state, 'consent_privacy_rights', False),  # 개인정보 권리 인지
+        'consent_final_confirmation': getattr(st.session_state, 'consent_final_confirmation', False),  # 최종 확인
+        'consent_zoom_interview': getattr(st.session_state, 'consent_zoom_interview', False),  # Zoom 인터뷰 동의
+        'gdpr_compliant': getattr(st.session_state, 'gdpr_compliant', False),  # GDPR 준수 여부
+        'consent_file_generated': getattr(st.session_state, 'consent_file', '') != '',  # 동의서 파일 생성 여부
+        'consent_file_filename': getattr(st.session_state, 'consent_file', ''),  # 동의서 파일명
+        'consent_file_type': 'html',  # 동의서 파일 형식 (HTML: 한국어 지원)
         
-        # 실험 데이터
-        'question': EXPERIMENT_QUESTION,
-        'transcription_1': st.session_state.transcription_1,
-        'transcription_2': st.session_state.transcription_2,
-        'gpt_feedback_json': json.dumps(st.session_state.feedback, ensure_ascii=False),
+        # ===== 4. 실험 핵심 데이터 =====
+        'question': EXPERIMENT_QUESTION,  # 실험에서 제시된 질문 (한국어)
+        'transcription_1': st.session_state.transcription_1,  # 첫 번째 녹음 STT 전사 결과
+        'transcription_2': st.session_state.transcription_2,  # 두 번째 녹음 STT 전사 결과 (피드백 적용 후)
+        'gpt_feedback_json': json.dumps(st.session_state.feedback, ensure_ascii=False),  # GPT가 생성한 전체 피드백 (JSON 원본)
         
-        # 연구용 점수 필드
-        'research_accuracy_score': research_scores.get('accuracy_score', 0.0),
-        'research_fluency_score': research_scores.get('fluency_score', 0.0),
-        'research_error_rate': research_scores.get('error_rate', 0.0),
-        'research_word_count': research_scores.get('word_count', 0),
-        'research_duration_s': research_scores.get('duration_s', 0.0),
-        'research_error_count': research_scores.get('error_count', 0),
-        'research_scores_json': json.dumps(research_scores, ensure_ascii=False),
+        # ===== 5. 연구용 정량 점수 (이중 평가 시스템) =====
+        # 논문용 객관적 점수 (오류율, 단어수 기반 자동 계산)
+        'research_accuracy_score': research_scores.get('accuracy_score', 0.0),  # 정확성 점수 (0-10점, 오류율 기반)
+        'research_fluency_score': research_scores.get('fluency_score', 0.0),  # 유창성 점수 (0-10점, 단어수 기반)
+        'research_error_rate': research_scores.get('error_rate', 0.0),  # 오류율 (%, 단어당 문법 오류)
+        'research_word_count': research_scores.get('word_count', 0),  # 총 단어 수
+        'research_duration_s': research_scores.get('duration_s', 0.0),  # 녹음 길이 (초)
+        'research_error_count': research_scores.get('error_count', 0),  # 실제 문법 오류 개수
+        'research_scores_json': json.dumps(research_scores, ensure_ascii=False),  # 연구용 점수 전체 (JSON)
         
-        # 데이터 품질 분석 필드
-        'audio_duration_1': getattr(st.session_state, 'audio_duration_1', 0.0),
-        'audio_duration_2': getattr(st.session_state, 'audio_duration_2', 0.0),
-        'audio_quality_check_1': get_audio_quality_label(getattr(st.session_state, 'audio_duration_1', 0)),
-        'audio_quality_check_2': get_audio_quality_label(getattr(st.session_state, 'audio_duration_2', 0)),
+        # ===== 6. 데이터 품질 분석 =====
+        'audio_duration_1': getattr(st.session_state, 'audio_duration_1', 0.0),  # 첫 번째 녹음 길이 (초)
+        'audio_duration_2': getattr(st.session_state, 'audio_duration_2', 0.0),  # 두 번째 녹음 길이 (초)
+        'audio_quality_check_1': get_audio_quality_label(getattr(st.session_state, 'audio_duration_1', 0)),  # 첫 번째 녹음 품질 라벨
+        'audio_quality_check_2': get_audio_quality_label(getattr(st.session_state, 'audio_duration_2', 0)),  # 두 번째 녹음 품질 라벨
         
-        # 개선도 평가 데이터
-        'improvement_score': getattr(st.session_state, 'improvement_assessment', {}).get('improvement_score', 0),
-        'improvement_reason': getattr(st.session_state, 'improvement_assessment', {}).get('improvement_reason', ''),
-        'first_attempt_score': getattr(st.session_state, 'improvement_assessment', {}).get('first_attempt_score', 0),
-        'second_attempt_score': getattr(st.session_state, 'improvement_assessment', {}).get('second_attempt_score', 0),
-        'score_difference': getattr(st.session_state, 'improvement_assessment', {}).get('score_difference', 0),
-        'feedback_application': getattr(st.session_state, 'improvement_assessment', {}).get('feedback_application', ''),
-        'specific_improvements': json.dumps(getattr(st.session_state, 'improvement_assessment', {}).get('specific_improvements', []), ensure_ascii=False),
-        'remaining_issues': json.dumps(getattr(st.session_state, 'improvement_assessment', {}).get('remaining_issues', []), ensure_ascii=False),
-        'overall_assessment': getattr(st.session_state, 'improvement_assessment', {}).get('overall_assessment', ''),
-        'improvement_assessment_json': json.dumps(getattr(st.session_state, 'improvement_assessment', {}), ensure_ascii=False),
+        # ===== 7. 개선도 평가 데이터 =====
+        'improvement_score': getattr(st.session_state, 'improvement_assessment', {}).get('improvement_score', 0),  # 1차→2차 개선도 점수 (1-10점)
+        'improvement_reason': getattr(st.session_state, 'improvement_assessment', {}).get('improvement_reason', ''),  # 개선도 평가 이유
+        'first_attempt_score': getattr(st.session_state, 'improvement_assessment', {}).get('first_attempt_score', 0),  # 1차 시도 평가 점수
+        'second_attempt_score': getattr(st.session_state, 'improvement_assessment', {}).get('second_attempt_score', 0),  # 2차 시도 평가 점수
+        'score_difference': getattr(st.session_state, 'improvement_assessment', {}).get('score_difference', 0),  # 점수 차이 (2차 - 1차)
+        'feedback_application': getattr(st.session_state, 'improvement_assessment', {}).get('feedback_application', ''),  # 피드백 적용도 ("excellent/good/partial/minimal")
+        'specific_improvements': json.dumps(getattr(st.session_state, 'improvement_assessment', {}).get('specific_improvements', []), ensure_ascii=False),  # 구체적 개선사항 목록
+        'remaining_issues': json.dumps(getattr(st.session_state, 'improvement_assessment', {}).get('remaining_issues', []), ensure_ascii=False),  # 남은 과제 목록
+        'overall_assessment': getattr(st.session_state, 'improvement_assessment', {}).get('overall_assessment', ''),  # 전체 평가 요약
+        'improvement_assessment_json': json.dumps(getattr(st.session_state, 'improvement_assessment', {}), ensure_ascii=False),  # 개선도 평가 전체 (JSON)
         
-        # 학생용 피드백 필드들
-        'suggested_model_sentence': st.session_state.feedback.get('suggested_model_sentence', ''),
-        'suggested_model_sentence_english': st.session_state.feedback.get('suggested_model_sentence_english', ''),
-        'fluency_comment': st.session_state.feedback.get('fluency_comment', ''),
-        'interview_readiness_score': st.session_state.feedback.get('interview_readiness_score', ''),
-        'interview_readiness_reason': st.session_state.feedback.get('interview_readiness_reason', ''),
-        'grammar_expression_tip': st.session_state.feedback.get('grammar_expression_tip', ''),
+        # ===== 8. 학생용 피드백 필드들 (UI 표시용) =====
+        'suggested_model_sentence': st.session_state.feedback.get('suggested_model_sentence', ''),  # AI가 제안한 모범 답안 (한국어)
+        'suggested_model_sentence_english': st.session_state.feedback.get('suggested_model_sentence_english', ''),  # 모범 답안 영어 번역
+        'fluency_comment': st.session_state.feedback.get('fluency_comment', ''),  # 유창성 코멘트
+        'interview_readiness_score': st.session_state.feedback.get('interview_readiness_score', ''),  # AI가 평가한 인터뷰 준비도 (1-10점)
+        'interview_readiness_reason': st.session_state.feedback.get('interview_readiness_reason', ''),  # 인터뷰 준비도 점수 이유
+        'grammar_expression_tip': st.session_state.feedback.get('grammar_expression_tip', ''),  # 고급 문법 패턴 제안
         
-        # STT 루브릭 기반 피드백 분석
-        'grammar_issues_count': len(st.session_state.feedback.get('grammar_issues', [])),
-        'vocabulary_suggestions_count': len(st.session_state.feedback.get('vocabulary_suggestions', [])),
-        'content_expansion_suggestions_count': len(st.session_state.feedback.get('content_expansion_suggestions', [])),
-        'content_expansion_suggestions_json': json.dumps(st.session_state.feedback.get('content_expansion_suggestions', []), ensure_ascii=False),
-        'grammar_issues_json': json.dumps(st.session_state.feedback.get('grammar_issues', []), ensure_ascii=False),
-        'vocabulary_suggestions_json': json.dumps(st.session_state.feedback.get('vocabulary_suggestions', []), ensure_ascii=False),
-        'highlight_targets_json': json.dumps(st.session_state.feedback.get('highlight_targets', {}), ensure_ascii=False),
+        # ===== 9. STT 루브릭 기반 피드백 분석 =====
+        'grammar_issues_count': len(st.session_state.feedback.get('grammar_issues', [])),  # 발견된 문법 오류 개수
+        'vocabulary_suggestions_count': len(st.session_state.feedback.get('vocabulary_suggestions', [])),  # 어휘 제안 개수
+        'content_expansion_suggestions_count': len(st.session_state.feedback.get('content_expansion_suggestions', [])),  # 내용 확장 제안 개수
+        'content_expansion_suggestions_json': json.dumps(st.session_state.feedback.get('content_expansion_suggestions', []), ensure_ascii=False),  # 내용 확장 제안 상세
+        'grammar_issues_json': json.dumps(st.session_state.feedback.get('grammar_issues', []), ensure_ascii=False),  # 문법 오류 상세 분석
+        'vocabulary_suggestions_json': json.dumps(st.session_state.feedback.get('vocabulary_suggestions', []), ensure_ascii=False),  # 어휘 제안 상세
+        'highlight_targets_json': json.dumps(st.session_state.feedback.get('highlight_targets', {}), ensure_ascii=False),  # 하이라이트 대상 분석
         
-        # 디버그 정보
-        'gpt_model_used': st.session_state.gpt_debug_info.get('model_used', ''),
-        'gpt_attempts': st.session_state.gpt_debug_info.get('attempts', 0),
-        'dual_evaluation_used': st.session_state.gpt_debug_info.get('dual_evaluation', False),
+        # ===== 10. 디버그 및 시스템 정보 =====
+        'gpt_model_used': st.session_state.gpt_debug_info.get('model_used', ''),  # 사용된 GPT 모델명
+        'gpt_attempts': st.session_state.gpt_debug_info.get('attempts', 0),  # GPT API 시도 횟수
+        'dual_evaluation_used': st.session_state.gpt_debug_info.get('dual_evaluation', False),  # 이중 평가 시스템 사용 여부
         
-        # 오디오 파일 정보
-        'audio_folder': f"{FOLDERS['audio_recordings']}/{getattr(st.session_state, 'session_number', CURRENT_SESSION)}_{st.session_state.session_id}_{timestamp}",
-        
-        # 데이터 관리 정보
-        'data_retention_until': (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d'),
-        'deletion_requested': False,
-        'last_updated': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        
-        # 저장 타이밍 정보
-        'saved_at_step': 'second_recording_complete',
-        'save_trigger': 'auto_after_second_recording'
+        # ===== 11. 파일 관리 정보 =====
+        'audio_folder': f"{FOLDERS['audio_recordings']}/{getattr(st.session_state, 'session_number', CURRENT_SESSION)}_{st.session_state.session_id}_{timestamp}",  # 음성 파일 저장 폴더
+        'data_retention_until': (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d'),  # 데이터 보관 만료일
+        'deletion_requested': False,  # 삭제 요청 여부
+        'last_updated': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 마지막 업데이트 시각
+        'saved_at_step': 'second_recording_complete',  # 저장 시점 단계
+        'save_trigger': 'auto_after_second_recording'  # 저장 트리거 방식
     }
     
     return session_data

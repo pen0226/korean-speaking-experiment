@@ -161,6 +161,48 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     """
     TOPIK 참고용 점수 저장 (홀리스틱 루브릭 적용 + 이유 컬럼 추가)
     
+    ===== EXCEL 데이터 구조 문서화 =====
+    이 함수는 TOPIK 기반 참고용 점수를 Excel 파일로 저장합니다.
+    파일명 형식: reference_scores_{timestamp}.xlsx
+    
+    📊 Excel 컬럼 구조:
+    
+    1. 기본 정보:
+       - session_id: 세션 고유번호 (CSV 파일과 연결 키)
+       - attempt: 시도 번호 (1=첫번째 녹음, 2=두번째 녹음)
+       - transcript: STT 전사 텍스트 (점수 산정 근거)
+       - duration_s: 녹음 길이 (초, 60초 미만은 점수 제한)
+       - timestamp: 점수 생성 시각
+    
+    2. TOPIK 3영역 홀리스틱 점수 (각 1-5점):
+       - topik_content_task_score_auto: 내용 및 과제 수행 점수
+         → 여름방학+한국계획 두 주제 모두 다뤘는지, 이유 설명했는지 평가
+       - topik_language_use_score_auto: 언어 사용 점수  
+         → 문법 정확성, 어휘 다양성, 자연스러운 표현 종합 평가
+       - topik_delivery_score(stt)_auto: 전달력 점수 (STT 기반)
+         → 발화 길이, 유창성, 완성도 종합 평가 (60초 미만은 최대 2점)
+    
+    3. 점수 산정 이유 (자동 생성):
+       - topik_content_task_reason: 내용 점수 이유 설명
+       - topik_language_use_reason: 언어 사용 점수 이유 설명  
+       - topik_delivery_reason: 전달력 점수 이유 설명
+    
+    4. 총점:
+       - topik_total_score_auto: 3영역 단순 합산 (3-15점)
+    
+    🎯 점수 기준 (홀리스틱 루브릭):
+    - 5점: 매우 우수 (면접 준비 완료 수준)
+    - 4점: 우수 (약간의 개선으로 면접 준비 가능)
+    - 3점: 보통 (기본 요구사항 충족, 추가 연습 필요)
+    - 2점: 미흡 (상당한 개선 필요)
+    - 1점: 매우 미흡 (기초부터 다시 연습 필요)
+    
+    📈 활용 목적:
+    - CSV의 AI 점수와 비교하여 자동채점 정확성 검증
+    - 전문가 채점 기준과 비교 연구
+    - 학습자 진단 및 레벨 평가 기준 개발
+    - 피드백 시스템 개선을 위한 벤치마크 점수
+    
     Args:
         session_id: 세션 ID
         attempt: 시도 번호 (1 or 2)
@@ -183,20 +225,27 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     # timestamp 기반 파일명
     filename = f"data/reference_scores_{timestamp}.xlsx"
     
-    # 새 데이터 (홀리스틱 루브릭 컬럼 + 이유 컬럼)
+    # 새 데이터 (홀리스틱 루브릭 컬럼 + 이유 컬럼 + 상세 주석)
     new_data = {
-        'session_id': session_id,
-        'attempt': attempt,
-        'transcript': transcript,
-        'duration_s': duration,
-        'topik_content_task_score_auto': content_task_score,
-        'topik_content_task_reason': content_task_reason,
-        'topik_language_use_score_auto': language_use_score,
-        'topik_language_use_reason': language_use_reason,
-        'topik_delivery_score(stt)_auto': delivery_score,
-        'topik_delivery_reason': delivery_reason,
-        'topik_total_score_auto': total_score,  # 3-15점 총합
-        'timestamp': timestamp
+        # === 기본 식별 정보 ===
+        'session_id': session_id,              # 세션 고유번호 (CSV와 연결)
+        'attempt': attempt,                    # 시도 번호 (1=피드백 전, 2=피드백 후)
+        'transcript': transcript,              # STT 전사 텍스트 (채점 근거)
+        'duration_s': duration,                # 녹음 길이 (초) - 60초 미만은 점수 제한
+        'timestamp': timestamp,                # 점수 생성 시각 (파일명과 동일)
+        
+        # === TOPIK 3영역 홀리스틱 점수 (각 1-5점) ===
+        'topik_content_task_score_auto': content_task_score,        # 내용 및 과제 수행 (여름방학+한국계획 주제 완성도)
+        'topik_language_use_score_auto': language_use_score,        # 언어 사용 (문법 정확성 + 어휘 다양성)  
+        'topik_delivery_score(stt)_auto': delivery_score,           # 전달력 (유창성 + 발화 길이, STT 기반)
+        
+        # === 점수 산정 이유 (자동 생성, 투명성 확보) ===
+        'topik_content_task_reason': content_task_reason,           # 내용 점수 근거 설명
+        'topik_language_use_reason': language_use_reason,           # 언어 사용 점수 근거 설명
+        'topik_delivery_reason': delivery_reason,                   # 전달력 점수 근거 설명
+        
+        # === 총점 (연구 분석용) ===
+        'topik_total_score_auto': total_score,                      # 3영역 단순 합산 (3-15점)
     }
     
     # 파일 있으면 기존 데이터에 추가, 없으면 새로 생성
