@@ -590,10 +590,123 @@ def generate_prompt(template, **kwargs):
     return template.format(**kwargs)
 
 
-# === 메인 피드백 함수들 (수정됨) ===
+# === 🔥 개선된 피드백 프롬프트 템플릿 ===
+IMPROVED_FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
+
+Student answered "{question}": {transcript}
+
+**IMPORTANT GUIDELINES:**
+1. Be encouraging and positive - these are beginners learning Korean
+2. Keep grammar explanations simple and beginner-friendly
+3. Always praise what they did well first
+4. Target level: {target_level}
+5. Allowed speech styles: {allowed_styles}
+6. Forbidden speech styles: {forbidden_styles}
+
+**⚠️⚠️ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE ⚠️⚠️**
+- **ABSOLUTELY DO NOT change all sentences into one style.** You MUST preserve the student's speech style for EACH sentence individually.
+- If a sentence uses 해요(해요, 이에요, 가요, 와요, 봐요, etc.), write that sentence in 해요-style.
+- If a sentence uses 합니다(합니다, 입니다, 갑니다, 옵니다, etc.), write that sentence in 합니다-style.
+- If the student mixes styles within their response, you MUST reflect that mix in the `suggested_model_sentence`.
+- **STRICTLY PROHIBITED:** Do NOT use 반말 or plain dictionary-style endings (e.g., "‑다"). ONLY use speech styles that are appropriate for an interview: either 합니다-style or 해요-style, following the student's usage.
+
+**🔥 ANALYSIS REQUIREMENTS:** 
+
+1. **Grammar Issues (3-6개, 다양한 유형 우선)**
+   - **우선순위 적용**: 의사소통에 가장 큰 영향을 주는 오류부터 선택
+   - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
+   - **포함할 유형들**:
+     * Particle (조사): 가장 명확한 1-2개만 (을/를, 은/는, 이/가, 에 등)
+     * Verb Tense (동사 시제): 과거/현재/미래 혼용 오류
+     * Verb Ending (동사 어미): 반말/존댓말, 불규칙 활용, 어미 선택
+     * Word Order (어순): 부자연스러운 어순
+     * Connectives (연결어): 부적절한 연결표현, 그리고 남용
+     * Others: 기타 문법 오류
+   
+   - **선택 기준**: 
+     1. 의사소통에 가장 큰 영향을 주는 오류
+     2. 초급자가 자주 틀리는 패턴
+     3. 쉽게 고칠 수 있는 오류
+     
+   - **MUST include "Original:" and "→ Fix:" format.**
+   - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
+   - **Target: Find 3-6 issues with TYPE DIVERSITY if they exist.**
+
+2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
+   - **학생이 실제로 사용한 표현의 개선에 초점**
+   - **포함할 내용**:
+     * 부자연스러운 표현 → 자연스러운 표현 (예: "많이 갔어요" → "여러 곳에 갔어요")
+     * 반복된 단어 → 다양한 표현 (예: "그리고" 남용 → 다양한 연결어)
+     * 더 정확한 어휘 선택 (맥락에 맞는 단어)
+     * vs 형식 유지하되 실용적 개선
+   
+   - **Format: "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both words in context]\\n📝 [key difference and usage rule]"**
+   - **Focus on student's actual expressions that could be more natural**
+   - **Target: Provide 2-3 practical improvements when possible.**
+
+3. **Content Expansion (2개, 구체적이고 실용적)**
+   - **학생이 언급한 주제를 기반으로 확장**
+   - **예시**: 학생이 "바다 갔어요"라고 했으면 → "바다에서 수영도 하고 조개껍데기도 주웠어요" 같은 구체적 확장
+   - Give two concrete, personal topics they can add based on what they mentioned.
+   - Each idea should help them speak at least 30 more seconds.
+   - Use examples they can directly copy.
+   - **CRITICAL: Topic names must be in ENGLISH, Korean sentences in Korean.**
+   
+4. **One Advanced Pattern (학생 답변 기반)**
+   - **학생이 사용한 패턴을 확장하는 방향**
+   - **예시**: 학생이 "~고 싶다" 많이 사용 → "~고 싶어서" 이유 표현 가르치기
+   - Provide one useful pattern for the placement interview.
+   - Must be appropriate for their level (TOPIK 1–2).
+   - Connect to what the student actually said.
+
+**GRAMMAR ERROR TYPES**
+- **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
+- **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
+- **Verb Tense**: Incorrect verb tense usage (past/present/future)
+- **Word Order**: Unnatural word order
+- **Connectives**: Inappropriate connecting expressions
+- **Others**: For grammar mistakes that do not fit the above categories
+
+**🔥 Performance Summary (구체적 맞춤형 피드백)**
+- **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained WHY you want to work in Korea")
+- **핵심 개선점**: 2-3개로 집중
+- **개선 예문**: 학생 답변을 기반으로 한 구체적 예문 제시
+- **길이 피드백**: 90초 목표 언급
+
+**Required JSON Structure:**
+{{
+    "suggested_model_sentence": "Natural, complete Korean sentence showing perfect answer",
+    "suggested_model_sentence_english": "English translation",
+    "grammar_issues": [
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
+    ],
+    "vocabulary_suggestions": [
+        "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both in context]\\n📝 [key difference]",
+        "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both in context]\\n📝 [key difference]"
+    ],
+    "content_expansion_suggestions": [
+        "💬 Topic: [English topic name]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'",
+        "💬 Topic: [English topic name]\\n📝 Example: '[Korean sentence they can use]'\\n   '[English translation]'"
+    ],
+    "grammar_expression_tip": "🚀 Try this: '[pattern]' = '[meaning]'\\n📝 Example: '[Korean example]'\\n💡 When to use: [simple explanation]",
+    "interview_readiness_score": [1-10],
+    "interview_readiness_reason": "Encouraging explanation of score with specific praise and improvements",
+    "detailed_feedback": "🌟 What You Did Well: [specific praise based on student's answer]\\n🎯 Key Improvements: [2-3 specific improvements]\\n📝 Improved Examples: [student-based example sentences]"
+}}
+
+**Scoring Guide:**
+- Score 8 to 10: Spoke 60s+, rich personal content, only minor errors
+- Score 6 to 7: Spoke 60s+, good content, some errors but understandable
+- Score 4 to 5: Spoke 60s+, basic content, several errors
+- Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
+
+
+# === 메인 피드백 함수들 (개선된 프롬프트 적용) ===
 def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     """
-    STT 기반 루브릭을 적용한 GPT 피드백 생성 (이중 평가 시스템 적용)
+    STT 기반 루브릭을 적용한 GPT 피드백 생성 (이중 평가 시스템 적용 + 개선된 프롬프트)
     
     Args:
         transcript: 전사된 텍스트
@@ -614,8 +727,8 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     if len(transcript) != len(processed_transcript):
         st.info(f"📝 Text processed: {len(transcript)} → {len(processed_transcript)} characters for better AI analysis")
     
-    # 🔥 duration 정보를 포함한 프롬프트 생성 + TOPIK 기준 점수 가이드 + 2인칭 톤 + detailed_feedback 추가
-    enhanced_prompt_template = FEEDBACK_PROMPT_TEMPLATE + f"""
+    # 🔥 개선된 프롬프트 템플릿 사용
+    enhanced_prompt_template = IMPROVED_FEEDBACK_PROMPT_TEMPLATE + f"""
 
 **STUDENT SPEAKING DURATION:** {duration:.1f} seconds
 
@@ -624,48 +737,6 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
 - Write feedback as if you're a warm Korean teacher talking directly to the student
 - Be encouraging and personal: "Great job! You spoke for..." instead of "The student spoke for..."
 - Use friendly, supportive language throughout all feedback sections
-
-**📋 DETAILED FEEDBACK INSTRUCTIONS:**
-You are a supportive Korean language teacher.
-You are helping a student who is preparing for a Korean language center speaking interview (TOPIK level 1~2).
-Look at the student's entire spoken answer (from STT) and also consider the grammar/vocabulary issues you identified.
-Give feedback as if you are their teacher, focusing on what will help them improve for the interview.
-
-Format your detailed feedback as follows:
-- Start with one short encouragement about what the student did well
-- Provide 2–3 practical interview tips with specific examples
-- Quote phrases from their actual answer and suggest improvements
-- Include simple Korean phrases they can directly use WITH English meanings in parentheses
-- Write in English but provide Korean phrases for practice
-
-Example output:
-📋 Detailed Feedback:
-- Great job using past tense like "배웠어요"! It's clear you're trying to use what you've learned.
-- You can expand your answer by adding why you started learning Korean. For example: "특히 한국 드라마가 재미있어서 관심이 생겼어요" (I became interested especially because Korean dramas are fun)
-- Instead of saying "좋아해요" many times, try "흥미가 있어요" (I'm interested) or "관심이 많아요" (I have a lot of interest) for variety.
-
-(Do not copy the example sentences directly; adapt them to the student's actual answer and issues identified.)
-
-**VOCABULARY SUGGESTIONS (vs format for educational comparison):**
-- Only suggest if you find word choice issues that need comparison
-- Format: "❓ **Word A vs Word B**\\n💡 Word A: [explanation]\\n💡 Word B: [explanation]\\n🟢 [examples showing both]\\n📝 [key difference]"
-- Focus on commonly confused pairs for beginners (공부하다 vs 배우다, 좋다 vs 좋아하다, etc.)
-- Emphasize when to use each word, not that one is "wrong"
-
-**ADVANCED PATTERN (1-2 suggestions max):**
-- Choose 1-2 most relevant patterns based on what student missed:
-  • Pattern 1: 'X하고 Y했어요' (if simple past experiences)
-  • Pattern 2: 'X고 싶어서 Y할 거예요' (if plans without reasons)  
-  • Pattern 3: 'X에는 Y했어요' (if no time expressions)
-- Only suggest patterns the student didn't use well
-
-**Scoring Guide (Based on TOPIK Speaking Standards):**
-- Score 8 to 10: Excellent task completion (summer vacation experiences + Korea plans with clear reasons), rich personal content, accurate and appropriate language use with some variety in expressions, usually 90+ seconds
-- Score 6 to 7: Good task completion (both topics covered, Korea plans with reasons), adequate personal content, mostly accurate language with minor errors, 60+ seconds
-- Score 4 to 5: Basic task completion (topics addressed but limited detail or missing reasons for Korea plans), some personal content, several language errors but communication remains clear, 60+ seconds
-- Score 2 to 3: Poor task completion (incomplete coverage of topics), very limited content, frequent language errors affecting communication, any duration
-- Score 1: Very poor task completion, minimal content, major communication breakdown, any duration
-**Duration Requirement:** Responses under 60 seconds cannot score above 5. Focus primarily on content quality and language accuracy for higher scores.
 
 **REMEMBER: Write ALL feedback sections using "You" and speak directly to the student with warmth and encouragement!**
 
