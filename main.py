@@ -310,7 +310,22 @@ def handle_feedback_step():
                 if feedback.get('detailed_feedback'):
                     st.markdown("#### 📋 Detailed Feedback")
                     st.markdown("*Interview preparation guidance from your Korean teacher:*")
-                    st.markdown(feedback['detailed_feedback'])
+                    
+                    # 줄바꿈 처리 개선 - 가독성 향상
+                    detailed_text = feedback['detailed_feedback']
+                    # • 기호를 기준으로 분리하여 리스트 형태로 표시
+                    if '•' in detailed_text:
+                        lines = detailed_text.split('•')
+                        # 첫 번째 부분 (격려 메시지)
+                        if lines[0].strip():
+                            st.markdown(lines[0].strip())
+                        # 나머지 팁들
+                        for line in lines[1:]:
+                            if line.strip():
+                                st.markdown(f"• {line.strip()}")
+                    else:
+                        # 백업: 일반 텍스트로 표시
+                        st.markdown(detailed_text.replace('\\n', '\n'))
             
             # 🔥 녹음 시간 정보 (1-2분 목표로 수정)
             duration = getattr(st.session_state, 'audio_duration_1', 0)
@@ -699,79 +714,113 @@ def display_improvement_metrics_personal(improvement):
     
 
 def display_improvement_details_personal(improvement):
-    """개선도 상세 정보 표시 (2인칭 톤으로 수정)"""
-    # 📈 Your Progress Analysis 섹션
-    st.markdown("#### 📈 Your Progress Analysis")
+    """개선도 상세 정보 표시 (구체적이고 실용적으로 개편)"""
     
-    # 🔥 3인칭을 2인칭으로 변경하여 따뜻하고 격려적인 톤으로 표시
+    # ✅ 핵심 요약 (한 줄로 간단히)
+    st.markdown("#### ✅ Key Feedback")
     analysis_text = improvement.get('improvement_reason', '')
     overall_assessment = improvement.get('overall_assessment', '')
     
-    # 3인칭 표현을 2인칭으로 변환
-    analysis_text = convert_to_second_person(analysis_text)
-    overall_assessment = convert_to_second_person(overall_assessment)
+    # 간단한 요약 생성
+    if analysis_text or overall_assessment:
+        summary = convert_to_actionable_summary(analysis_text, overall_assessment)
+        st.info(summary)
+    else:
+        st.info("Good effort! Focus on speaking longer with more specific details.")
     
-    # Analysis 표시 (더 따뜻한 톤으로)
-    if analysis_text:
-        st.markdown(
-            f"""
-            <div style='
-                background-color: #f0f9ff;
-                border: 2px solid #0ea5e9;
-                border-radius: 10px;
-                padding: 20px;
-                margin: 10px 0;
-            '>
-                <div style='color: #0c4a6e; font-weight: bold; margin-bottom: 10px;'>
-                    📋 Analysis: {analysis_text}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # 🔧 핵심 개선사항 (Top 3)
+    st.markdown("#### 🔧 Fix These 3 Things")
     
-    # Overall Summary 표시 (더 격려적인 톤으로)
-    if overall_assessment:
-        st.markdown(
-            f"""
-            <div style='
-                background-color: #f0fdf4;
-                border: 2px solid #22c55e;
-                border-radius: 10px;
-                padding: 20px;
-                margin: 10px 0;
-            '>
-                <div style='color: #166534; font-weight: bold; margin-bottom: 10px;'>
-                    🎯 Overall Summary: {overall_assessment}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # 구체적인 개선사항 생성
+    actionable_tips = generate_actionable_tips(improvement)
     
-    # Specific Improvements 표시
-    improvements = improvement.get('specific_improvements', [])
-    if improvements:
-        st.markdown("#### ✅ What You Improved")
-        for item in improvements[:3]:  # 최대 3개
-            # 2인칭으로 변환
-            item = convert_to_second_person(item)
-            st.markdown(f"• {item}")
+    for i, tip in enumerate(actionable_tips, 1):
+        st.markdown(f"**{i}. {tip['category']}** → {tip['description']}")
+        if tip.get('example'):
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;👉 **예:** {tip['example']}")
+        st.markdown("")  # 간격 추가
     
-    # Remaining Issues 표시 (격려적인 톤으로)
-    remaining = improvement.get('remaining_issues', [])
-    if remaining:
-        st.markdown("#### 🎯 Areas for Future Practice")
-        for item in remaining[:3]:  # 최대 3개
-            # 2인칭으로 변환하고 더 격려적으로
-            item = convert_to_second_person(item)
-            st.markdown(f"• {item}")
+    # 💡 Quick Tip
+    st.markdown("#### 💡 Quick Tip")
+    st.success("Practice these expressions before your next recording!")
+
+
+def convert_to_actionable_summary(analysis_text, overall_assessment):
+    """추상적 텍스트를 간단한 핵심 요약으로 변환"""
+    # 2인칭으로 변환
+    text = convert_to_second_person(analysis_text + " " + overall_assessment)
     
-    # Encouragement Message
-    encouragement = improvement.get('encouragement_message', '')
-    if encouragement:
-        encouragement = convert_to_second_person(encouragement)
-        st.success(f"💪 {encouragement}")
+    # 핵심 키워드 기반 요약 생성
+    if "longer" in text.lower() or "length" in text.lower():
+        if "grammar" in text.lower() or "error" in text.lower():
+            return "Good progress adding details! Next time, focus on grammar accuracy and topic clarity."
+        else:
+            return "Great job speaking longer! Next time, focus more on the specific question topics."
+    elif "grammar" in text.lower() or "error" in text.lower():
+        return "Good effort! Next time, focus on grammar accuracy and adding more details."
+    elif "topic" in text.lower() or "focus" in text.lower():
+        return "Good attempt! Next time, focus more on answering the specific topics in the question."
+    else:
+        return "Good progress! Keep practicing to improve clarity and add more specific details."
+
+
+def generate_actionable_tips(improvement):
+    """구체적이고 실용적인 개선 팁 3개 생성"""
+    tips = []
+    
+    # 기본 개선사항들에서 구체적 팁 추출
+    remaining_issues = improvement.get('remaining_issues', [])
+    specific_improvements = improvement.get('specific_improvements', [])
+    
+    # 1. Topic Focus (가장 중요)
+    if any("topic" in issue.lower() or "focus" in issue.lower() for issue in remaining_issues):
+        tips.append({
+            'category': 'Topic focus',
+            'description': 'Talk more about 여름 방학 activities and 한국에서 할 일',
+            'example': '"방학에 친구랑 부산에 여행 갔어요" / "한국에서 한국 회사에 취직하려고 해요"'
+        })
+    
+    # 2. Grammar (두 번째 중요)
+    if any("grammar" in issue.lower() for issue in remaining_issues):
+        tips.append({
+            'category': 'Grammar',
+            'description': 'Past tense: 갔어요, 했어요 / Future tense: 할 거예요, 가려고 해요',
+            'example': '"여름에 가족과 여행했어요" / "한국에서 한국어를 더 배우려고 해요"'
+        })
+    
+    # 3. Content Expansion (세 번째)
+    if any("detail" in issue.lower() or "content" in issue.lower() or "expand" in issue.lower() for issue in remaining_issues):
+        tips.append({
+            'category': 'Content expansion',
+            'description': 'Add 1-2 more sentences with specific details for each topic',
+            'example': '"부산에서 해운대도 갔어요. 가족과 함께 맛있는 음식도 먹었어요"'
+        })
+    
+    # 기본 팁들로 채우기 (3개 미만인 경우)
+    if len(tips) < 3:
+        default_tips = [
+            {
+                'category': 'Speaking length',
+                'description': 'Try to speak for at least 60-90 seconds total',
+                'example': 'Add more details about what you did and why you plan to do something'
+            },
+            {
+                'category': 'Connecting words',
+                'description': 'Use 그리고 (and), 그래서 (so), 그런데 (but) to connect ideas',
+                'example': '"여행 갔어요. 그리고 맛있는 음식도 먹었어요"'
+            },
+            {
+                'category': 'Clear reasons',
+                'description': 'Explain why for your Korea plans using 왜냐하면 or ~어서/아서',
+                'example': '"한국어를 배우고 싶어서 한국에 갈 거예요"'
+            }
+        ]
+        
+        for tip in default_tips:
+            if len(tips) < 3:
+                tips.append(tip)
+    
+    return tips[:3]  # 최대 3개만 반환
 
 
 def convert_to_second_person(text):

@@ -635,14 +635,14 @@ Format your detailed feedback as follows:
 - Start with one short encouragement about what the student did well
 - Provide 2–3 practical interview tips with specific examples
 - Quote phrases from their actual answer and suggest improvements
-- Include simple Korean phrases they can directly use
+- Include simple Korean phrases they can directly use WITH English meanings in parentheses
 - Write in English but provide Korean phrases for practice
 
 Example output:
 📋 Detailed Feedback:
 - Great job using past tense like "배웠어요"! It's clear you're trying to use what you've learned.
-- You can expand your answer by adding why you started learning Korean. For example: "특히 한국 드라마가 재미있어서 관심이 생겼어요."
-- Instead of saying "좋아해요" many times, try "흥미가 있어요" or "관심이 많아요" for variety.
+- You can expand your answer by adding why you started learning Korean. For example: "특히 한국 드라마가 재미있어서 관심이 생겼어요" (I became interested especially because Korean dramas are fun)
+- Instead of saying "좋아해요" many times, try "흥미가 있어요" (I'm interested) or "관심이 많아요" (I have a lot of interest) for variety.
 
 (Do not copy the example sentences directly; adapt them to the student's actual answer and issues identified.)
 
@@ -787,7 +787,7 @@ def validate_and_fix_feedback(feedback):
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
-        "detailed_feedback": "Great job attempting both topics! You can make your answer stronger by: • Adding specific details about your summer activities • Using more varied expressions like '즐거웠어요' instead of just '좋았어요' • Explaining your Korean study goals more clearly with phrases like '한국 문화를 이해하고 싶어서 공부해요'",
+        "detailed_feedback": "Great job attempting both topics! You can make your answer stronger by: • Adding specific details about your summer activities • Using more varied expressions like '즐거웠어요' (I had fun/it was enjoyable) instead of just '좋았어요' • Explaining your Korean study goals more clearly with phrases like '한국 문화를 이해하고 싶어서 공부해요' (I study because I want to understand Korean culture)",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
     
@@ -908,7 +908,7 @@ def get_fallback_feedback():
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
         "fluency_comment": "Keep practicing! Try to speak for at least 60+ seconds to build fluency.",
         "interview_readiness_score": 5,
-        "detailed_feedback": "Good effort attempting both topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do? • Practice connecting your ideas with phrases like '그리고' and '그래서' to sound more natural",
+        "detailed_feedback": "Good effort attempting both topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do? • Practice connecting your ideas with phrases like '그리고' (and) and '그래서' (so/therefore) to sound more natural",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
 
