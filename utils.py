@@ -320,51 +320,6 @@ def parse_sentence_connection_tip(tip_text):
     return result
 
 
-def display_sentence_connection_tip(feedback):
-    """
-    🔥 문장 연결 팁을 Speaking Flow 섹션에 표시
-    
-    Args:
-        feedback: 피드백 딕셔너리
-    """
-    sentence_tip = feedback.get('sentence_connection_tip', '')
-    
-    if not sentence_tip:
-        return
-    
-    # 문장 연결 팁 파싱
-    parsed = parse_sentence_connection_tip(sentence_tip)
-    
-    # 간단한 박스 형태로 표시
-    st.markdown(
-        f"""
-        <div style='
-            background-color: #f0f9ff;
-            border: 2px solid #0ea5e9;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-        '>
-            <div style='font-weight: bold; color: #0369a1; margin-bottom: 8px; font-size: 15px;'>
-                🎯 {parsed['title']}
-            </div>
-            <div style='margin-bottom: 8px;'>
-                <span style='color: #ef4444; font-weight: bold;'>❌</span> 
-                <span style='color: #1f2937;'>{parsed['before_sentences']}</span>
-            </div>
-            <div style='margin-bottom: 8px;'>
-                <span style='color: #10b981; font-weight: bold;'>✅</span> 
-                <span style='color: #1f2937; font-weight: bold;'>{parsed['after_sentence']}</span>
-            </div>
-            <div style='color: #6b7280; font-size: 14px;'>
-                💡 {parsed['explanation']}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
 def display_vocabulary_tips_simplified(feedback):
     """
     어휘 팁을 간단한 텍스트 형태로 표시 (박스 제거, 텍스트 간소화)

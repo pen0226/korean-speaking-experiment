@@ -24,7 +24,7 @@ from utils import (
     display_error_message, display_success_message, display_info_message,
     highlight_differences, format_content_ideas,
     parse_grammar_issue, parse_vocabulary_suggestion, display_vocabulary_tips_simplified, display_grammar_tips_simplified,
-    display_sentence_connection_tip, format_detailed_feedback  # 🔥 새로 추가된 함수들
+    format_detailed_feedback  # 🔥 새로 추가된 함수
 )
 
 
@@ -245,9 +245,6 @@ def handle_feedback_step():
                 unsafe_allow_html=True
             )
             
-            # 🔥 새로 추가: 문장 연결 팁 표시
-            display_sentence_connection_tip(feedback)
-            
             # 모델 발음 표시 (중복 타이틀 제거됨)
             if st.session_state.model_audio:
                 display_model_audio(st.session_state.model_audio)
@@ -309,6 +306,18 @@ def handle_feedback_step():
                 if feedback.get('fluency_comment'):
                     st.markdown("#### 🗣️ Speaking Flow")
                     st.write(feedback['fluency_comment'])
+                    
+                    # 🔥 간단한 텍스트 형태로 문장 연결 팁 표시
+                    sentence_tip = feedback.get('sentence_connection_tip', '')
+                    if sentence_tip:
+                        from utils import parse_sentence_connection_tip
+                        parsed_tip = parse_sentence_connection_tip(sentence_tip)
+                        
+                        st.markdown("")  # 간격 추가
+                        st.markdown("💡 **Quick Tip: Connect short sentences**")
+                        st.markdown(f"❌ {parsed_tip['before_sentences']}")
+                        st.markdown(f"✅ {parsed_tip['after_sentence']}")
+                        st.caption("💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural")
             
             with col2:
                 if feedback.get('detailed_feedback'):
