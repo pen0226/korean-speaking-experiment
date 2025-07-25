@@ -307,17 +307,21 @@ def handle_feedback_step():
                     st.markdown("#### 🗣️ Speaking Flow")
                     st.write(feedback['fluency_comment'])
                     
-                    # 🔥 간단한 텍스트 형태로 문장 연결 팁 표시
+                    # 🔥 옵션 3 스타일로 문장 연결 팁 표시 (HTML 통일)
                     sentence_tip = feedback.get('sentence_connection_tip', '')
                     if sentence_tip:
                         from utils import parse_sentence_connection_tip
                         parsed_tip = parse_sentence_connection_tip(sentence_tip)
                         
                         st.markdown("")  # 간격 추가
-                        st.markdown("💡 **Quick Tip: Connect short sentences**")
-                        st.markdown(f"❌ {parsed_tip['before_sentences']}")
-                        st.markdown(f"✅ {parsed_tip['after_sentence']}")
-                        st.caption("💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural")
+                        st.markdown(f"""
+                        <div style='font-size: 16px; line-height: 1.5; color: #1f2937; margin-top: 15px;'>
+                            🔗 <strong>Sentence Connection</strong><br>
+                            ❌ <strong>Before:</strong> {parsed_tip['before_sentences']}<br>
+                            ✅ <strong>After:</strong> {parsed_tip['after_sentence']}<br>
+                            <span style='color: #6b7280; font-size: 14px;'>💡 Use connectives like 그리고, 그래서, -고, -아서/어서</span>
+                        </div>
+                        """, unsafe_allow_html=True)
             
             with col2:
                 if feedback.get('detailed_feedback'):

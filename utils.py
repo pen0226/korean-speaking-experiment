@@ -684,7 +684,7 @@ def format_detailed_feedback(content):
             <div style="font-weight: bold; color: #059669; margin-bottom: 8px; font-size: 15px;">
                 🌟 What You Did Well:
             </div>
-            <div style="color: #1f2937; line-height: 1.5;">
+            <div style="color: #1f2937; line-height: 1.5; font-size: 16px;">
                 {well_content}
             </div>
         </div>
@@ -698,7 +698,7 @@ def format_detailed_feedback(content):
             <div style="font-weight: bold; color: #0369a1; margin-bottom: 8px; font-size: 15px;">
                 🎯 Key Improvements:
             </div>
-            <div style="color: #1f2937; line-height: 1.5;">
+            <div style="color: #1f2937; line-height: 1.5; font-size: 16px;">
                 {improvements_content}
             </div>
         </div>
@@ -712,15 +712,15 @@ def format_detailed_feedback(content):
             <div style="font-weight: bold; color: #7c3aed; margin-bottom: 8px; font-size: 15px;">
                 📝 Improved Examples:
             </div>
-            <div style="color: #1f2937; line-height: 1.5;">
+            <div style="color: #1f2937; line-height: 1.5; font-size: 16px;">
                 {examples_content}
             </div>
         </div>
         """)
     
-    # 모든 섹션이 비어있으면 원본 텍스트 반환
+    # 모든 섹션이 비어있으면 원본 텍스트 반환 (font-size 추가)
     if not any(sections.values()):
-        return format_bullet_points(formatted)
+        return f'<div style="color: #1f2937; line-height: 1.5; font-size: 16px;">{format_bullet_points(formatted)}</div>'
     
     return ''.join(html_parts)
 
