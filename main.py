@@ -29,14 +29,32 @@ from utils import (
 
 
 def scroll_to_top():
-    """페이지 전환 시 스크롤을 맨 위로 이동"""
+    """모바일 호환 페이지 스크롤 초기화"""
     st.markdown(
         """
         <script>
-        window.parent.document.querySelector('.main').scrollTo(0, 0);
-        setTimeout(() => {
-            window.parent.document.querySelector('.main').scrollTo(0, 0);
-        }, 100);
+        // 여러 방법으로 스크롤 시도
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        
+        // Streamlit 컨테이너들
+        const containers = ['.main', '.block-container', '[data-testid="stAppViewContainer"]'];
+        containers.forEach(selector => {
+            const element = document.querySelector(selector);
+            if (element) element.scrollTop = 0;
+        });
+        
+        // 상위 프레임에서도 시도 (iframe 환경 대응)
+        try {
+            window.parent.scrollTo(0, 0);
+            const parentContainers = window.parent.document.querySelectorAll('.main, .block-container');
+            parentContainers.forEach(element => {
+                if (element) element.scrollTop = 0;
+            });
+        } catch(e) {
+            // 크로스 오리진 오류 무시
+        }
         </script>
         """,
         unsafe_allow_html=True
