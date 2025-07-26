@@ -28,9 +28,6 @@ from utils import (
 )
 
 
-# 불필요한 add_page_anchor 함수 제거됨
-
-
 def scroll_to_top():
     """강화된 페이지 스크롤 초기화 (iPhone Safari 완벽 호환)"""
     st.markdown(
@@ -642,7 +639,10 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 6: Required Survey")
@@ -758,7 +758,10 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('completion')
     
     # 완료 축하 (간소화된 버전)
@@ -1075,24 +1078,6 @@ def main():
     elif current_step == 'second_recording':
         handle_second_recording_step()
     elif current_step == 'survey':
-        handle_survey_step()
-    elif current_step == 'completion':
-        handle_completion_step()
-    else:
-        display_error_message(f"Unknown step: {current_step}")
-        st.session_state.step = 'consent'
-        st.rerun()
-
-
-if __name__ == "__main__":
-    main()
-        handle_survey_step()
-    elif current_step == 'completion':
-        handle_completion_step()
-    else:
-        display_error_message(f"Unknown step: {current_step}")
-        st.session_state.step = 'consent'
-        st.rerun()elif current_step == 'survey':
         handle_survey_step()
     elif current_step == 'completion':
         handle_completion_step()
