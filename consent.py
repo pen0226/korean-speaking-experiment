@@ -1,6 +1,7 @@
 """
 consent.py
 연구 참여 동의서 처리 및 HTML 동의서 생성 모듈 (동의서와 배경정보 분리 버전)
+GCS 매핑 파일 동기화 기능 추가
 """
 
 import streamlit as st
@@ -285,9 +286,145 @@ def save_background_to_session(background_details):
             setattr(st.session_state, key, background_details[key])
 
 
+# ==================== GCS 매핑 파일 동기화 함수들 ====================
+
+def download_mapping_file_from_gcs():
+    """
+    GCS에서 최신 매핑 파일을 다운로드
+    
+    Returns:
+        tuple: (success, message)
+    """
+    try:
+        from config import GCS_ENABLED, GCS_BUCKET_NAME, GCS_SERVICE_ACCOUNT
+        
+        if not GCS_ENABLED:
+            return False, "GCS is disabled"
+        
+        if not GCS_SERVICE_ACCOUNT or not GCS_BUCKET_NAME:
+            return False, "GCS configuration missing"
+        
+        # GCS 클라이언트 초기화
+        from google.cloud import storage
+        import json
+        
+        try:
+            if isinstance(GCS_SERVICE_ACCOUNT, dict):
+                credentials_dict = dict(GCS_SERVICE_ACCOUNT)
+            elif isinstance(GCS_SERVICE_ACCOUNT, str):
+                credentials_dict = json.loads(GCS_SERVICE_ACCOUNT)
+            else:
+                return False, f"Invalid service account type: {type(GCS_SERVICE_ACCOUNT)}"
+        except Exception as e:
+            return False, f"Service account parsing error: {str(e)}"
+        
+        client = storage.Client.from_service_account_info(credentials_dict)
+        bucket = client.bucket(GCS_BUCKET_NAME)
+        
+        # nickname_mapping.csv 다운로드 시도
+        blob = bucket.blob("nickname_mapping.csv")
+        
+        if not blob.exists():
+            return False, "No mapping file found in GCS"
+        
+        # 로컬 파일 경로
+        local_mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
+        os.makedirs(FOLDERS["data"], exist_ok=True)
+        
+        # 다운로드
+        blob.download_to_filename(local_mapping_file)
+        
+        return True, f"Downloaded mapping file from GCS (size: {blob.size} bytes)"
+        
+    except ImportError:
+        return False, "google-cloud-storage library not installed"
+    except Exception as e:
+        return False, f"GCS download failed: {str(e)}"
+
+
+def upload_mapping_file_to_gcs():
+    """
+    로컬 매핑 파일을 GCS에 업로드
+    
+    Returns:
+        tuple: (success, message)
+    """
+    try:
+        from config import GCS_ENABLED, GCS_BUCKET_NAME, GCS_SERVICE_ACCOUNT
+        
+        if not GCS_ENABLED:
+            return False, "GCS is disabled"
+        
+        local_mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
+        if not os.path.exists(local_mapping_file):
+            return False, "No local mapping file to upload"
+        
+        # GCS 클라이언트 초기화
+        from google.cloud import storage
+        import json
+        
+        try:
+            if isinstance(GCS_SERVICE_ACCOUNT, dict):
+                credentials_dict = dict(GCS_SERVICE_ACCOUNT)
+            elif isinstance(GCS_SERVICE_ACCOUNT, str):
+                credentials_dict = json.loads(GCS_SERVICE_ACCOUNT)
+            else:
+                return False, f"Invalid service account type: {type(GCS_SERVICE_ACCOUNT)}"
+        except Exception as e:
+            return False, f"Service account parsing error: {str(e)}"
+        
+        client = storage.Client.from_service_account_info(credentials_dict)
+        bucket = client.bucket(GCS_BUCKET_NAME)
+        
+        # 업로드
+        blob = bucket.blob("nickname_mapping.csv")
+        blob.upload_from_filename(local_mapping_file)
+        
+        return True, f"Uploaded mapping file to GCS"
+        
+    except ImportError:
+        return False, "google-cloud-storage library not installed"
+    except Exception as e:
+        return False, f"GCS upload failed: {str(e)}"
+
+
+def merge_mapping_files(gcs_data, local_data):
+    """
+    GCS와 로컬 매핑 데이터를 병합 (충돌 해결)
+    
+    Args:
+        gcs_data: GCS에서 가져온 매핑 데이터 (리스트)
+        local_data: 로컬 매핑 데이터 (리스트)
+        
+    Returns:
+        list: 병합된 매핑 데이터
+    """
+    merged_data = {}
+    
+    # GCS 데이터 먼저 추가 (우선순위 높음)
+    for row in gcs_data:
+        nickname = row.get('Nickname', '').strip().lower()
+        if nickname:
+            merged_data[nickname] = row
+    
+    # 로컬 데이터 추가 (새로운 것만)
+    for row in local_data:
+        nickname = row.get('Nickname', '').strip().lower()
+        if nickname and nickname not in merged_data:
+            merged_data[nickname] = row
+        elif nickname in merged_data:
+            # 세션 카운트가 더 높은 것 사용
+            existing_count = int(merged_data[nickname].get('Session_Count', 0))
+            current_count = int(row.get('Session_Count', 0))
+            if current_count > existing_count:
+                merged_data[nickname] = row
+    
+    return list(merged_data.values())
+
+
 def find_or_create_anonymous_id(nickname):
     """
-    닉네임 기반으로 기존 익명 ID를 찾거나 새로 생성 (세션 간 매칭을 위함)
+    닉네임 기반으로 기존 익명 ID를 찾거나 새로 생성 (GCS 동기화 포함)
     
     Args:
         nickname: 사용자 닉네임
@@ -296,22 +433,41 @@ def find_or_create_anonymous_id(nickname):
         str: 기존 또는 새로 생성된 익명 ID
     """
     try:
+        # 디버깅용 로그
+        print(f"🔍 Finding ID for nickname: '{nickname}'")
+        
+        # 1. GCS에서 최신 매핑 파일 다운로드 시도
+        gcs_success, gcs_message = download_mapping_file_from_gcs()
+        if gcs_success:
+            print(f"✅ GCS download: {gcs_message}")
+        else:
+            print(f"⚠️ GCS download failed: {gcs_message}")
+        
+        # 2. 로컬 매핑 파일 확인
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
         
-        # 기존 매핑 파일에서 닉네임 검색
         if os.path.exists(mapping_file):
+            print(f"📁 Local mapping file found: {mapping_file}")
+            
             with open(mapping_file, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    if row.get('Nickname', '').strip().lower() == nickname.lower():
+                    stored_nickname = row.get('Nickname', '').strip()
+                    if stored_nickname.lower() == nickname.lower():
                         existing_id = row.get('Anonymous_ID', '').strip()
                         if existing_id:
+                            print(f"✅ Found existing ID: {existing_id} for nickname: {nickname}")
                             return existing_id
+        else:
+            print(f"❌ No local mapping file found: {mapping_file}")
         
-        # 기존 닉네임 없음 → 새 ID 생성
-        return generate_new_anonymous_id()
+        # 3. 기존 닉네임 없음 → 새 ID 생성
+        new_id = generate_new_anonymous_id()
+        print(f"🆕 Generated new ID: {new_id} for nickname: {nickname}")
+        return new_id
         
-    except Exception:
+    except Exception as e:
+        print(f"❌ Error in find_or_create_anonymous_id: {str(e)}")
         return f"Student{datetime.now().strftime('%m%d%H%M')}"
 
 
@@ -328,25 +484,29 @@ def generate_new_anonymous_id():
         
         if os.path.exists(mapping_file):
             with open(mapping_file, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-                for line in lines[1:]:  # 헤더 제외
-                    if line.strip() and line.startswith('Student'):
+                reader = csv.DictReader(f)
+                for row in reader:
+                    anonymous_id = row.get('Anonymous_ID', '').strip()
+                    if anonymous_id.startswith('Student'):
                         try:
-                            number = int(line.split(',')[0].replace('Student', ''))
+                            number = int(anonymous_id.replace('Student', ''))
                             last_number = max(last_number, number)
-                        except:
+                        except ValueError:
                             continue
         
         next_number = last_number + 1
-        return f"Student{next_number:02d}"
+        new_id = f"Student{next_number:02d}"
+        print(f"🔢 Generated sequential ID: {new_id} (last was: Student{last_number:02d})")
+        return new_id
         
-    except Exception:
+    except Exception as e:
+        print(f"❌ Error generating ID: {str(e)}")
         return f"Student{datetime.now().strftime('%m%d%H%M')}"
 
 
 def save_nickname_mapping(anonymous_id, nickname, consent_details=None, background_details=None):
     """
-    닉네임 매핑 정보를 CSV 파일에 저장 (자기효능감 점수 포함)
+    닉네임 매핑 정보를 CSV 파일에 저장 (자기효능감 점수 포함) + GCS 동기화
     
     Args:
         anonymous_id: 익명 ID
@@ -358,6 +518,8 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         bool: 저장 성공 여부
     """
     try:
+        print(f"💾 Saving mapping: {nickname} → {anonymous_id}")
+        
         os.makedirs(FOLDERS["data"], exist_ok=True)
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
         
@@ -411,6 +573,8 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         if existing_entry:
             # 기존 엔트리 업데이트
             session_count = int(existing_entry.get('Session_Count', 0)) + 1
+            print(f"📝 Updating existing entry: {nickname} (session #{session_count})")
+            
             with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
                 fieldnames = [
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
@@ -441,6 +605,8 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     writer.writerow(row)
         else:
             # 새 엔트리 추가
+            print(f"🆕 Creating new entry: {nickname} → {anonymous_id}")
+            
             with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
                 row_data = [
@@ -461,8 +627,17 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                 
                 writer.writerow(row_data)
         
+        # 🔥 GCS에 업로드 시도
+        upload_success, upload_message = upload_mapping_file_to_gcs()
+        if upload_success:
+            print(f"☁️ GCS upload: {upload_message}")
+        else:
+            print(f"⚠️ GCS upload failed: {upload_message}")
+        
         return True
-    except Exception:
+        
+    except Exception as e:
+        print(f"❌ Error saving mapping: {str(e)}")
         return False
 
 
@@ -841,11 +1016,11 @@ def handle_background_info_only():
 
 def _process_background_completion(background_details):
     """
-    배경 정보 완료 처리 (HTML 파일 저장)
+    배경 정보 완료 처리 (HTML 파일 저장) + GCS 동기화
     """
     nickname = background_details['nickname']
     
-    # 익명 ID 생성
+    # 🔥 GCS 동기화를 포함한 익명 ID 찾기/생성
     anonymous_id = find_or_create_anonymous_id(nickname)
     
     # 세션에서 저장된 동의 정보 가져오기
@@ -857,8 +1032,13 @@ def _process_background_completion(background_details):
         'consent_timestamp': getattr(st.session_state, 'consent_timestamp', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     }
     
-    # 매핑 정보 저장 (자기효능감 포함)
-    save_nickname_mapping(anonymous_id, nickname, consent_details, background_details)
+    # 🔥 GCS 동기화를 포함한 매핑 정보 저장 (자기효능감 포함)
+    mapping_saved = save_nickname_mapping(anonymous_id, nickname, consent_details, background_details)
+    if mapping_saved:
+        print(f"✅ Mapping saved successfully: {nickname} → {anonymous_id}")
+    else:
+        print(f"⚠️ Mapping save failed, but continuing...")
+    
     save_background_to_session(background_details)
     
     # HTML 동의서 생성

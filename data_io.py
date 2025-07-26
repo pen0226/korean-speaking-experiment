@@ -1,6 +1,7 @@
 """
 data_io.py
 실험 데이터 저장, 백업, 업로드 및 로그 관리 모듈 (TOPIK 엑셀 ZIP 포함 보장)
+GCS 매핑 파일 동기화 최적화 적용
 """
 
 import os
@@ -657,9 +658,56 @@ def upload_to_gcs(local_path, blob_name):
         return None, f"Upload failed: {str(e)}"
 
 
+def check_mapping_file_freshness():
+    """
+    매핑 파일의 최신 상태 확인 (consent.py에서 실시간 업로드했는지 체크)
+    
+    Returns:
+        tuple: (needs_upload, reason)
+    """
+    try:
+        # 현재 세션의 닉네임으로 최근 업데이트가 있었는지 확인
+        original_nickname = getattr(st.session_state, 'original_nickname', '')
+        if not original_nickname:
+            return False, "No nickname in current session"
+        
+        mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
+        if not os.path.exists(mapping_file):
+            return False, "No local mapping file found"
+        
+        # 현재 세션의 타임스탬프 확인
+        current_timestamp = datetime.now()
+        
+        with open(mapping_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row.get('Nickname', '').strip().lower() == original_nickname.lower():
+                    # 매핑 파일의 마지막 업데이트 시간 확인
+                    file_timestamp_str = row.get('Timestamp', '')
+                    if file_timestamp_str:
+                        try:
+                            file_timestamp = datetime.strptime(file_timestamp_str, '%Y-%m-%d %H:%M:%S')
+                            time_diff = (current_timestamp - file_timestamp).total_seconds()
+                            
+                            # 5분 이내에 업데이트되었다면 최신 상태로 간주
+                            if time_diff <= 300:  # 5분 = 300초
+                                return False, f"Recently updated {time_diff:.0f}s ago by consent.py"
+                            else:
+                                return True, f"Last updated {time_diff:.0f}s ago, needs refresh"
+                        except ValueError:
+                            return True, "Invalid timestamp format, needs refresh"
+                    break
+        
+        return True, "Nickname not found in mapping file, needs upload"
+        
+    except Exception as e:
+        return True, f"Error checking freshness: {str(e)}"
+
+
 def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, timestamp):
     """
-    ZIP 파일만 GCS에 자동 백업 (엑셀 개별 업로드 제거) + nickname_mapping.csv 백업
+    ZIP 파일만 GCS에 자동 백업 + 스마트한 nickname_mapping.csv 백업
+    (consent.py에서 실시간 업로드했다면 중복 업로드 방지)
     
     Args:
         csv_filename: CSV 파일 경로
@@ -698,23 +746,28 @@ def auto_backup_to_gcs(csv_filename, excel_filename, zip_filename, session_id, t
     else:
         errors.append("ZIP file not found for upload")
     
-    # 🔥 엑셀 파일 개별 업로드 제거됨 (ZIP에 포함되므로 불필요)
-    # 이제 엑셀 파일은 ZIP 안에서만 확인 가능
+    # 🔥 스마트한 nickname_mapping.csv 백업 (중복 방지)
+    needs_upload, reason = check_mapping_file_freshness()
     
-    # nickname_mapping.csv 백업
-    mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
-    if os.path.exists(mapping_file):
-        try:
-            mapping_blob_name = "nickname_mapping.csv"
-            blob_url, result_msg = upload_to_gcs(mapping_file, mapping_blob_name)
-            
-            if blob_url:
-                uploaded_files.append(mapping_blob_name)
-            else:
-                errors.append(f"Mapping file upload failed: {result_msg}")
+    if needs_upload:
+        mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
+        if os.path.exists(mapping_file):
+            try:
+                mapping_blob_name = "nickname_mapping.csv"
+                blob_url, result_msg = upload_to_gcs(mapping_file, mapping_blob_name)
                 
-        except Exception as e:
-            errors.append(f"Mapping file upload error: {str(e)}")
+                if blob_url:
+                    uploaded_files.append(mapping_blob_name)
+                    print(f"📝 Mapping file uploaded: {reason}")
+                else:
+                    errors.append(f"Mapping file upload failed: {result_msg}")
+                    
+            except Exception as e:
+                errors.append(f"Mapping file upload error: {str(e)}")
+        else:
+            print(f"📝 No local mapping file to upload")
+    else:
+        print(f"📝 Mapping file upload skipped: {reason}")
     
     return uploaded_files, errors
 
@@ -755,7 +808,7 @@ def test_gcs_connection():
 
 def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=False):
     """
-    GCS 업로드 결과를 로그 파일에 기록
+    GCS 업로드 결과를 로그 파일에 기록 (매핑 파일 동기화 정보 포함)
     
     Args:
         session_id: 세션 ID
@@ -788,6 +841,10 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
         # 자기효능감 평균 계산 (6개)
         efficacy_avg = calculate_self_efficacy_average()
         
+        # 🔥 매핑 파일 동기화 상태 확인
+        needs_upload, freshness_reason = check_mapping_file_freshness()
+        mapping_sync_status = "SKIPPED (consent.py already synced)" if not needs_upload else "UPLOADED (needed refresh)"
+        
         upload_status = "SUCCESS" if uploaded_files and not errors else "PARTIAL" if uploaded_files else "FAILED"
         
         log_entry = f"""
@@ -801,6 +858,7 @@ TOPIK Scores: 3-area reference scores included in ZIP
 GCS Enabled: {GCS_ENABLED} (Service Account method - ZIP-only backup)
 Bucket: {GCS_BUCKET_NAME}
 Files uploaded: {len(uploaded_files)} ({', '.join(uploaded_files) if uploaded_files else 'None'})
+Mapping file sync: {mapping_sync_status} ({freshness_reason})
 Errors: {len(errors)} ({'; '.join(errors) if errors else 'None'})
 Email notification: {'Sent' if email_sent else 'Not sent/Failed'}
 Data Safety: Secured before survey step
@@ -880,7 +938,7 @@ def display_download_buttons(csv_filename, excel_filename, zip_filename):
 
 def display_session_details():
     """
-    연구자용 세션 상세 정보 표시
+    연구자용 세션 상세 정보 표시 (매핑 파일 동기화 정보 포함)
     """
     st.markdown("**📋 Session Details:**")
     display_name = getattr(st.session_state, 'original_nickname', st.session_state.session_id)
@@ -936,6 +994,15 @@ def display_session_details():
     else:
         st.write("❌ TOPIK reference scores not found")
     
+    # 🔥 매핑 파일 동기화 상태 표시
+    st.markdown("**🔄 Mapping File Sync Status:**")
+    needs_upload, freshness_reason = check_mapping_file_freshness()
+    
+    if needs_upload:
+        st.warning(f"⚠️ Mapping file needs update: {freshness_reason}")
+    else:
+        st.success(f"✅ Mapping file is current: {freshness_reason}")
+    
     # GCS 연동 상태 표시
     st.markdown("**☁️ Google Cloud Storage Status:**")
     if GCS_ENABLED:
@@ -947,6 +1014,7 @@ def display_session_details():
             st.write(f"Self-efficacy: 6 items (1-5 scale) included")
             st.write(f"TOPIK scores: 3-area Excel inside ZIP")
             st.write(f"Save timing: Auto-save after 2nd recording")
+            st.write(f"Mapping sync: Smart upload (avoid duplicates from consent.py)")
         else:
             st.warning("⚠️ No bucket specified")
         
