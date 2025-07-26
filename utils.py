@@ -1,6 +1,6 @@
 """
 utils.py
-시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (2분 기준) - vs 방식 어휘 팁으로 업데이트
+시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (나이트 모드 최적화) - vs 방식 어휘 팁으로 업데이트
 """
 
 import streamlit as st
@@ -34,7 +34,7 @@ def convert_student_to_you(text):
 
 def highlight_differences_for_feedback(original, fixed):
     """
-    Detailed Feedback용 하이라이트 (색상 없이 검정색 기반)
+    Detailed Feedback용 하이라이트 (나이트 모드 최적화)
     
     Args:
         original: 원본 문장 (학생 답안)
@@ -42,8 +42,8 @@ def highlight_differences_for_feedback(original, fixed):
         
     Returns:
         tuple: (highlighted_original, highlighted_fixed)
-               - highlighted_original: 삭제된 부분에 빨간 밑줄 (검정색 글씨)
-               - highlighted_fixed: 추가/수정된 부분에 검정색 굵은 글씨
+               - highlighted_original: 삭제된 부분에 빨간 밑줄 (다크모드 대응)
+               - highlighted_fixed: 추가/수정된 부분에 굵은 글씨 (다크모드 대응)
     """
     if not original or not fixed:
         return original, fixed
@@ -64,19 +64,19 @@ def highlight_differences_for_feedback(original, fixed):
                 highlighted_original.append(original_segment)
                 highlighted_fixed.append(fixed_segment)
             elif tag == 'delete':
-                # 원본에서 삭제된 부분 - 검정색 글씨 + 빨간 물결무늬 밑줄
-                highlighted_original.append(f'<span style="color: #1f2937; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444;">{original_segment}</span>')
+                # 원본에서 삭제된 부분 - 다크모드 대응 빨간 물결무늬 밑줄
+                highlighted_original.append(f'<span style="color: inherit; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444; opacity: 0.9;">{original_segment}</span>')
                 # fixed에는 해당 부분이 없음
             elif tag == 'insert':
-                # fixed에 추가된 부분 - 검정색 굵은 글씨
-                highlighted_fixed.append(f'<strong style="color: #1f2937; font-weight: bold;">{fixed_segment}</strong>')
+                # fixed에 추가된 부분 - 다크모드 대응 굵은 글씨
+                highlighted_fixed.append(f'<strong style="color: inherit; font-weight: bold; opacity: 1;">{fixed_segment}</strong>')
                 # original에는 해당 부분이 없음
             elif tag == 'replace':
                 # 교체된 부분
-                # 원본: 검정색 글씨 + 빨간 물결무늬 밑줄
-                highlighted_original.append(f'<span style="color: #1f2937; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444;">{original_segment}</span>')
-                # 수정: 검정색 굵은 글씨
-                highlighted_fixed.append(f'<strong style="color: #1f2937; font-weight: bold;">{fixed_segment}</strong>')
+                # 원본: 다크모드 대응 빨간 물결무늬 밑줄
+                highlighted_original.append(f'<span style="color: inherit; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444; opacity: 0.9;">{original_segment}</span>')
+                # 수정: 다크모드 대응 굵은 글씨
+                highlighted_fixed.append(f'<strong style="color: inherit; font-weight: bold; opacity: 1;">{fixed_segment}</strong>')
         
         return ''.join(highlighted_original), ''.join(highlighted_fixed)
         
@@ -87,7 +87,7 @@ def highlight_differences_for_feedback(original, fixed):
 
 def highlight_differences(original, fixed):
     """
-    두 문장을 비교해서 다른 부분을 하이라이트 (개선 버전)
+    두 문장을 비교해서 다른 부분을 하이라이트 (나이트 모드 최적화)
     
     Args:
         original: 원본 문장 (학생 답안)
@@ -95,8 +95,8 @@ def highlight_differences(original, fixed):
         
     Returns:
         tuple: (highlighted_original, highlighted_fixed)
-               - highlighted_original: 삭제된 부분에 빨간 물결무늬 밑줄 (검정색 글씨)
-               - highlighted_fixed: 추가/수정된 부분에 검정색 굵은 글씨
+               - highlighted_original: 삭제된 부분에 빨간 물결무늬 밑줄 (다크모드 대응)
+               - highlighted_fixed: 추가/수정된 부분에 굵은 글씨 (다크모드 대응)
     """
     if not original or not fixed:
         return original, fixed
@@ -117,19 +117,19 @@ def highlight_differences(original, fixed):
                 highlighted_original.append(original_segment)
                 highlighted_fixed.append(fixed_segment)
             elif tag == 'delete':
-                # 원본에서 삭제된 부분 - 검정색 글씨 + 빨간 물결무늬 밑줄
-                highlighted_original.append(f'<span style="color: #1f2937; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444;">{original_segment}</span>')
+                # 원본에서 삭제된 부분 - 다크모드 대응 빨간 물결무늬 밑줄
+                highlighted_original.append(f'<span style="color: inherit; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444; opacity: 0.9;">{original_segment}</span>')
                 # fixed에는 해당 부분이 없음
             elif tag == 'insert':
-                # fixed에 추가된 부분 - 검정색 굵은 글씨
-                highlighted_fixed.append(f'<strong style="color: #1f2937; font-weight: bold;">{fixed_segment}</strong>')
+                # fixed에 추가된 부분 - 다크모드 대응 굵은 글씨
+                highlighted_fixed.append(f'<strong style="color: inherit; font-weight: bold; opacity: 1;">{fixed_segment}</strong>')
                 # original에는 해당 부분이 없음
             elif tag == 'replace':
                 # 교체된 부분
-                # 원본: 검정색 글씨 + 빨간 물결무늬 밑줄
-                highlighted_original.append(f'<span style="color: #1f2937; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444;">{original_segment}</span>')
-                # 수정: 검정색 굵은 글씨
-                highlighted_fixed.append(f'<strong style="color: #1f2937; font-weight: bold;">{fixed_segment}</strong>')
+                # 원본: 다크모드 대응 빨간 물결무늬 밑줄
+                highlighted_original.append(f'<span style="color: inherit; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: #ef4444; opacity: 0.9;">{original_segment}</span>')
+                # 수정: 다크모드 대응 굵은 글씨
+                highlighted_fixed.append(f'<strong style="color: inherit; font-weight: bold; opacity: 1;">{fixed_segment}</strong>')
         
         return ''.join(highlighted_original), ''.join(highlighted_fixed)
         
@@ -353,27 +353,34 @@ def display_vocabulary_tips_simplified(feedback):
 
 def show_progress_indicator(current_step):
     """
-    현재 단계를 표시하는 진행 상황 인디케이터 (completion 단계 수정)
+    현재 단계를 표시하는 진행 상황 인디케이터 (나이트 모드 최적화)
     
     Args:
         current_step: 현재 단계 키
     """
     current_info = EXPERIMENT_STEPS.get(current_step, ('Step ?', 'Unknown'))
     
-    # 🔥 completion 단계 특별 처리
+    # 🔥 completion 단계 특별 처리 (나이트 모드 최적화)
     if current_step == 'completion':
         st.markdown(
             f"""
-            <div style='margin-bottom: 20px; padding: 15px; background-color: {UI_COLORS['background']}; border-radius: 10px; border-left: 4px solid {UI_COLORS['success']};'>
+            <div style='
+                margin-bottom: 20px; 
+                padding: 15px; 
+                background: rgba(34, 197, 94, 0.1); 
+                border-radius: 10px; 
+                border-left: 4px solid #22c55e;
+                color: inherit;
+            '>
                 <div style='display: flex; justify-content: space-between; align-items: center;'>
                     <div>
-                        <strong style='color: {UI_COLORS['success']}; font-size: 16px;'>{current_info[0]}: {current_info[1]}</strong>
+                        <strong style='color: #22c55e; font-size: 16px;'>{current_info[0]}: {current_info[1]}</strong>
                     </div>
-                    <div style='color: #64748b; font-size: 14px;'>
+                    <div style='color: inherit; opacity: 0.7; font-size: 14px;'>
                         Progress: Complete ✅
                     </div>
                 </div>
-                <div style='margin-top: 10px; background-color: {UI_COLORS['success']}; height: 6px; border-radius: 3px; width: 100%;'>
+                <div style='margin-top: 10px; background-color: #22c55e; height: 6px; border-radius: 3px; width: 100%;'>
                 </div>
             </div>
             """,
@@ -381,7 +388,7 @@ def show_progress_indicator(current_step):
         )
         return
     
-    # 일반 단계 처리 (Step 1-6)
+    # 일반 단계 처리 (나이트 모드 최적화)
     try:
         step_num = int(current_info[0].split()[1])
     except:
@@ -391,17 +398,24 @@ def show_progress_indicator(current_step):
     
     st.markdown(
         f"""
-        <div style='margin-bottom: 20px; padding: 15px; background-color: {UI_COLORS['background']}; border-radius: 10px; border-left: 4px solid {UI_COLORS['primary']};'>
+        <div style='
+            margin-bottom: 20px; 
+            padding: 15px; 
+            background: rgba(59, 130, 246, 0.1); 
+            border-radius: 10px; 
+            border-left: 4px solid #3b82f6;
+            color: inherit;
+        '>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
-                    <strong style='color: {UI_COLORS['primary']}; font-size: 16px;'>{current_info[0]} of 6: {current_info[1]}</strong>
+                    <strong style='color: #3b82f6; font-size: 16px;'>{current_info[0]} of 6: {current_info[1]}</strong>
                 </div>
-                <div style='color: #64748b; font-size: 14px;'>
+                <div style='color: inherit; opacity: 0.7; font-size: 14px;'>
                     Progress: {step_num}/6
                 </div>
             </div>
-            <div style='margin-top: 10px; background-color: #e2e8f0; height: 6px; border-radius: 3px;'>
-                <div style='background-color: {UI_COLORS['primary']}; height: 6px; border-radius: 3px; width: {progress_percentage}%;'></div>
+            <div style='margin-top: 10px; background: rgba(255, 255, 255, 0.2); height: 6px; border-radius: 3px;'>
+                <div style='background-color: #3b82f6; height: 6px; border-radius: 3px; width: {progress_percentage}%;'></div>
             </div>
         </div>
         """,
@@ -411,7 +425,7 @@ def show_progress_indicator(current_step):
 
 def display_question(step_context=""):
     """
-    통일된 질문 표시 함수
+    통일된 질문 표시 함수 (나이트 모드 최적화)
     
     Args:
         step_context: 단계 맥락 설명
@@ -420,8 +434,16 @@ def display_question(step_context=""):
         st.markdown(f"#### {step_context}")
     
     st.markdown(
-        f"""<div style='padding: 20px; background-color: {UI_COLORS['background']}; border: 1px solid {UI_COLORS['border']}; border-radius: 8px; margin: 15px 0; text-align: center;'>
-        <h3 style='color: #1e293b; margin: 0; font-size: 20px;'>{EXPERIMENT_QUESTION}</h3>
+        f"""<div style='
+            padding: 20px; 
+            background: rgba(0, 0, 0, 0.05); 
+            border: 1px solid rgba(128, 128, 128, 0.3); 
+            border-radius: 8px; 
+            margin: 15px 0; 
+            text-align: center;
+            color: inherit;
+        '>
+        <h3 style='color: inherit; margin: 0; font-size: 20px; opacity: 0.9;'>{EXPERIMENT_QUESTION}</h3>
         </div>""",
         unsafe_allow_html=True
     )
@@ -474,7 +496,7 @@ def record_audio(key, label):
 
 def display_transcription_with_highlights(transcription, feedback, title="What You Said", audio_data=None):
     """
-    전사 텍스트를 하이라이트와 함께 표시 (음성 재생 포함)
+    전사 텍스트를 하이라이트와 함께 표시 (나이트 모드 최적화)
     
     Args:
         transcription: 전사된 텍스트
@@ -499,7 +521,7 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
             st.audio(audio_data['bytes'])
         st.markdown("")  # 오디오 플레이어 아래쪽 여백
     
-    # 하이라이트된 학생 답안 표시
+    # 하이라이트된 학생 답안 표시 (나이트 모드 최적화)
     st.markdown("**💬 Your Answer**")
     
     # 모델 문장과 비교해서 하이라이트 생성
@@ -510,13 +532,14 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
         st.markdown(
             f"""
             <div style='
-                background-color: #fef2f2;
+                background: rgba(252, 165, 165, 0.15);
                 border: 2px solid #fca5a5;
                 border-radius: 8px;
                 padding: 20px;
                 margin: 3px 0 15px 0;
+                color: inherit;
             '>
-                <div style='font-size: 16px; line-height: 1.6; color: #1f2937;'>
+                <div style='font-size: 16px; line-height: 1.6; color: inherit;'>
                     {highlighted_student}
                 </div>
             </div>
@@ -524,10 +547,17 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
             unsafe_allow_html=True
         )
     else:
-        # 피드백이 없는 경우 기본 표시
+        # 피드백이 없는 경우 기본 표시 (나이트 모드 최적화)
         st.markdown(
-            f"""<div style='padding: 20px; border: 1px solid {UI_COLORS['border']}; border-radius: 8px; background-color: #ffffff; margin: 15px 0;'>
-            <div style='font-size: 18px; line-height: 1.8; color: #1f2937;'>
+            f"""<div style='
+                padding: 20px; 
+                border: 1px solid rgba(128, 128, 128, 0.3); 
+                border-radius: 8px; 
+                background: rgba(0, 0, 0, 0.05); 
+                margin: 15px 0;
+                color: inherit;
+            '>
+            <div style='font-size: 18px; line-height: 1.8; color: inherit;'>
             {transcription}
             </div>
             </div>""",
@@ -537,7 +567,7 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
 
 def display_model_sentence_with_highlights(model_sentence, feedback, title="Suggested Model Sentence"):
     """
-    모델 문장을 하나의 박스에 한국어와 영어를 함께 표시
+    모델 문장을 하나의 박스에 한국어와 영어를 함께 표시 (나이트 모드 최적화)
     
     Args:
         model_sentence: 모델 문장
@@ -550,26 +580,40 @@ def display_model_sentence_with_highlights(model_sentence, feedback, title="Sugg
     # 영어 번역 가져오기
     english_translation = feedback.get('suggested_model_sentence_english', '')
     
-    # 하나의 통합된 박스에 한국어와 영어 모두 표시
+    # 하나의 통합된 박스에 한국어와 영어 모두 표시 (나이트 모드 최적화)
     with st.container():
         if english_translation:
-            # 한국어와 영어를 하나의 박스에 통합
+            # 한국어와 영어를 하나의 박스에 통합 (나이트 모드 최적화)
             st.markdown(
-                f"""<div style='padding: 20px; border: 2px solid #10b981; border-radius: 8px; background-color: #ecfdf5; margin: 15px 0;'>
-                <div style='font-size: 18px; line-height: 1.6; color: #111827; margin-bottom: 12px;'>
+                f"""<div style='
+                    padding: 20px; 
+                    border: 2px solid #10b981; 
+                    border-radius: 8px; 
+                    background: rgba(16, 185, 129, 0.1); 
+                    margin: 15px 0;
+                    color: inherit;
+                '>
+                <div style='font-size: 18px; line-height: 1.6; color: inherit; margin-bottom: 12px;'>
                 {model_sentence}
                 </div>
-                <div style='font-size: 14px; color: #065f46; font-style: italic; padding-top: 8px; border-top: 1px solid #10b981;'>
+                <div style='font-size: 14px; color: #10b981; font-style: italic; padding-top: 8px; border-top: 1px solid #10b981;'>
                 "{english_translation}"
                 </div>
                 </div>""",
                 unsafe_allow_html=True
             )
         else:
-            # 영어 번역이 없으면 한국어만 표시
+            # 영어 번역이 없으면 한국어만 표시 (나이트 모드 최적화)
             st.markdown(
-                f"""<div style='padding: 20px; border: 2px solid #10b981; border-radius: 8px; background-color: #ecfdf5; margin: 15px 0;'>
-                <div style='font-size: 18px; line-height: 1.6; color: #111827; margin-bottom: 0;'>
+                f"""<div style='
+                    padding: 20px; 
+                    border: 2px solid #10b981; 
+                    border-radius: 8px; 
+                    background: rgba(16, 185, 129, 0.1); 
+                    margin: 15px 0;
+                    color: inherit;
+                '>
+                <div style='font-size: 18px; line-height: 1.6; color: inherit; margin-bottom: 0;'>
                 {model_sentence}
                 </div>
                 </div>""",
@@ -610,8 +654,8 @@ def format_feedback_content(content):
     formatted = formatted.replace('💭', '<span style="color: #ec4899;">💭</span>')
     formatted = formatted.replace('🚀', '<span style="color: #3b82f6;">🚀</span>')
     
-    # **굵은 글씨** 처리
-    formatted = re.sub(r'\*\*(.*?)\*\*', r'<strong style="color: #1f2937;">\1</strong>', formatted)
+    # **굵은 글씨** 처리 (나이트 모드 최적화)
+    formatted = re.sub(r'\*\*(.*?)\*\*', r'<strong style="color: inherit; font-weight: bold;">\1</strong>', formatted)
     
     # 중복 줄바꿈 정리
     formatted = re.sub(r'(<br>\s*){3,}', '<br><br>', formatted)
@@ -621,7 +665,7 @@ def format_feedback_content(content):
 
 def format_detailed_feedback(content):
     """
-    🔥 Detailed Feedback 전용 포맷팅 함수 (구조화된 박스 스타일)
+    🔥 Detailed Feedback 전용 포맷팅 함수 (구조화된 박스 스타일, 나이트 모드 최적화)
     
     Args:
         content: 원본 detailed feedback 텍스트
@@ -666,7 +710,7 @@ def format_detailed_feedback(content):
             if current_section:
                 sections[current_section] += line + '\n'
     
-    # 섹션별로 HTML 구조화
+    # 섹션별로 HTML 구조화 (나이트 모드 최적화)
     html_parts = []
     
     # 🌟 What You Did Well 섹션
@@ -677,7 +721,7 @@ def format_detailed_feedback(content):
             <div style="font-weight: bold; color: #059669; margin-bottom: 8px; font-size: 15px;">
                 🌟 What You Did Well:
             </div>
-            <div style="color: #1f2937; line-height: 1.5; font-size: 16px;">
+            <div style="color: inherit; line-height: 1.5; font-size: 16px;">
                 {well_content}
             </div>
         </div>
@@ -691,7 +735,7 @@ def format_detailed_feedback(content):
             <div style="font-weight: bold; color: #0369a1; margin-bottom: 8px; font-size: 15px;">
                 🎯 Key Improvements:
             </div>
-            <div style="color: #1f2937; line-height: 1.5; font-size: 16px;">
+            <div style="color: inherit; line-height: 1.5; font-size: 16px;">
                 {improvements_content}
             </div>
         </div>
@@ -705,15 +749,15 @@ def format_detailed_feedback(content):
             <div style="font-weight: bold; color: #7c3aed; margin-bottom: 8px; font-size: 15px;">
                 📝 Improved Examples:
             </div>
-            <div style="color: #1f2937; line-height: 1.5; font-size: 16px;">
+            <div style="color: inherit; line-height: 1.5; font-size: 16px;">
                 {examples_content}
             </div>
         </div>
         """)
     
-    # 모든 섹션이 비어있으면 원본 텍스트 반환 (font-size 추가)
+    # 모든 섹션이 비어있으면 원본 텍스트 반환 (나이트 모드 최적화)
     if not any(sections.values()):
-        return f'<div style="color: #1f2937; line-height: 1.5; font-size: 16px;">{format_bullet_points(formatted)}</div>'
+        return f'<div style="color: inherit; line-height: 1.5; font-size: 16px;">{format_bullet_points(formatted)}</div>'
     
     return ''.join(html_parts)
 
@@ -753,7 +797,7 @@ def format_bullet_points(text):
 
 def format_content_ideas(content):
     """
-    Content Ideas와 Advanced Grammar Pattern의 줄바꿈 처리 개선 (새로운 포맷 적용)
+    Content Ideas와 Advanced Grammar Pattern의 줄바꿈 처리 개선 (새로운 포맷 적용, 나이트 모드 최적화)
     
     Args:
         content: 원본 content 텍스트
@@ -780,7 +824,7 @@ def format_content_ideas(content):
         korean_example = match.group(2).strip()
         english_translation = match.group(3).strip()
         
-        return f'💬 **{topic}**<br>📝 {korean_example}<br><span style="margin-left:20px; color:#6b7280; font-style:italic;">*\'{english_translation}\'*</span>'
+        return f'💬 **{topic}**<br>📝 {korean_example}<br><span style="margin-left:20px; color: inherit; opacity: 0.7; font-style:italic;">*\'{english_translation}\'*</span>'
     
     formatted = re.sub(content_pattern, replace_content_format, formatted)
     
@@ -807,10 +851,10 @@ def format_content_ideas(content):
     formatted = re.sub(advanced_pattern2, replace_advanced_format, formatted)
     
     # === 기존 포맷 처리 (fallback) ===
-    # 영어 번역 줄: '…' 만 골라 들여쓰기 + 이탤릭 처리 (기존 코드 유지)
+    # 영어 번역 줄: '…' 만 골라 들여쓰기 + 이탤릭 처리 (나이트 모드 최적화)
     formatted = re.sub(
         r"<br>\s*'(.*?)'",
-        r"<br><span style='margin-left:20px; color:#6b7280; font-style:italic;'>'\g<1>'</span>",
+        r"<br><span style='margin-left:20px; color: inherit; opacity: 0.7; font-style:italic;'>'\g<1>'</span>",
         formatted
     )
     

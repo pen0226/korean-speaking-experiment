@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (참고용 TOPIK 점수 통합)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (나이트 모드 최적화)
 """
 
 import streamlit as st
@@ -28,6 +28,21 @@ from utils import (
 )
 
 
+def scroll_to_top():
+    """페이지 전환 시 스크롤을 맨 위로 이동"""
+    st.markdown(
+        """
+        <script>
+        window.parent.document.querySelector('.main').scrollTo(0, 0);
+        setTimeout(() => {
+            window.parent.document.querySelector('.main').scrollTo(0, 0);
+        }, 100);
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
+
 def initialize_session_state():
     """세션 상태 초기화 (자기효능감 필드 추가)"""
     if 'step' not in st.session_state:
@@ -52,6 +67,7 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('consent')
     
     st.markdown("### 📝 Consent to Participate")
@@ -64,6 +80,7 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('background_info')
     
     st.markdown("### 📊 Background Information")
@@ -75,29 +92,31 @@ def handle_background_info_step():
 
 
 def handle_first_recording_step():
-    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (1-2분 기준)"""
+    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('first_recording')
     
-    # 1) 질문 영역을 박스로 분리 (다크모드 대응)
+    # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화)
     st.markdown(
         """
         <div style='
-            background-color: rgba(248, 249, 250, 0.95); 
-            border: 2px solid #e5e7eb; 
+            background: rgba(0, 0, 0, 0.05); 
+            border: 2px solid rgba(229, 231, 235, 0.5); 
             border-radius: 12px; 
             padding: 25px; 
             margin: 15px 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: inherit;
         '>
-            <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Interview Question:</div>
+            <div style='font-weight: bold; margin-bottom: 20px; color: inherit; opacity: 0.8; font-size: 16px;'>📝 Interview Question:</div>
             <div style='text-align: center;'>
-                <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
+                <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: inherit; line-height: 1.4;'>
                     Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
-                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
                 </div>
-                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     2️⃣ <strong>한국에서 뭐 할 거예요? 왜요?</strong>
                 </div>
             </div>
@@ -187,7 +206,8 @@ def process_first_recording():
 
 
 def handle_feedback_step():
-    """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (1-2분 기준)"""
+    """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -225,21 +245,22 @@ def handle_feedback_step():
                 model_sentence
             )
             
-            # 모델 답안 (개선된 부분 표시)
+            # 모델 답안 (개선된 부분 표시, 나이트 모드 최적화)
             st.markdown(
                 f"""
                 <div style='
-                    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+                    background: rgba(16, 185, 129, 0.1);
                     border: 3px solid #22c55e;
                     border-radius: 12px;
                     padding: 25px;
                     margin: 5px 0 15px 0;
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    color: inherit;
                 '>
-                    <div style='font-size: 18px; line-height: 1.6; color: #1f2937; margin-bottom: 15px;'>
+                    <div style='font-size: 18px; line-height: 1.6; color: inherit; margin-bottom: 15px;'>
                         {highlighted_model}
                     </div>
-                    {f'<div style="color: #166534; font-style: italic; font-size: 14px; padding-top: 10px; border-top: 1px solid #22c55e;">"{english_translation}"</div>' if english_translation else ''}
+                    {f'<div style="color: #22c55e; font-style: italic; font-size: 14px; padding-top: 10px; border-top: 1px solid #22c55e;">"{english_translation}"</div>' if english_translation else ''}
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -314,12 +335,12 @@ def handle_feedback_step():
                             elif line.startswith('💡 When to use:'):
                                 usage_line = line.replace('💡 When to use:', '').strip()
                         
-                        # HTML로 통일된 스타일 적용
+                        # HTML로 통일된 스타일 적용 (나이트 모드 최적화)
                         st.markdown(f"""
-                        <div style='font-size: 16px; line-height: 1.5; color: #1f2937;'>
+                        <div style='font-size: 16px; line-height: 1.5; color: inherit;'>
                             <strong>🚀 Try this:</strong> {pattern_line}<br>
                             <strong>📝 Example:</strong> {example_line}<br>
-                            <span style='color: #6b7280; font-size: 14px;'>💡 {usage_line}</span>
+                            <span style='color: inherit; opacity: 0.7; font-size: 14px;'>💡 {usage_line}</span>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
@@ -341,10 +362,10 @@ def handle_feedback_step():
                     parsed_tip = parse_sentence_connection_tip(sentence_tip)
                     
                     st.markdown(f"""
-                    <div style='font-size: 16px; line-height: 1.5; color: #1f2937;'>
+                    <div style='font-size: 16px; line-height: 1.5; color: inherit;'>
                         <strong>❌ Before:</strong> {parsed_tip['before_sentences']}<br>
                         <strong>✅ After:</strong> {parsed_tip['after_sentence']}<br>
-                        <span style='color: #6b7280; font-size: 14px;'>💡 Use connectives like <strong>그리고</strong>, <strong>그래서</strong>, <strong>-고</strong>, <strong>-아서/어서</strong> to sound more natural</span>
+                        <span style='color: inherit; opacity: 0.7; font-size: 14px;'>💡 Use connectives like <strong>그리고</strong>, <strong>그래서</strong>, <strong>-고</strong>, <strong>-아서/어서</strong> to sound more natural</span>
                     </div>
                     """, unsafe_allow_html=True)
         
@@ -401,7 +422,8 @@ def handle_feedback_step():
 
 
 def handle_second_recording_step():
-    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (1-2분 기준)"""
+    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")
@@ -411,26 +433,27 @@ def handle_second_recording_step():
         st.session_state.step = 'feedback'
         st.rerun()
     
-    # 1) 질문 영역을 박스로 분리 (다크모드 대응)
+    # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화)
     st.markdown(
         """
         <div style='
-            background-color: rgba(248, 249, 250, 0.95); 
-            border: 2px solid #e5e7eb; 
+            background: rgba(0, 0, 0, 0.05); 
+            border: 2px solid rgba(229, 231, 235, 0.5); 
             border-radius: 12px; 
             padding: 25px; 
             margin: 15px 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: inherit;
         '>
-            <div style='font-weight: bold; margin-bottom: 20px; color: #1f2937; font-size: 16px;'>📝 Same Question - Second Attempt:</div>
+            <div style='font-weight: bold; margin-bottom: 20px; color: inherit; opacity: 0.8; font-size: 16px;'>📝 Same Question - Second Attempt:</div>
             <div style='text-align: center;'>
-                <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #1f2937; line-height: 1.4;'>
+                <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: inherit; line-height: 1.4;'>
                     Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
-                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
                 </div>
-                <div style='font-size: 20px; color: #1f2937; margin: 10px 0;'>
+                <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     2️⃣ <strong>한국에서 뭐 할 거예요? 왜요?</strong>
                 </div>
             </div>
@@ -561,6 +584,7 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 6: Required Survey")
@@ -676,6 +700,7 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
+    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
     show_progress_indicator('completion')
     
     # 완료 축하 (간소화된 버전)

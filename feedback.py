@@ -1,6 +1,6 @@
 """
 feedback.py
-GPT를 이용한 한국어 학습 피드백 생성 (이중 평가 시스템: 연구용 + 학생용)
+GPT를 이용한 한국어 학습 피드백 생성 (이중 평가 시스템: 연구용 + 학생용) - STT 검증 및 점수 수정
 """
 
 import openai
@@ -22,6 +22,31 @@ from config import (
     GPT_FEEDBACK_MAX_TOKENS,
     GPT_FEEDBACK_MAX_CHARS
 )
+
+
+# === STT 검증 함수 ===
+def is_valid_transcript(text: str) -> bool:
+    """
+    STT 결과가 유효한지 검증
+    
+    Args:
+        text: STT 전사 텍스트
+        
+    Returns:
+        bool: 유효한 전사 텍스트인지 여부
+    """
+    if not text:
+        return False
+    
+    cleaned = text.strip()
+    if len(cleaned) < 5:  # 5글자 미만
+        return False
+    
+    # 점만 있는 경우 체크 (예: ". . . . . .")
+    if cleaned.replace('.', '').replace(' ', '') == '':
+        return False
+    
+    return True
 
 
 # === 간소화된 오류 분류 상수 ===
@@ -711,10 +736,10 @@ Student answered "{question}": {transcript}
 - Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
 
 
-# === 메인 피드백 함수들 (개선된 프롬프트 적용) ===
+# === 메인 피드백 함수들 (개선된 프롬프트 적용 + STT 검증) ===
 def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     """
-    STT 기반 루브릭을 적용한 GPT 피드백 생성 (이중 평가 시스템 적용 + 개선된 프롬프트)
+    STT 기반 루브릭을 적용한 GPT 피드백 생성 (이중 평가 시스템 적용 + 개선된 프롬프트 + STT 검증)
     
     Args:
         transcript: 전사된 텍스트
@@ -727,6 +752,26 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     if not OPENAI_API_KEY:
         st.error("Critical Error: OpenAI API key is required for feedback!")
         return {}
+    
+    # 🔥 STT 유효성 먼저 검사 (API 호출 전에 체크)
+    if not is_valid_transcript(transcript):
+        fb = get_fallback_feedback()
+        fb["interview_readiness_score"] = 0
+        fb["interview_readiness_reason"] = "No clear speech detected. Please try recording again."
+        
+        # 연구용 점수도 0으로 설정
+        research_scores = get_research_scores("", [], duration)
+        st.session_state.research_scores = research_scores
+        
+        # 디버그 정보 저장
+        st.session_state.gpt_debug_info = {
+            'attempts': 0, 
+            'errors': ['STT validation failed - no clear speech detected'],
+            'dual_evaluation': True
+        }
+        
+        st.warning("⚠️ No clear speech detected in recording. Using sample feedback.")
+        return fb
     
     # 긴 텍스트 전처리 (문자 수 기반)
     processed_transcript = preprocess_long_transcript(transcript)
@@ -798,6 +843,7 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
                 st.session_state.research_scores = research_scores
                 
                 # 4. 디버그 정보 저장
+                debug_info['dual_evaluation'] = True
                 st.session_state.gpt_debug_info = debug_info
                 
                 st.success("✅ AI feedback ready!")
@@ -818,10 +864,16 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
     st.info("Using basic feedback to continue experiment")
     
     debug_info['errors'].append("All attempts failed - using fallback")
+    debug_info['dual_evaluation'] = True
     st.session_state.gpt_debug_info = debug_info
     
     # Fallback에서도 이중 평가 시스템 적용
     fallback_feedback = get_fallback_feedback()
+    
+    # 🔥 STT 검증 후 점수만 0점으로 오버라이드 (fallback에서도)
+    if not is_valid_transcript(transcript):
+        fallback_feedback["interview_readiness_score"] = 0
+        fallback_feedback["interview_readiness_reason"] = "No clear speech detected. Please try recording again."
     
     # Fallback용 연구 점수 계산
     research_scores = get_research_scores(transcript, [], duration)
@@ -988,7 +1040,7 @@ def get_fallback_feedback():
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
         "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
         "fluency_comment": "Keep practicing! Try to speak for at least 60+ seconds to build fluency.",
-        "interview_readiness_score": 5,
+        "interview_readiness_score": 5,  # 🔥 기본 점수는 5점 (STT 검증에서 0으로 오버라이드됨)
         "detailed_feedback": "Good effort attempting both topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do? • Practice connecting your ideas with phrases like '그리고' (and) and '그래서' (so/therefore) to sound more natural",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
