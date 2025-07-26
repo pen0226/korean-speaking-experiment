@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (나이트 모드 최적화)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (iPhone 스크롤 최적화)
 """
 
 import streamlit as st
@@ -28,32 +28,70 @@ from utils import (
 )
 
 
+def add_page_anchor():
+    """페이지 상단에 invisible anchor 추가 (모든 환경 스크롤 대응)"""
+    st.markdown(
+        """
+        <div id="page-top" style="height: 1px; position: absolute; top: 0; visibility: hidden;"></div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
 def scroll_to_top():
-    """모바일 호환 페이지 스크롤 초기화"""
+    """강화된 페이지 스크롤 초기화 (iPhone/모바일 완벽 지원)"""
     st.markdown(
         """
         <script>
-        // 여러 방법으로 스크롤 시도
+        // 🎯 방법 1: 페이지 상단 앵커로 강제 이동 (iPhone 최적화)
+        const pageTop = document.getElementById('page-top');
+        if (pageTop) {
+            pageTop.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
+        
+        // 🎯 방법 2: 전통적인 스크롤 방법들 (데스크톱 브라우저용)
+        window.scrollTo({ top: 0, behavior: 'instant' });
         window.scrollTo(0, 0);
         document.body.scrollTop = 0;
         document.documentElement.scrollTop = 0;
         
-        // Streamlit 컨테이너들
-        const containers = ['.main', '.block-container', '[data-testid="stAppViewContainer"]'];
+        // 🎯 방법 3: Streamlit 특화 컨테이너들 (앱 내부 스크롤)
+        const containers = [
+            '.main', 
+            '.block-container', 
+            '[data-testid="stAppViewContainer"]',
+            '[data-testid="stApp"]',
+            '.stApp'
+        ];
+        
         containers.forEach(selector => {
             const element = document.querySelector(selector);
-            if (element) element.scrollTop = 0;
+            if (element) {
+                element.scrollTop = 0;
+                element.scrollTo && element.scrollTo(0, 0);
+            }
         });
         
-        // 상위 프레임에서도 시도 (iframe 환경 대응)
+        // 🎯 방법 4: 상위 프레임에서도 시도 (iframe 환경 대응)
         try {
             window.parent.scrollTo(0, 0);
             const parentContainers = window.parent.document.querySelectorAll('.main, .block-container');
             parentContainers.forEach(element => {
-                if (element) element.scrollTop = 0;
+                if (element) {
+                    element.scrollTop = 0;
+                    element.scrollTo && element.scrollTo(0, 0);
+                }
             });
         } catch(e) {
             // 크로스 오리진 오류 무시
+        }
+        
+        // 🎯 방법 5: 모바일 터치 스크롤 강제 리셋
+        if (window.innerWidth <= 768) {  // 모바일 화면
+            setTimeout(() => {
+                if (pageTop) pageTop.scrollIntoView({ behavior: 'instant' });
+                window.scrollTo(0, 0);
+            }, 50);
         }
         </script>
         """,
@@ -85,7 +123,7 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('consent')
     
     st.markdown("### 📝 Consent to Participate")
@@ -98,7 +136,7 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('background_info')
     
     st.markdown("### 📊 Background Information")
@@ -111,7 +149,7 @@ def handle_background_info_step():
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('first_recording')
     
     # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화)
@@ -225,7 +263,7 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -441,7 +479,7 @@ def handle_feedback_step():
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")
@@ -602,7 +640,7 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 6: Required Survey")
@@ -718,7 +756,7 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
-    scroll_to_top()  # 🔥 페이지 맨 위로 스크롤
+    scroll_to_top()  # 🔥 강화된 스크롤 초기화
     show_progress_indicator('completion')
     
     # 완료 축하 (간소화된 버전)
@@ -1005,9 +1043,12 @@ def display_researcher_mode():
 
 
 def main():
-    """메인 애플리케이션 함수 (참고용 TOPIK 점수 통합)"""
+    """메인 애플리케이션 함수 (iPhone 스크롤 최적화 + 참고용 TOPIK 점수 통합)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
+    
+    # 🔥 페이지 상단 앵커 추가 (모든 환경 스크롤 대응)
+    add_page_anchor()
     
     # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
