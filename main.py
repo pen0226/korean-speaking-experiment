@@ -28,71 +28,58 @@ from utils import (
 )
 
 
-def add_page_anchor():
-    """페이지 상단에 invisible anchor 추가 (모든 환경 스크롤 대응)"""
-    st.markdown(
-        """
-        <div id="page-top" style="height: 1px; position: absolute; top: 0; visibility: hidden;"></div>
-        """,
-        unsafe_allow_html=True
-    )
+# 불필요한 add_page_anchor 함수 제거됨
 
 
 def scroll_to_top():
-    """강화된 페이지 스크롤 초기화 (iPhone/모바일 완벽 지원)"""
+    """강화된 페이지 스크롤 초기화 (iPhone Safari 완벽 호환)"""
     st.markdown(
         """
         <script>
-        // 🎯 방법 1: 페이지 상단 앵커로 강제 이동 (iPhone 최적화)
-        const pageTop = document.getElementById('page-top');
-        if (pageTop) {
-            pageTop.scrollIntoView({ behavior: 'instant', block: 'start' });
-        }
-        
-        // 🎯 방법 2: 전통적인 스크롤 방법들 (데스크톱 브라우저용)
-        window.scrollTo({ top: 0, behavior: 'instant' });
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-        
-        // 🎯 방법 3: Streamlit 특화 컨테이너들 (앱 내부 스크롤)
-        const containers = [
-            '.main', 
-            '.block-container', 
-            '[data-testid="stAppViewContainer"]',
-            '[data-testid="stApp"]',
-            '.stApp'
-        ];
-        
-        containers.forEach(selector => {
-            const element = document.querySelector(selector);
-            if (element) {
-                element.scrollTop = 0;
-                element.scrollTo && element.scrollTo(0, 0);
+        // 0.1초 뒤 강제 스크롤 (렌더링 이후 적용)
+        setTimeout(function(){
+            // 앵커 스크롤
+            var pageTop = document.getElementById('page-top');
+            if(pageTop && pageTop.scrollIntoView){
+                pageTop.scrollIntoView({behavior:'auto', block:'start'});
             }
-        });
-        
-        // 🎯 방법 4: 상위 프레임에서도 시도 (iframe 환경 대응)
-        try {
-            window.parent.scrollTo(0, 0);
-            const parentContainers = window.parent.document.querySelectorAll('.main, .block-container');
-            parentContainers.forEach(element => {
-                if (element) {
-                    element.scrollTop = 0;
-                    element.scrollTo && element.scrollTo(0, 0);
+            
+            // 기본 스크롤
+            window.scrollTo(0,0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            
+            // Streamlit 컨테이너까지 스크롤
+            var containers = ['.main','.block-container','[data-testid="stAppViewContainer"]','[data-testid="stApp"]','.stApp'];
+            containers.forEach(function(sel){
+                var el = document.querySelector(sel);
+                if(el){
+                    el.scrollTop = 0;
+                    if(el.scrollTo) el.scrollTo(0,0);
                 }
             });
-        } catch(e) {
-            // 크로스 오리진 오류 무시
-        }
+            
+            // 상위 프레임 처리 (iframe 환경)
+            try {
+                window.parent.scrollTo(0,0);
+                var parentContainers = window.parent.document.querySelectorAll('.main,.block-container');
+                parentContainers.forEach(function(el){
+                    if(el){
+                        el.scrollTop = 0;
+                        if(el.scrollTo) el.scrollTo(0,0);
+                    }
+                });
+            } catch(e) {
+                // 크로스 오리진 오류 무시
+            }
+        }, 100);
         
-        // 🎯 방법 5: 모바일 터치 스크롤 강제 리셋
-        if (window.innerWidth <= 768) {  // 모바일 화면
-            setTimeout(() => {
-                if (pageTop) pageTop.scrollIntoView({ behavior: 'instant' });
-                window.scrollTo(0, 0);
-            }, 50);
+        // 즉시 한 번 더 시도 (보험)
+        var pageTop = document.getElementById('page-top');
+        if(pageTop && pageTop.scrollIntoView){
+            pageTop.scrollIntoView({behavior:'auto', block:'start'});
         }
+        window.scrollTo(0,0);
         </script>
         """,
         unsafe_allow_html=True
@@ -123,7 +110,10 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('consent')
     
     st.markdown("### 📝 Consent to Participate")
@@ -136,7 +126,10 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('background_info')
     
     st.markdown("### 📊 Background Information")
@@ -149,7 +142,10 @@ def handle_background_info_step():
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('first_recording')
     
     # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화)
@@ -263,7 +259,10 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -479,7 +478,10 @@ def handle_feedback_step():
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
-    scroll_to_top()  # 🔥 강화된 스크롤 초기화
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")
@@ -1047,9 +1049,6 @@ def main():
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
     
-    # 🔥 페이지 상단 앵커 추가 (모든 환경 스크롤 대응)
-    add_page_anchor()
-    
     # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
     
@@ -1076,6 +1075,24 @@ def main():
     elif current_step == 'second_recording':
         handle_second_recording_step()
     elif current_step == 'survey':
+        handle_survey_step()
+    elif current_step == 'completion':
+        handle_completion_step()
+    else:
+        display_error_message(f"Unknown step: {current_step}")
+        st.session_state.step = 'consent'
+        st.rerun()
+
+
+if __name__ == "__main__":
+    main()
+        handle_survey_step()
+    elif current_step == 'completion':
+        handle_completion_step()
+    else:
+        display_error_message(f"Unknown step: {current_step}")
+        st.session_state.step = 'consent'
+        st.rerun()elif current_step == 'survey':
         handle_survey_step()
     elif current_step == 'completion':
         handle_completion_step()
