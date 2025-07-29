@@ -196,8 +196,8 @@ def collect_background_information():
     
     st.markdown("---")
     
-    # 자신감 질문
-    st.markdown("**🌟 How confident do you feel speaking Korean right now?**")
+    # 자신감 질문 - 수정된 문구 적용
+    st.markdown("**🌟 How confident do you feel speaking Korean in this interview situation?**")
     
     speaking_confidence = st.radio(
         "Choose what describes you best:",
