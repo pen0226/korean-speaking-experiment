@@ -615,7 +615,7 @@ def generate_prompt(template, **kwargs):
     return template.format(**kwargs)
 
 
-# === 🔥 개선된 피드백 프롬프트 템플릿 (문장 연결 팁 추가) ===
+# === 🔥 개선된 피드백 프롬프트 템플릿 (문장 연결 팁 추가 + 자연스러운 변형 허용) ===
 IMPROVED_FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -635,24 +635,32 @@ Student answered "{question}": {transcript}
 - If the student mixes styles within their response, you MUST reflect that mix in the `suggested_model_sentence`.
 - **STRICTLY PROHIBITED:** Do NOT use 반말 or plain dictionary-style endings (e.g., "‑다"). ONLY use speech styles that are appropriate for an interview: either 합니다-style or 해요-style, following the student's usage.
 
+**🔥 GRAMMAR ANALYSIS GUIDELINES:**
+- **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
+  * '하고' and '과/와' are both correct for "and/with" 
+  * '에서' and '에' can both be correct depending on context
+  * Colloquial forms that are grammatically acceptable should not be flagged
+- **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
+- **AVOID OVER-CORRECTION**: Do not suggest changes to already-correct Korean expressions
+
 **🔥 ANALYSIS REQUIREMENTS:** 
 
 1. **Grammar Issues (3-6개, 다양한 유형 우선)**
-   - **우선순위 적용**: 의사소통에 가장 큰 영향을 주는 오류부터 선택
+   - **우선순위 적용**: 
+     1. 실제로 틀린 문법 (자연스러운 변형은 제외)
+     2. 의사소통에 가장 큰 영향을 주는 오류
+     3. 초급자가 자주 틀리는 패턴
+     4. 쉽게 고칠 수 있는 오류
+     
    - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
    - **포함할 유형들**:
-     * Particle (조사): 가장 명확한 1-2개만 (을/를, 은/는, 이/가, 에 등)
+     * Particle (조사): 가장 명확한 1-2개만 (을/를, 은/는, 이/가, 에 등) - 단, '하고'와 '과/와'는 둘 다 맞음
      * Verb Tense (동사 시제): 과거/현재/미래 혼용 오류
      * Verb Ending (동사 어미): 반말/존댓말, 불규칙 활용, 어미 선택
      * Word Order (어순): 부자연스러운 어순
      * Connectives (연결어): 부적절한 연결표현, 그리고 남용
      * Others: 기타 문법 오류
    
-   - **선택 기준**: 
-     1. 의사소통에 가장 큰 영향을 주는 오류
-     2. 초급자가 자주 틀리는 패턴
-     3. 쉽게 고칠 수 있는 오류
-     
    - **MUST include "Original:" and "→ Fix:" format.**
    - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
    - **Target: Find 3-6 issues with TYPE DIVERSITY if they exist.**
@@ -692,7 +700,7 @@ Student answered "{question}": {transcript}
    - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
 
 **GRAMMAR ERROR TYPES**
-- **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
+- **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.) - BUT accept both '하고' and '과/와' as correct
 - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
 - **Verb Tense**: Incorrect verb tense usage (past/present/future)
 - **Word Order**: Unnatural word order
