@@ -1,6 +1,6 @@
 """
 save_reference_score.py
-TOPIK 참고용 점수 저장 모듈 (홀리스틱 루브릭 - 채점자 감각 기반 + 이유 컬럼 추가) - 지난/다음 방학 주제로 업데이트
+TOPIK 참고용 점수 저장 모듈 (홀리스틱 루브릭 - 채점자 감각 기반 + 이유 컬럼 추가)
 """
 
 import pandas as pd
@@ -10,7 +10,7 @@ from datetime import datetime
 
 def calculate_content_task_score_holistic(transcript):
     """
-    내용 및 과제 수행 점수 계산 (홀리스틱 방식 1-5점 + 이유) - 지난/다음 방학 주제로 업데이트
+    내용 및 과제 수행 점수 계산 (홀리스틱 방식 1-5점 + 이유)
     
     Args:
         transcript: STT 전사 텍스트
@@ -21,33 +21,33 @@ def calculate_content_task_score_holistic(transcript):
     if not transcript or not transcript.strip():
         return 1, "No meaningful content detected"
     
-    # 🔥 키워드 업데이트: 지난/다음 방학 주제로 변경
-    past_vacation_keywords = ["지난", "방학", "휴가", "여행", "갔어요", "했어요", "특별한", "일", "경험"]
-    future_vacation_keywords = ["다음", "방학", "계획", "할 거예요", "하려고", "갈 거예요", "공부할", "배울", "왜", "이유"]
-    reason_keywords = ["왜냐하면", "때문에", "해서", "좋아해서", "재미있어서", "아름다워서", "맛있어서", "하고 싶어서", "배우고 싶어서"]
+    # 기본 키워드 확인
+    summer_keywords = ["여름", "방학", "휴가", "여행"]
+    korea_keywords = ["한국", "계획", "할 거예요", "하려고", "갈 거예요", "공부할", "배울"]
+    reason_keywords = ["왜냐하면", "때문에", "해서", "좋아해서", "재미있어서", "아름다워서", "맛있어서", "하고 싶어서"]
     
-    past_mentioned = any(keyword in transcript for keyword in past_vacation_keywords)
-    future_mentioned = any(keyword in transcript for keyword in future_vacation_keywords)
+    summer_mentioned = any(keyword in transcript for keyword in summer_keywords)
+    korea_mentioned = any(keyword in transcript for keyword in korea_keywords)
     reason_mentioned = any(keyword in transcript for keyword in reason_keywords)
     
     word_count = len(transcript.split())
     sentence_count = len([s for s in transcript.split('.') if s.strip()])
     
     # 홀리스틱 평가 (전체적 인상 기반)
-    if past_mentioned and future_mentioned and reason_mentioned and word_count >= 60:
+    if summer_mentioned and korea_mentioned and reason_mentioned and word_count >= 60:
         # 5점: 두 주제 완전히 다루고, 이유도 명확, 체계적 구성
         if word_count >= 80 and sentence_count >= 4:
-            return 5, f"Both vacation topics fully covered with clear reasons and good structure ({word_count} words, {sentence_count} sentences)"
+            return 5, f"Both topics fully covered with clear reasons and good structure ({word_count} words, {sentence_count} sentences)"
         # 4점: 두 주제 다루지만 한쪽이 약간 부족하거나 이유가 약함
         else:
-            return 4, f"Both vacation topics covered but one side slightly lacking or weak reasons ({word_count} words)"
-    elif past_mentioned and future_mentioned and word_count >= 40:
+            return 4, f"Both topics covered but one side slightly lacking or weak reasons ({word_count} words)"
+    elif summer_mentioned and korea_mentioned and word_count >= 40:
         # 3점: 두 주제 언급하지만 내용이 얕거나 구성이 어색
         reason_text = " with some reasons" if reason_mentioned else " but lacks clear reasons"
-        return 3, f"Both vacation topics mentioned but shallow content ({word_count} words){reason_text}"
-    elif (past_mentioned or future_mentioned) and word_count >= 20:
+        return 3, f"Both topics mentioned but shallow content ({word_count} words){reason_text}"
+    elif (summer_mentioned or korea_mentioned) and word_count >= 20:
         # 2점: 한 주제만 제대로 다루거나 매우 짧음
-        topic_text = "past vacation" if past_mentioned else "future vacation plans" if future_mentioned else "limited topic"
+        topic_text = "summer vacation" if summer_mentioned else "Korea plans" if korea_mentioned else "limited topic"
         return 2, f"Only {topic_text} covered adequately ({word_count} words)"
     else:
         # 1점: 최소한의 응답만 시도
@@ -159,7 +159,7 @@ def calculate_total_topik_score(content_score, language_score, delivery_score):
 
 def save_reference_score(session_id, attempt, transcript, duration, timestamp=None):
     """
-    TOPIK 참고용 점수 저장 (홀리스틱 루브릭 적용 + 이유 컬럼 추가) - 지난/다음 방학 주제로 업데이트
+    TOPIK 참고용 점수 저장 (홀리스틱 루브릭 적용 + 이유 컬럼 추가)
     
     ===== EXCEL 데이터 구조 문서화 =====
     이 함수는 TOPIK 기반 참고용 점수를 Excel 파일로 저장합니다.
@@ -176,7 +176,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     
     2. TOPIK 3영역 홀리스틱 점수 (각 1-5점):
        - topik_content_task_score_auto: 내용 및 과제 수행 점수
-         → 지난방학+다음방학 두 주제 모두 다뤘는지, 이유 설명했는지 평가
+         → 여름방학+한국계획 두 주제 모두 다뤘는지, 이유 설명했는지 평가
        - topik_language_use_score_auto: 언어 사용 점수  
          → 문법 정확성, 어휘 다양성, 자연스러운 표현 종합 평가
        - topik_delivery_score(stt)_auto: 전달력 점수 (STT 기반)
@@ -216,7 +216,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
     if not timestamp:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # 홀리스틱 방식으로 3영역 점수 + 이유 계산 (지난/다음 방학 주제로 업데이트)
+    # 홀리스틱 방식으로 3영역 점수 + 이유 계산
     content_task_score, content_task_reason = calculate_content_task_score_holistic(transcript)
     language_use_score, language_use_reason = calculate_language_use_score_holistic(transcript)
     delivery_score, delivery_reason = calculate_delivery_score_holistic(transcript, duration)
@@ -235,7 +235,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
         'timestamp': timestamp,                # 점수 생성 시각 (파일명과 동일)
         
         # === TOPIK 3영역 홀리스틱 점수 (각 1-5점) ===
-        'topik_content_task_score_auto': content_task_score,        # 내용 및 과제 수행 (지난방학+다음방학 주제 완성도)
+        'topik_content_task_score_auto': content_task_score,        # 내용 및 과제 수행 (여름방학+한국계획 주제 완성도)
         'topik_language_use_score_auto': language_use_score,        # 언어 사용 (문법 정확성 + 어휘 다양성)  
         'topik_delivery_score(stt)_auto': delivery_score,           # 전달력 (유창성 + 발화 길이, STT 기반)
         
