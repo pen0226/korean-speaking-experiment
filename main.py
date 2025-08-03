@@ -1,6 +1,6 @@
 """
 main.py
-AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (iPhone 스크롤 최적화)
+AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (iPhone 스크롤 최적화) - 지난/다음 방학 주제로 업데이트
 """
 
 import streamlit as st
@@ -138,14 +138,14 @@ def handle_background_info_step():
 
 
 def handle_first_recording_step():
-    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
+    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화) - 지난/다음 방학 주제로 업데이트"""
     # 🔥 앵커 + 스크롤을 맨 처음에!
     st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('first_recording')
     
-    # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화)
+    # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화) - 🔥 지난/다음 방학 주제로 업데이트
     st.markdown(
         """
         <div style='
@@ -163,10 +163,10 @@ def handle_first_recording_step():
                     Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
-                    1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
+                    1️⃣ <strong>지난 방학에 뭐 했어요? 특별한 일이 있었어요?</strong>
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
-                    2️⃣ <strong>한국에서 뭐 할 거예요? 왜요?</strong>
+                    2️⃣ <strong>다음 방학에는 뭐 할 거예요? 왜요?</strong>
                 </div>
             </div>
         </div>
@@ -461,7 +461,7 @@ def handle_feedback_step():
         1. 🎯 Aim for **about 1~2 minutes total** of speaking
         2. 🎤 Listen to the model pronunciation above
         3. 📝 Try to fix the grammar points
-        4. 💡 Add details for both topics (summer vacation + plans in Korea with reasons)
+        4. 💡 Add details for both topics (past vacation + future vacation plans with reasons)
         """)
         
         # 다음 단계 버튼
@@ -474,7 +474,7 @@ def handle_feedback_step():
 
 
 def handle_second_recording_step():
-    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화)"""
+    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화) - 지난/다음 방학 주제로 업데이트"""
     # 🔥 앵커 + 스크롤을 맨 처음에!
     st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
     scroll_to_top()
@@ -488,7 +488,7 @@ def handle_second_recording_step():
         st.session_state.step = 'feedback'
         st.rerun()
     
-    # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화)
+    # 1) 질문 영역을 박스로 분리 (나이트 모드 최적화) - 🔥 지난/다음 방학 주제로 업데이트
     st.markdown(
         """
         <div style='
@@ -506,10 +506,10 @@ def handle_second_recording_step():
                     Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
-                    1️⃣ <strong>여름 방학에 뭐 했어요?</strong>
+                    1️⃣ <strong>지난 방학에 뭐 했어요? 특별한 일이 있었어요?</strong>
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
-                    2️⃣ <strong>한국에서 뭐 할 거예요? 왜요?</strong>
+                    2️⃣ <strong>다음 방학에는 뭐 할 거예요? 왜요?</strong>
                 </div>
             </div>
         </div>
@@ -888,19 +888,19 @@ def convert_to_actionable_summary(analysis_text, overall_assessment):
 
 
 def generate_actionable_tips(improvement):
-    """구체적이고 실용적인 개선 팁 3개 생성"""
+    """구체적이고 실용적인 개선 팁 3개 생성 - 지난/다음 방학 주제로 업데이트"""
     tips = []
     
     # 기본 개선사항들에서 구체적 팁 추출
     remaining_issues = improvement.get('remaining_issues', [])
     specific_improvements = improvement.get('specific_improvements', [])
     
-    # 1. Topic Focus (가장 중요)
+    # 1. Topic Focus (가장 중요) - 🔥 지난/다음 방학 주제로 업데이트
     if any("topic" in issue.lower() or "focus" in issue.lower() for issue in remaining_issues):
         tips.append({
             'category': 'Topic focus',
-            'description': 'Talk more about 여름 방학 activities and 한국에서 할 일',
-            'example': '"방학에 친구랑 부산에 여행 갔어요" / "한국에서 한국 회사에 취직하려고 해요"'
+            'description': 'Talk more about 지난 방학 experiences and 다음 방학 plans',
+            'example': '"지난 방학에 친구랑 부산에 여행 갔어요" / "다음 방학에는 한국 회사에 취직하려고 해요"'
         })
     
     # 2. Grammar (두 번째 중요)
@@ -908,34 +908,34 @@ def generate_actionable_tips(improvement):
         tips.append({
             'category': 'Grammar',
             'description': 'Past tense: 갔어요, 했어요 / Future tense: 할 거예요, 가려고 해요',
-            'example': '"여름에 가족과 여행했어요" / "한국에서 한국어를 더 배우려고 해요"'
+            'example': '"지난 방학에 가족과 여행했어요" / "다음 방학에는 한국어를 더 배우려고 해요"'
         })
     
     # 3. Content Expansion (세 번째)
     if any("detail" in issue.lower() or "content" in issue.lower() or "expand" in issue.lower() for issue in remaining_issues):
         tips.append({
             'category': 'Content expansion',
-            'description': 'Add 1-2 more sentences with specific details for each topic',
-            'example': '"부산에서 해운대도 갔어요. 가족과 함께 맛있는 음식도 먹었어요"'
+            'description': 'Add 1-2 more sentences with specific details for each vacation topic',
+            'example': '"지난 방학에 부산에서 해운대도 갔어요. 가족과 함께 맛있는 음식도 먹었어요"'
         })
     
-    # 기본 팁들로 채우기 (3개 미만인 경우)
+    # 기본 팁들로 채우기 (3개 미만인 경우) - 🔥 지난/다음 방학 주제로 업데이트
     if len(tips) < 3:
         default_tips = [
             {
                 'category': 'Speaking length',
                 'description': 'Try to speak for at least 60-90 seconds total',
-                'example': 'Add more details about what you did and why you plan to do something'
+                'example': 'Add more details about your past vacation experiences and future vacation plans'
             },
             {
                 'category': 'Connecting words',
                 'description': 'Use 그리고 (and), 그래서 (so), 그런데 (but) to connect ideas',
-                'example': '"여행 갔어요. 그리고 맛있는 음식도 먹었어요"'
+                'example': '"지난 방학에 여행 갔어요. 그리고 맛있는 음식도 먹었어요"'
             },
             {
                 'category': 'Clear reasons',
-                'description': 'Explain why for your Korea plans using 왜냐하면 or ~어서/아서',
-                'example': '"한국어를 배우고 싶어서 한국에 갈 거예요"'
+                'description': 'Explain why for your future vacation plans using 왜냐하면 or ~어서/아서',
+                'example': '"한국어를 배우고 싶어서 다음 방학에 한국에 갈 거예요"'
             }
         ]
         

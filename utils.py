@@ -425,7 +425,7 @@ def show_progress_indicator(current_step):
 
 def display_question(step_context=""):
     """
-    통일된 질문 표시 함수 (나이트 모드 최적화)
+    통일된 질문 표시 함수 (나이트 모드 최적화) - config.py의 EXPERIMENT_QUESTION 사용
     
     Args:
         step_context: 단계 맥락 설명
@@ -451,7 +451,7 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (2분 목표) - 노란색 박스로 변경
+    간소화된 녹음 인터페이스 (1~2분 목표) - 노란색 박스로 변경
     
     Args:
         key: 컴포넌트 키
@@ -997,7 +997,7 @@ def display_improvement_details(improvement_assessment):
 
 def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0):
     """
-    두 음성을 비교 표시 (2분 기준)
+    두 음성을 비교 표시 (1~2분 기준)
     
     Args:
         first_audio: 첫 번째 오디오 데이터
@@ -1040,7 +1040,7 @@ def display_audio_comparison(first_audio, second_audio, duration1=0, duration2=0
 
 def get_duration_status(duration):
     """
-    음성 길이 상태 반환 (1-2분 목표로 수정)
+    음성 길이 상태 반환 (1~2분 목표로 수정)
     
     Args:
         duration: 음성 길이 (초)
@@ -1054,13 +1054,13 @@ def get_duration_status(duration):
     TARGET_FAIR_DURATION = AUDIO_QUALITY["fair_min_duration"] # 60초 (1분)
 
     if duration >= TARGET_EXCELLENT_DURATION: # 90초 이상
-        return f"✅ Excellent! {duration:.1f}s — a perfect length (1-2 minutes) for the interview!"
+        return f"✅ Excellent! {duration:.1f}s — a perfect length (1~2 minutes) for the interview!"
     elif duration >= TARGET_GOOD_DURATION: # 75초 이상
-        return f"🌟 Good! {duration:.1f}s — almost reached the 1-2 minute goal!"
+        return f"🌟 Good! {duration:.1f}s — almost reached the 1~2 minute goal!"
     elif duration >= TARGET_FAIR_DURATION: # 60초 이상
-        return f"⚠️ Fair! {duration:.1f}s — try for at least 1-2 minutes next time."
+        return f"⚠️ Fair! {duration:.1f}s — try for at least 1~2 minutes next time."
     else:
-        return f"❌ Short! {duration:.1f}s — aim for at least 1-2 minutes for a better score."
+        return f"❌ Short! {duration:.1f}s — aim for at least 1~2 minutes for a better score."
 
 
 def display_contact_info(session_id):

@@ -1,6 +1,6 @@
 """
 feedback.py
-GPT를 이용한 한국어 학습 피드백 생성 (이중 평가 시스템: 연구용 + 학생용) - STT 검증 및 점수 수정
+GPT를 이용한 한국어 학습 피드백 생성 (이중 평가 시스템: 연구용 + 학생용) - STT 검증 및 점수 수정 - 지난/다음 방학 주제로 업데이트
 """
 
 import openai
@@ -49,9 +49,9 @@ def is_valid_transcript(text: str) -> bool:
     return True
 
 
-# === 간소화된 오류 분류 상수 ===
+# === 간소화된 오류 분류 상수 (지난/다음 방학 주제로 업데이트) ===
 INDIVIDUAL_PARTICLES = ["을", "를", "은", "는", "이", "가", "에서", "에게", "에", "와", "과", "의", "로", "으로"]
-TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에"]
+TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에", "지난", "다음", "방학"]
 VERB_ENDINGS = ["예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다", "다", "ㄴ다", "는다"]
 TENSE_MARKERS = ["했어요", "할 거예요", "하고 있어요", "한 적이", "했었어요", "할게요"]
 
@@ -589,11 +589,11 @@ def filter_grammar_from_vocabulary(vocab_suggestions, grammar_issues):
 
 def get_default_vocabulary_suggestions():
     """
-    🔥 vs 방식 기본 어휘 제안 (단어 비교 교육)
+    🔥 vs 방식 기본 어휘 제안 (단어 비교 교육) - 지난/다음 방학 주제로 업데이트
     """
     return [
         "❓ **공부하다 vs 배우다**\\n💡 공부하다: Academic studying or reviewing material at a desk\\n💡 배우다: Learning new skills or acquiring new knowledge\\n🟢 시험을 위해 공부해요 (I study for exams) / 한국어를 배우고 있어요 (I'm learning Korean)\\n📝 Use '배우다' for new skills, '공부하다' for reviewing",
-        "❓ **좋다 vs 좋아하다**\\n💡 좋다: Adjective - something is good (state/quality)\\n💡 좋아하다: Verb - to like something (preference)\\n🟢 날씨가 좋아요 (The weather is nice) / 음악을 좋아해요 (I like music)\\n📝 Use '이/가 좋다' vs '을/를 좋아하다'"
+        "❓ **지난 vs 다음**\\n💡 지난: Past time periods (last/previous)\\n💡 다음: Future time periods (next/following)\\n🟢 지난 방학에 여행했어요 (I traveled last vacation) / 다음 방학에 공부할 거예요 (I will study next vacation)\\n📝 '지난' for past experiences, '다음' for future plans"
     ]
 
 
@@ -615,7 +615,7 @@ def generate_prompt(template, **kwargs):
     return template.format(**kwargs)
 
 
-# === 🔥 개선된 피드백 프롬프트 템플릿 (문장 연결 팁 추가 + 자연스러운 변형 허용) ===
+# === 🔥 개선된 피드백 프롬프트 템플릿 (지난/다음 방학 주제 + 문장 연결 팁 추가 + 자연스러운 변형 허용) ===
 IMPROVED_FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -676,10 +676,11 @@ Student answered "{question}": {transcript}
    - **Format: "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both words in context]\\n📝 [key difference and usage rule]"**
    - **Focus on student's actual expressions that could be more natural**
    - **Target: Provide 2-3 practical improvements when possible.**
+   - **CRITICAL: This section should handle unnatural/incorrect word choices. DO NOT overlap with grammar corrections.**
 
 3. **Content Expansion (2개, 구체적이고 실용적)**
    - **학생이 언급한 주제를 기반으로 확장**
-   - **예시**: 학생이 "바다 갔어요"라고 했으면 → "바다에서 수영도 하고 조개껍데기도 주웠어요" 같은 구체적 확장
+   - **예시**: 학생이 "여행 갔어요"라고 했으면 → "여행에서 친구들과 사진도 찍고 특별한 음식도 먹었어요" 같은 구체적 확장
    - Give two concrete, personal topics they can add based on what they mentioned.
    - Each idea should help them speak at least 30 more seconds.
    - Use examples they can directly copy.
@@ -697,7 +698,7 @@ Student answered "{question}": {transcript}
    - **연결어 활용**: 그리고, 그래서, -고, -아서/어서
    - **Before/After 형식**으로 명확한 개선 예시 제공
    - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
-   - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
+   - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences from their response]\\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
 
 **GRAMMAR ERROR TYPES**
 - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.) - BUT accept both '하고' and '과/와' as correct
@@ -708,7 +709,7 @@ Student answered "{question}": {transcript}
 - **Others**: For grammar mistakes that do not fit the above categories
 
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
-- **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained WHY you want to work in Korea")
+- **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both vacation topics completely and shared specific experiences!")
 - **핵심 개선점**: 2-3개로 집중
 - **개선 예문**: 학생 답변을 기반으로 한 구체적 예문 제시
 - **길이 피드백**: 90초 목표 언급
@@ -915,19 +916,19 @@ def parse_gpt_response(raw_content):
 def validate_and_fix_feedback(feedback):
     """피드백 구조를 검증하고 누락된 필수 필드를 추가"""
     
-    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback + sentence_connection_tip)
+    # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback + sentence_connection_tip) - 지난/다음 방학 주제로 업데이트
     required_fields = {
-        "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
-        "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
+        "suggested_model_sentence": "지난 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 특별한 일로는 친구들과 캠핑을 한 것이 정말 재미있었어요. 다음 방학에는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence_english": "During my last vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. The special thing was camping with friends, which was really fun. Next vacation, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "content_expansion_suggestions": [
-            "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
-            "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
+            "💬 Topic: Past vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+            "💬 Topic: Specific future plans\\n📝 Example: '다음 방학에는 한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'Next vacation, I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
-        "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁
+        "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 (지난/다음 방학 주제)
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
-        "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
-    "detailed_feedback": "🌟 What You Did Well\\n- You answered both topics really well! I could clearly understand your summer vacation activities and your plans for Korea 😊\\n- Your motivation was so clear when you said '한국 문화를 좋아해서' - that connection was perfect! 👍\\n- I loved how you mentioned specific activities like going to the beach. That made your answer much more interesting!\\n\\n🎯 Key Improvements\\n- I noticed some particles were missing. For example, you said '친구 만났어요' but it should be '친구를 만났어요' to sound more natural\\n- Try to keep your tense consistent - when talking about past vacation, stick with past tense endings like '갔어요, 했어요'\\n- Your answer was a bit short (about 45 seconds). Try to add one more detail for each topic to reach 90+ seconds\\n\\n📝 Try This Next Time\\n1. Before speaking, quickly think: 'Am I using 을/를 correctly?'\\n2. Add one specific example when explaining reasons: 'I like Korean food, especially kimchi and bulgogi'\\n3. Use connecting words like '그리고' or '그래서' to make longer, smoother sentences",
+        "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 여행 갔어요. 재미있었어요.\\n✅ 여행을 가서 정말 재미있었어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
+        "detailed_feedback": "🌟 What You Did Well\\n- You answered both vacation topics really well! I could clearly understand your past vacation activities and your future plans 😊\\n- Your motivation was so clear when you said '한국 문화를 좋아해서' - that connection was perfect! 👍\\n- I loved how you mentioned specific activities like traveling. That made your answer much more interesting!\\n\\n🎯 Key Improvements\\n- I noticed some particles were missing. For example, you said '친구 만났어요' but it should be '친구를 만났어요' to sound more natural\\n- Try to keep your tense consistent - when talking about past vacation, stick with past tense endings like '갔어요, 했어요'\\n- Your answer was a bit short (about 45 seconds). Try to add one more detail for each topic to reach 90+ seconds\\n\\n📝 Try This Next Time\\n1. Before speaking, quickly think: 'Am I using 을/를 correctly?'\\n2. Add one specific example when explaining experiences: 'I went camping and it was fun because...'\\n3. Use connecting words like '그리고' or '그래서' to make longer, smoother sentences",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
     
@@ -1026,30 +1027,30 @@ def get_default_explanation(error_type):
 
 
 def get_default_grammar_issues():
-    """기본 문법 이슈들 (3개 주요 유형)"""
+    """기본 문법 이슈들 (3개 주요 유형) - 지난/다음 방학 주제로 업데이트"""
     return [
         "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object and change '전공이에요' to '전공해요'",
         "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing that you like doing activities",
-        "Verb Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'"
+        "Verb Tense|지난 방학에 가요|지난 방학에 갔어요|Use past tense with time indicators like '지난'"
     ]
 
 
 def get_fallback_feedback():
-    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함, sentence_connection_tip 추가)"""
+    """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함, sentence_connection_tip 추가) - 지난/다음 방학 주제로 업데이트"""
     return {
-        "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
-        "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
+        "suggested_model_sentence": "지난 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 특별한 일로는 친구들과 캠핑을 한 것이 정말 재미있었어요. 다음 방학에는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence_english": "During my last vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. The special thing was camping with friends, which was really fun. Next vacation, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "grammar_issues": get_default_grammar_issues(),
-        "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함
+        "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함 (지난/다음 방학 주제)
         "content_expansion_suggestions": [
-            "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
-            "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
+            "💬 Topic: Past vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
+            "💬 Topic: Specific future plans\\n📝 Example: '다음 방학에는 한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'Next vacation, I want to learn Korean traditional food. I will also learn how to make kimchi.'"
         ],
         "grammar_expression_tip": "🚀 Try: '저는 X를 좋아해요' = 'I like X'\\n📝 Example: '저는 한국 음식을 좋아해요'\\n💡 Use to express preferences",
-        "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
+        "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 여행 갔어요. 재미있었어요.\\n✅ 여행을 가서 정말 재미있었어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
         "fluency_comment": "Keep practicing! Try to speak for at least 60+ seconds to build fluency.",
         "interview_readiness_score": 5,  # 🔥 기본 점수는 5점 (STT 검증에서 0으로 오버라이드됨)
-        "detailed_feedback": "Good effort attempting both topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do? • Practice connecting your ideas with phrases like '그리고' (and) and '그래서' (so/therefore) to sound more natural",
+        "detailed_feedback": "Good effort attempting both vacation topics! Here are some tips to improve: • Try to speak for at least 60+ seconds to meet interview expectations • Add specific details about your experiences - what exactly did you do during your vacation? • Practice connecting your ideas with phrases like '그리고' (and) and '그래서' (so/therefore) to sound more natural",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
 
@@ -1113,9 +1114,9 @@ def validate_and_fix_improvement(improvement):
         "improvement_score": 5,
         "improvement_reason": "Continue practicing for better fluency and accuracy",
         "specific_improvements": ["Attempted Korean speaking practice"],
-        "remaining_issues": ["Focus on speaking longer (60+ seconds) with more details and address both topics"],
+        "remaining_issues": ["Focus on speaking longer (60+ seconds) with more details and address both vacation topics"],
         "feedback_application": "unknown",
-        "overall_assessment": "Keep practicing! Focus on speaking for 60+ seconds with personal details and clear reasons for both topics.",
+        "overall_assessment": "Keep practicing! Focus on speaking for 60+ seconds with personal details and clear experiences for both past and future vacation topics.",
         "encouragement_message": "Every practice session makes you better! Keep going!"
     }
     
@@ -1149,7 +1150,7 @@ def validate_and_fix_improvement(improvement):
 
 
 def get_fallback_improvement_assessment():
-    """개선도 평가 실패시 기본값 (2인칭 톤)"""
+    """개선도 평가 실패시 기본값 (2인칭 톤) - 지난/다음 방학 주제로 업데이트"""
     return {
         "first_attempt_score": 5,
         "second_attempt_score": 5,
@@ -1157,9 +1158,9 @@ def get_fallback_improvement_assessment():
         "improvement_score": 5,
         "improvement_reason": "Technical error - manual review needed",
         "specific_improvements": ["You attempted Korean speaking practice"],
-        "remaining_issues": ["Practice speaking for at least 60-120 seconds"],
+        "remaining_issues": ["Practice speaking for at least 60-120 seconds about both vacation topics"],
         "feedback_application": "unknown",
-        "overall_assessment": "Keep practicing - focus on at least 60-120 seconds with personal details",
+        "overall_assessment": "Keep practicing - focus on at least 60-120 seconds with personal vacation details",
         "encouragement_message": "Every practice session makes you better! Keep going!"
     }
 
@@ -1218,7 +1219,7 @@ def display_score_with_encouragement(score, duration=0):
             message += " Focus on reaching 60 seconds."
     else:
         message = "🌱 Everyone starts somewhere! Keep practicing!"
-        message += " Work towards 60+ seconds with both topics covered."
+        message += " Work towards 60+ seconds with both vacation topics covered."
     
     # 메시지 표시
     st.markdown(
