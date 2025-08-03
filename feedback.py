@@ -384,12 +384,11 @@ def preprocess_long_transcript(transcript):
         return preprocess_long_transcript_fallback(cleaned)
 
 
-# === 개선된 오류 분류 함수 (3개 주요 유형 + 기타) ===
+# === 🔥 개선된 오류 분류 함수 (설명 텍스트 우선 분석) ===
 def classify_error_type(issue_text):
     """
     피드백 텍스트를 분석하여 4개 오류 타입 중 하나 반환
-    - 3개 주요 유형: Particle, Verb Ending, Verb Tense (모두 동등하게 중요)
-    - 기타: Others (모든 다른 문법 오류)
+    🔥 개선사항: 설명 텍스트(💡 뒤의 내용)를 우선적으로 분석
     
     Args:
         issue_text: 분석할 피드백 텍스트
@@ -400,7 +399,49 @@ def classify_error_type(issue_text):
     """
     issue_lower = issue_text.lower()
     
-    # Original과 Fix 부분 추출 (개선된 파싱)
+    # 🔥 1순위: 설명 텍스트 키워드 우선 분석
+    explanation_text = ""
+    if "💡" in issue_text:
+        try:
+            explanation_text = issue_text.split("💡")[1].strip().lower()
+        except:
+            pass
+    elif "🧠" in issue_text:
+        try:
+            explanation_text = issue_text.split("🧠")[1].strip().lower()
+        except:
+            pass
+    
+    # 설명 텍스트에서 키워드 확인
+    if explanation_text:
+        # Verb Ending 키워드 (가장 우선)
+        verb_ending_keywords = [
+            "verb ending", "polite form", "어미", "존댓말", "반말", 
+            "consistent", "politeness", "형태", "verb form"
+        ]
+        for keyword in verb_ending_keywords:
+            if keyword in explanation_text:
+                print(f"✅ Verb Ending detected from explanation: '{keyword}'")
+                return "Verb Ending"
+        
+        # Verb Tense 키워드
+        tense_keywords = [
+            "tense", "시제", "past", "future", "과거", "미래", 
+            "present", "현재", "time"
+        ]
+        for keyword in tense_keywords:
+            if keyword in explanation_text:
+                print(f"✅ Verb Tense detected from explanation: '{keyword}'")
+                return "Verb Tense"
+        
+        # Particle 키워드
+        particle_keywords = ["particle", "조사", "marker"]
+        for keyword in particle_keywords:
+            if keyword in explanation_text:
+                print(f"✅ Particle detected from explanation: '{keyword}'")
+                return "Particle"
+    
+    # 🔥 2순위: Original과 Fix 부분 추출 및 분석
     original_text = ""
     fix_text = ""
     
@@ -426,13 +467,13 @@ def classify_error_type(issue_text):
     
     print(f"🔍 Debug - Original: '{original_text}' | Fix: '{fix_text}'")  # 디버깅용
     
-    # 1. 초급자 자주 틀리는 패턴 우선 확인
+    # 초급자 자주 틀리는 패턴 우선 확인
     for pattern_info in COMMON_BEGINNER_ERRORS.values():
         if pattern_info["pattern"] in original_text and pattern_info["correct"] in fix_text:
             print(f"✅ {pattern_info['type']} (common pattern): {pattern_info['pattern']} → {pattern_info['correct']}")
             return pattern_info["type"]
     
-    # 2. Particle 확인
+    # Particle 확인
     for particle in INDIVIDUAL_PARTICLES:
         if f"'{particle}'" in issue_text or f" {particle} " in issue_text:
             print(f"✅ Particle detected: keyword '{particle}'")
@@ -442,21 +483,13 @@ def classify_error_type(issue_text):
                 print(f"✅ Particle detected: added '{particle}'")
                 return "Particle"
     
-    if "particle" in issue_lower or "조사" in issue_text:
-        print(f"✅ Particle detected: keyword")
-        return "Particle"
-    
-    # 3. Verb Tense 확인 (시간 표현이 있는 경우)
+    # Verb Tense 확인 (시간 표현이 있는 경우)
     for indicator in TIME_INDICATORS + TENSE_MARKERS:
         if indicator in issue_text:
             print(f"✅ Verb Tense detected: time indicator '{indicator}'")
             return "Verb Tense"
     
-    if "tense" in issue_lower or "시제" in issue_text or "past tense" in issue_lower:
-        print(f"✅ Verb Tense detected: keyword")
-        return "Verb Tense"
-    
-    # 4. Verb Ending 확인
+    # Verb Ending 확인
     for ending in VERB_ENDINGS:
         if ending in issue_text:
             print(f"✅ Verb Ending detected: ending '{ending}'")
@@ -475,6 +508,15 @@ def classify_error_type(issue_text):
             print(f"✅ Verb Ending detected: {original_text} → {fix_text} (informal to formal)")
             return "Verb Ending"
 
+    # 🔥 3순위: 기존 키워드 분석
+    if "particle" in issue_lower or "조사" in issue_text:
+        print(f"✅ Particle detected: keyword")
+        return "Particle"
+    
+    if "tense" in issue_lower or "시제" in issue_text or "past tense" in issue_lower:
+        print(f"✅ Verb Tense detected: keyword")
+        return "Verb Tense"
+    
     if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
         print(f"✅ Verb Ending detected: keyword")
         return "Verb Ending"
