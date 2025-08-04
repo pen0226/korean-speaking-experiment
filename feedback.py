@@ -384,23 +384,43 @@ def preprocess_long_transcript(transcript):
         return preprocess_long_transcript_fallback(cleaned)
 
 
-# === 개선된 오류 분류 함수 (3개 주요 유형 + 기타) ===
 def classify_error_type(issue_text):
     """
-    피드백 텍스트를 분석하여 4개 오류 타입 중 하나 반환
-    - 3개 주요 유형: Particle, Verb Ending, Verb Tense (모두 동등하게 중요)
+    💡 설명 부분을 우선 분석하여 오류 타입 분류
+    - 5개 주요 유형: Particle, Verb Ending, Verb Tense, Word Order, Connectives
     - 기타: Others (모든 다른 문법 오류)
     
     Args:
         issue_text: 분석할 피드백 텍스트
         
     Returns:
-        str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense, 또는 None)
+        str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense, Word Order, Connectives, 또는 None)
               None인 경우 호출부에서 "Others"로 분류됨
     """
     issue_lower = issue_text.lower()
     
-    # Original과 Fix 부분 추출 (개선된 파싱)
+    # 1. 💡 설명 부분 추출 및 우선 분석 (가장 정확함)
+    if "💡" in issue_text:
+        explanation = issue_text.split("💡")[1].strip().lower()
+        
+        # 설명 기반 분류
+        if any(keyword in explanation for keyword in ["tense", "시제", "past tense", "future tense", "present tense"]):
+            print(f"✅ Verb Tense detected: explanation keyword")
+            return "Verb Tense"
+        elif any(keyword in explanation for keyword in ["particle", "조사", "use 을", "use 를", "add 이", "add 가"]):
+            print(f"✅ Particle detected: explanation keyword")
+            return "Particle"
+        elif any(keyword in explanation for keyword in ["ending", "어미", "verb form", "polite form", "formal form"]):
+            print(f"✅ Verb Ending detected: explanation keyword")
+            return "Verb Ending"
+        elif any(keyword in explanation for keyword in ["word order", "어순", "order", "position", "place"]):
+            print(f"✅ Word Order detected: explanation keyword")
+            return "Word Order"
+        elif any(keyword in explanation for keyword in ["connective", "연결", "그리고", "connecting", "transition"]):
+            print(f"✅ Connectives detected: explanation keyword")
+            return "Connectives"
+    
+    # 2. Original과 Fix 부분 추출 (기존 로직 - 보조용)
     original_text = ""
     fix_text = ""
     
@@ -426,13 +446,28 @@ def classify_error_type(issue_text):
     
     print(f"🔍 Debug - Original: '{original_text}' | Fix: '{fix_text}'")  # 디버깅용
     
-    # 1. 초급자 자주 틀리는 패턴 우선 확인
+    # 3. 초급자 자주 틀리는 패턴 확인
     for pattern_info in COMMON_BEGINNER_ERRORS.values():
         if pattern_info["pattern"] in original_text and pattern_info["correct"] in fix_text:
             print(f"✅ {pattern_info['type']} (common pattern): {pattern_info['pattern']} → {pattern_info['correct']}")
             return pattern_info["type"]
     
-    # 2. Particle 확인
+    # 4. Connectives 확인 (새로 추가)
+    connective_keywords = ["그리고", "그래서", "그런데", "하지만", "그러나", "또한", "또", "그리고"]
+    if any(keyword in issue_text for keyword in connective_keywords):
+        print(f"✅ Connectives detected: connective word found")
+        return "Connectives"
+    
+    if "connective" in issue_lower or "연결" in issue_text or "connecting" in issue_lower:
+        print(f"✅ Connectives detected: keyword")
+        return "Connectives"
+    
+    # 5. Word Order 확인 (새로 추가)
+    if "word order" in issue_lower or "어순" in issue_text or "order" in issue_lower:
+        print(f"✅ Word Order detected: keyword")
+        return "Word Order"
+    
+    # 6. Particle 확인
     for particle in INDIVIDUAL_PARTICLES:
         if f"'{particle}'" in issue_text or f" {particle} " in issue_text:
             print(f"✅ Particle detected: keyword '{particle}'")
@@ -446,7 +481,7 @@ def classify_error_type(issue_text):
         print(f"✅ Particle detected: keyword")
         return "Particle"
     
-    # 3. Verb Tense 확인 (시간 표현이 있는 경우)
+    # 7. Verb Tense 확인 (시간 표현이 있는 경우)
     for indicator in TIME_INDICATORS + TENSE_MARKERS:
         if indicator in issue_text:
             print(f"✅ Verb Tense detected: time indicator '{indicator}'")
@@ -456,7 +491,7 @@ def classify_error_type(issue_text):
         print(f"✅ Verb Tense detected: keyword")
         return "Verb Tense"
     
-    # 4. Verb Ending 확인
+    # 8. Verb Ending 확인
     for ending in VERB_ENDINGS:
         if ending in issue_text:
             print(f"✅ Verb Ending detected: ending '{ending}'")
@@ -479,7 +514,7 @@ def classify_error_type(issue_text):
         print(f"✅ Verb Ending detected: keyword")
         return "Verb Ending"
     
-    # 🔥 3개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
+    # 🔥 5개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
     print(f"❓ No specific type detected, will be classified as 'Others'")
     return None
 
@@ -645,7 +680,7 @@ Student answered "{question}": {transcript}
 
 **🔥 ANALYSIS REQUIREMENTS:** 
 
-1. **Grammar Issues (3-6개, 다양한 유형 우선)**
+1. **Grammar Issues (5-6개, 다양한 유형 우선)**
    - **우선순위 적용**: 
      1. 실제로 틀린 문법 (자연스러운 변형은 제외)
      2. 의사소통에 가장 큰 영향을 주는 오류
@@ -700,11 +735,11 @@ Student answered "{question}": {transcript}
    - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
 
 **GRAMMAR ERROR TYPES**
-- **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.) - BUT accept both '하고' and '과/와' as correct
+- **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
 - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
 - **Verb Tense**: Incorrect verb tense usage (past/present/future)
-- **Word Order**: Unnatural word order
-- **Connectives**: Inappropriate connecting expressions
+- **Word Order**: Unnatural word order in sentences
+- **Connectives**: Inappropriate connecting expressions or overuse of 그리고
 - **Others**: For grammar mistakes that do not fit the above categories
 
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
@@ -720,6 +755,8 @@ Student answered "{question}": {transcript}
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
     ],
     "vocabulary_suggestions": [

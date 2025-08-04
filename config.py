@@ -178,7 +178,15 @@ GRAMMAR_ERROR_TYPES = {
         "korean": "동사시제", 
         "description": "Wrong tense with time indicators"
     },
-    "Others": { # <-- 이 부분이 추가됩니다.
+    "Word Order": {
+        "korean": "어순",
+        "description": "Unnatural word order in sentences"
+    },
+    "Connectives": {
+        "korean": "연결어",
+        "description": "Inappropriate connecting expressions or overuse"
+    },
+    "Others": {
         "korean": "기타",
         "description": "Other grammar mistakes not fitting specific categories"
     }
