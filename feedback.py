@@ -404,19 +404,19 @@ def classify_error_type(issue_text):
         explanation = issue_text.split("💡")[1].strip().lower()
         
         # 설명 기반 분류
-        if any(keyword in explanation for keyword in ["tense", "시제", "past tense", "future tense", "present tense"]):
+        if any(keyword in explanation for keyword in ["tense", "past tense", "future tense", "present tense", "past", "present", "future", "match the context", "time context", "wrong tense", "does not match tense", "change to past tense"]):
             print(f"✅ Verb Tense detected: explanation keyword")
             return "Verb Tense"
         elif any(keyword in explanation for keyword in ["particle", "조사", "use 을", "use 를", "add 이", "add 가"]):
             print(f"✅ Particle detected: explanation keyword")
             return "Particle"
-        elif any(keyword in explanation for keyword in ["ending", "어미", "verb form", "polite form", "formal form"]):
+        elif any(keyword in explanation for keyword in ["ending", "verb form", "polite form", "formal form", "should be -요", "verb ending is wrong", "needs polite ending"]):
             print(f"✅ Verb Ending detected: explanation keyword")
             return "Verb Ending"
-        elif any(keyword in explanation for keyword in ["word order", "어순", "order", "position", "place"]):
+        elif any(keyword in explanation for keyword in ["word order", "어순", "wrong order", "position", "place"]):
             print(f"✅ Word Order detected: explanation keyword")
             return "Word Order"
-        elif any(keyword in explanation for keyword in ["connective", "연결", "그리고", "connecting", "transition"]):
+        elif any(keyword in explanation for keyword in ["connective", "연결", "그리고", "connecting", "transition","sentence transition", "needs better connection", "connect with 그리고", "add 그래서"]):
             print(f"✅ Connectives detected: explanation keyword")
             return "Connectives"
     
