@@ -51,7 +51,7 @@ def is_valid_transcript(text: str) -> bool:
 
 # === 간소화된 오류 분류 상수 ===
 INDIVIDUAL_PARTICLES = ["을", "를", "은", "는", "이", "가", "에서", "에게", "에", "와", "과", "의", "로", "으로"]
-TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에"]
+TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에", "지난", "다음"]
 VERB_ENDINGS = ["예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다", "다", "ㄴ다", "는다"]
 TENSE_MARKERS = ["했어요", "할 거예요", "하고 있어요", "한 적이", "했었어요", "할게요"]
 
@@ -743,7 +743,7 @@ Student answered "{question}": {transcript}
 - **Others**: For grammar mistakes that do not fit the above categories
 
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
-- **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained WHY you want to work in Korea")
+- **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained your vacation experiences clearly")
 - **핵심 개선점**: 2-3개로 집중
 - **개선 예문**: 학생 답변을 기반으로 한 구체적 예문 제시
 - **길이 피드백**: 90초 목표 언급
@@ -954,8 +954,8 @@ def validate_and_fix_feedback(feedback):
     
     # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback + sentence_connection_tip)
     required_fields = {
-        "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
-        "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
+        "suggested_model_sentence": "지난 방학에는 가족과 함께 제주도로 여행을 갔어요. 아름다운 바다를 보고 맛있는 흑돼지도 먹었어요. 정말 특별한 경험이었어요. 다음 방학에는 한국어 공부를 더 열심히 할 거예요. 한국 문화를 깊이 배우고 싶어서 한국 친구들과 더 많이 대화하고 싶어요.",
+        "suggested_model_sentence_english": "During my last vacation, I went on a trip to Jeju Island with my family. We saw the beautiful ocean and ate delicious black pork. It was truly a special experience. Next vacation, I will study Korean more diligently. I want to learn Korean culture deeply, so I want to have more conversations with Korean friends.",
         "content_expansion_suggestions": [
             "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
             "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
@@ -1078,8 +1078,9 @@ def get_default_grammar_issues():
 def get_fallback_feedback():
     """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함, sentence_connection_tip 추가)"""
     return {
-        "suggested_model_sentence": "여름 방학에는 가족하고 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
-        "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
+        "suggested_model_sentence": "지난 방학에는 가족과 함께 여행을 갔어요. 새로운 도시에서 맛있는 음식도 먹고 사진도 많이 찍었어요. 다음 방학에는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+        "suggested_model_sentence_english": "During my last vacation, I went on a trip with my family. We ate delicious food in a new city and took lots of photos. Next vacation, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
+        "grammar_issues": get_default_grammar_issues(),
         "grammar_issues": get_default_grammar_issues(),
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함
         "content_expansion_suggestions": [

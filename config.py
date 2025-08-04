@@ -50,13 +50,13 @@ SESSION_LABELS = {
     2: "Session 2"
 }
 
-# 실험 설정
-EXPERIMENT_QUESTION = "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요? 왜요?"
+# 🔥 수정된 실험 질문
+EXPERIMENT_QUESTION = "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요? 특별한 일이 있었어요? 2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?"
 
-# 세션별 질문 설정
+# 🔥 수정된 세션별 질문 설정
 SESSION_QUESTIONS = {
-    1: "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 여름 방학에 뭐 했어요? 2️⃣ 한국에서 뭐 할 거예요? 왜요?",
-    2: "이번 여름에 한국에서 뭐 하려고 하세요? 특별한 계획이 있으세요?"
+    1: "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요? 특별한 일이 있었어요? 2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?",
+    2: "지난 방학에 뭐 하셨어요? 다음 방학에는 특별한 계획이 있으세요?"
 }
 
 # 현재 세션에 맞는 질문으로 자동 설정
@@ -233,7 +233,7 @@ GPT_SYSTEM_PROMPT = """You are a Korean language teaching expert specializing in
 Focus on precise error analysis and practical improvements. 
 Always respond with valid JSON only."""
 
-# 🔥 개선된 피드백 생성 프롬프트 템플릿 (1-2분 목표 + 강화된 오류 감지 + vs 방식 어휘 제안)
+# 🔥 개선된 피드백 생성 프롬프트 템플릿 (수정된 질문 반영)
 FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -319,7 +319,7 @@ Student answered "{question}": {transcript}
 - Score 4 to 5: Spoke 60s+, basic content, several errors
 - Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
 
-# 🔥 개선도 평가 프롬프트 템플릿 (1-2분 기준)
+# 🔥 개선도 평가 프롬프트 템플릿 (수정된 질문 반영)
 IMPROVEMENT_PROMPT_TEMPLATE = """Compare two Korean speaking attempts from a beginner student.
 
 QUESTION: "{question}"
@@ -366,10 +366,10 @@ ORIGINAL FEEDBACK GIVEN: {original_feedback}
 
 Be specific about improvements and always find something positive to say!"""
 
-# 🔥 기본 피드백 데이터 (1-2분 기준, vs 방식 어휘 제안으로 수정)
+# 🔥 기본 피드백 데이터 (수정된 질문에 맞게 조정)
 FALLBACK_FEEDBACK_DATA = {
-    "suggested_model_sentence": "여름 방학에는 가족과 함께 여행을 갔어요. 바다에서 수영도 하고 맛있는 음식도 많이 먹었어요. 한국에서는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
-    "suggested_model_sentence_english": "During summer vacation, I went on a trip with my family. I swam in the sea and ate a lot of delicious food. In Korea, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
+    "suggested_model_sentence": "지난 방학에는 가족과 함께 여행을 갔어요. 새로운 도시에서 맛있는 음식도 먹고 사진도 많이 찍었어요. 다음 방학에는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
+    "suggested_model_sentence_english": "During my last vacation, I went on a trip with my family. We ate delicious food in a new city and took lots of photos. Next vacation, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
     "grammar_issues": [
         "Particle|친구가 만났어요|친구를 만났어요|Use '를' to indicate the object and change '전공이에요' to '전공해요'",
         "Verb Tense|내일 한국어 공부해요|내일 한국어 공부할 거예요|Use future tense '할 거예요' for definite future plans",
@@ -380,8 +380,8 @@ FALLBACK_FEEDBACK_DATA = {
         "❓ **좋다 vs 좋아하다**\\n💡 좋다: Adjective - something is good (state/quality)\\n💡 좋아하다: Verb - to like something (preference)\\n🟢 날씨가 좋아요 (The weather is nice) / 음악을 좋아해요 (I like music)\\n📝 Use '이/가 좋다' vs '을/를 좋아하다'"
     ],
     "content_expansion_suggestions": [
-        "💬 Topic: Summer vacation details\\n📝 Example: '친구들과 함께 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
-        "💬 Topic: Specific plans in Korea\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
+        "💬 Topic: Last vacation details\\n📝 Example: '친구들과 함께 해변에서 놀았어요. 일출도 보고 바베큐도 했어요.'\\n   'I had fun at the beach with friends. We watched the sunrise and had a barbecue.'",
+        "💬 Topic: Specific plans for next vacation\\n📝 Example: '한국 전통 음식을 배우고 싶어요. 김치 만드는 방법도 배울 거예요.'\\n   'I want to learn Korean traditional food. I will also learn how to make kimchi.'"
     ],
     "grammar_expression_tip": "🚀 Try these useful patterns:\\n• 'X와/과 함께 Y했어요' = 'I did Y together with X'\\n📝 Example: '가족과 함께 여행했어요'\\n• 'X고 싶어서 Y할 거예요' = 'I will do Y because I want to X'\\n📝 Example: '한국어를 배우고 싶어서 수업을 들을 거예요'\\n💡 Use to make your answers more detailed and natural",
     "interview_readiness_score": 6,
