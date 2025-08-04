@@ -1052,22 +1052,26 @@ def standardize_grammar_issue(issue_text, error_type):
 
 
 def get_default_explanation(error_type):
-    """오류 타입별 기본 설명 (4개 유형 지원)"""
+    """오류 타입별 기본 설명 (6개 유형 지원)"""
     explanations = {
         "Particle": "Use the appropriate particle to mark the grammatical role",
         "Verb Ending": "Use the correct verb ending form",
         "Verb Tense": "Use the appropriate tense marker",
-        "Others": "Review this grammar point carefully"  # 🔥 "Others" 유형 추가
+        "Word Order": "Use the correct word order for natural Korean",
+        "Connectives": "Use appropriate connecting expressions",
+        "Others": "Review this grammar point carefully"
     }
     return explanations.get(error_type, "Review this grammar point")
 
 
 def get_default_grammar_issues():
-    """기본 문법 이슈들 (3개 주요 유형)"""
+    """기본 문법 이슈들 (5개 주요 유형)"""
     return [
-        "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object and change '전공이에요' to '전공해요'",
-        "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing that you like doing activities",
-        "Verb Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'"
+        "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object",
+        "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing preferences",
+        "Verb Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'",
+        "Word Order|한국에서 저는 공부해요|저는 한국에서 공부해요|Subject comes before location",
+        "Connectives|그리고 그리고 또|그리고... 또한|Avoid repeating the same connector"
     ]
 
 
