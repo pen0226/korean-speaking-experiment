@@ -385,56 +385,58 @@ def preprocess_long_transcript(transcript):
 
 
 def classify_error_type(issue_text):
-    """
-    💡 설명 부분을 우선 분석하여 오류 타입 분류
-    - 5개 주요 유형: Particle, Verb Ending, Verb Tense, Word Order, Connectives
-    - 기타: Others (모든 다른 문법 오류)
-    
-    Args:
-        issue_text: 분석할 피드백 텍스트
-        
-    Returns:
-        str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense, Word Order, Connectives, 또는 None)
-              None인 경우 호출부에서 "Others"로 분류됨
-    """
+    """💡 설명 부분을 우선 분석하여 오류 타입 분류"""
     issue_lower = issue_text.lower()
     
-    # 1. 💡 설명 부분 추출 및 우선 분석 (가장 정확함)
+    # 1. 💡 설명 부분 우선 분석
     if "💡" in issue_text:
         explanation = issue_text.split("💡")[1].strip().lower()
         
-        # 시제 키워드
+        # 시제 (한국어 어미 포함)
         if any(keyword in explanation for keyword in [
-            "tense", "past tense", "future tense", "present tense", "past", "present", "future",
-            "match the context", "time context", "wrong tense", "does not match tense",
-            "change to past tense", "match the past context", "use past tense", "should be past",
-            "바빴어요", "갔어요", "했어요", "past form"
+            "tense", "past", "present", "future", "context", "match",
+            "바빴어요", "갔어요", "했어요", "었어요", "았어요", "ㄴ다", "는다"
         ]):
             return "Verb Tense"
         
-        elif any(keyword in explanation for keyword in ["particle", "조사", 
-            "'을'", "'를'", "'은'", "'는'", "'이'", "'가'", "'에서'", "'에'", "'와'", "'과'", "'의'", "'로'", "'으로'",
-            "'한테'", "'께'", "'부터'", "'까지'", "'만'", "'도'", "'하고'",
-            "mark", "indicate", "subject", "object", "location", "direction", 
-            "missing particle", "wrong particle", "need particle", "particle error"]):
+        # 조사 (한국어 조사 포함)
+        elif any(keyword in explanation for keyword in [
+            "particle", "조사", "mark", "indicate", "subject", "object", "location",
+            "을", "를", "은", "는", "이", "가", "에서", "에", "와", "과", "의", "로", "으로",
+            "한테", "께", "부터", "까지", "만", "도", "하고"
+        ]):
             return "Particle"
         
-        elif any(keyword in explanation for keyword in ["ending", "verb form", "polite form", "formal form", "should be -요", "verb ending is wrong", "needs polite ending", "natural", "expressing", "appropriate"]):
+        # 어미 (한국어 어미 포함)
+        elif any(keyword in explanation for keyword in [
+            "ending", "form", "polite", "formal", "natural", "expressing", "appropriate",
+            "요", "습니다", "세요", "해요", "이에요", "예요"
+        ]):
             return "Verb Ending"
         
-        elif any(keyword in explanation for keyword in ["word order", "어순", "wrong order", "position", "place", "order"]):
+        # 어순
+        elif any(keyword in explanation for keyword in [
+            "order", "어순", "position", "structure", "place"
+        ]):
             return "Word Order"
         
-        elif any(keyword in explanation for keyword in ["connective", "연결", "connecting", "transition", "sentence transition", "needs better connection", "connect with 그리고", "add 그래서"]):
+        # 연결어
+        elif any(keyword in explanation for keyword in [
+            "connective", "연결", "connecting", "transition", "그리고", "그래서"
+        ]):
             return "Connectives"
     
-    # 2. 간단한 fallback - 키워드 체크
-    if "tense" in issue_lower or "시제" in issue_text or "past tense" in issue_lower:
+    # 2. 💡 없을 때 강화된 fallback
+    # 전체 텍스트에서 한국어 패턴 찾기
+    if any(particle in issue_text for particle in ["을", "를", "은", "는", "이", "가", "에서", "에"]):
+        return "Particle"
+    elif any(ending in issue_text for ending in ["요", "습니다", "해요", "이에요"]):
+        return "Verb Ending"  
+    elif any(tense in issue_text for tense in ["었어요", "았어요", "했어요", "갔어요"]):
         return "Verb Tense"
-    elif "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
-        return "Verb Ending"
+    elif "tense" in issue_lower or "ending" in issue_lower:
+        return "Verb Tense" if "tense" in issue_lower else "Verb Ending"
     
-    # 주요 유형에 해당하지 않으면 Others
     return "Others"
 
 
