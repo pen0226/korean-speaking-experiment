@@ -412,7 +412,11 @@ def classify_error_type(issue_text):
         ]):
             return "Verb Tense"
         
-        elif any(keyword in explanation for keyword in [    "particle", "조사", "use 을", "use 를", "use 은", "use 는", "use 이", "use 가", "use 에서", "use 에", "use 와", "use 과", "use 의", "use 로", "use 으로","use 한테", "use 께", "use 부터", "use 까지", "use 만", "use 도", "add 이", "add 가", "add 을", "add 를", "add 은", "add 는", "add 에서", "add 에", "add 와", "add 과", "add 의", "add 로", "add 으로", "mark", "indicate", "subject", "object", "location", "direction", "missing particle", "wrong particle", "need particle", "particle error"]):
+        elif any(keyword in explanation for keyword in ["particle", "조사", 
+            "'을'", "'를'", "'은'", "'는'", "'이'", "'가'", "'에서'", "'에'", "'와'", "'과'", "'의'", "'로'", "'으로'",
+            "'한테'", "'께'", "'부터'", "'까지'", "'만'", "'도'", "'하고'",
+            "mark", "indicate", "subject", "object", "location", "direction", 
+            "missing particle", "wrong particle", "need particle", "particle error"]):
             return "Particle"
         
         elif any(keyword in explanation for keyword in ["ending", "verb form", "polite form", "formal form", "should be -요", "verb ending is wrong", "needs polite ending", "natural", "expressing", "appropriate"]):
