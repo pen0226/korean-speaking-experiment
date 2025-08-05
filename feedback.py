@@ -385,58 +385,74 @@ def preprocess_long_transcript(transcript):
 
 
 def classify_error_type(issue_text):
-    """💡 설명 부분을 우선 분석하여 오류 타입 분류"""
+    """
+    💡 설명 부분을 우선 분석하여 오류 타입 분류
+    - 5개 주요 유형: Particle, Verb Ending, Verb Tense, Word Order, Connectives
+    - 기타: Others (모든 다른 문법 오류)
+    """
     issue_lower = issue_text.lower()
-    
+
     # 1. 💡 설명 부분 우선 분석
     if "💡" in issue_text:
         explanation = issue_text.split("💡")[1].strip().lower()
-        
-        # 시제 (한국어 어미 포함)
+
+        # 1. Verb Tense (시제)
         if any(keyword in explanation for keyword in [
-            "tense", "past", "present", "future", "context", "match",
-            "바빴어요", "갔어요", "했어요", "었어요", "았어요", "ㄴ다", "는다"
+            "tense", "past tense", "future tense", "present tense",
+            "past", "present", "future",
+            "match the context", "time context", "wrong tense", "does not match tense",
+            "change to past tense", "match the past context", "should be past", "use past tense",
+            "'-었어요'","'-았어요'", "used present but", "should be past form",
+            "했어요", "갔어요", "왔어요", "있었어요", "없었어요"
         ]):
             return "Verb Tense"
-        
-        # 조사 (한국어 조사 포함)
+
+        # 2. Particle (조사)
         elif any(keyword in explanation for keyword in [
-            "particle", "조사", "mark", "indicate", "subject", "object", "location",
-            "을", "를", "은", "는", "이", "가", "에서", "에", "와", "과", "의", "로", "으로",
-            "한테", "께", "부터", "까지", "만", "도", "하고"
+            "particle", "조사", "subject marker", "object marker",
+            "use '에'", "use '에서'", "add '을'", "add '를'", "use '이'", "use '가'",
+            "mark the subject", "mark the object", "location marker", "direction marker",
+            "indicate where", "indicate the location", "place where something exists"
         ]):
             return "Particle"
-        
-        # 어미 (한국어 어미 포함)
+
+        # 3. Verb Ending (어미)
         elif any(keyword in explanation for keyword in [
-            "ending", "form", "polite", "formal", "natural", "expressing", "appropriate",
-            "요", "습니다", "세요", "해요", "이에요", "예요"
+            "ending", "verb form", "sentence ending",
+            "polite form", "formal form", "casual form",
+            "요", "should be -요", "needs polite ending", "natural ending",
+            "ending is unnatural", "more polite", "appropriate style",
+            "해요", "합니다", "이에요", "예요", "ㅂ니다"
         ]):
             return "Verb Ending"
-        
-        # 어순
+
+        # 4. Word Order (어순)
         elif any(keyword in explanation for keyword in [
-            "order", "어순", "position", "structure", "place"
+            "word order", "어순", "wrong order", "position", "structure",
+            "rearrange", "place", "natural order", "more natural word order"
         ]):
             return "Word Order"
-        
-        # 연결어
+
+        # 5. Connectives (연결어)
         elif any(keyword in explanation for keyword in [
-            "connective", "연결", "connecting", "transition", "그리고", "그래서"
+            "connective", "연결", "transition", "connecting word",
+            "logical connector", "sentence transition",
+            "needs better connection", "connect with", "add 그래서", "use 그리고"
         ]):
             return "Connectives"
-    
-    # 2. 💡 없을 때 강화된 fallback
-    # 전체 텍스트에서 한국어 패턴 찾기
-    if any(particle in issue_text for particle in ["을", "를", "은", "는", "이", "가", "에서", "에"]):
-        return "Particle"
-    elif any(ending in issue_text for ending in ["요", "습니다", "해요", "이에요"]):
-        return "Verb Ending"  
-    elif any(tense in issue_text for tense in ["었어요", "았어요", "했어요", "갔어요"]):
+
+    # 2. fallback – 텍스트 전체에서 단서 추정
+    if "tense" in issue_lower or "past tense" in issue_lower or "tense" in issue_text:
         return "Verb Tense"
-    elif "tense" in issue_lower or "ending" in issue_lower:
-        return "Verb Tense" if "tense" in issue_lower else "Verb Ending"
-    
+    elif "ending" in issue_lower or "verb form" in issue_lower or "ending" in issue_text:
+        return "Verb Ending"
+    elif "particle" in issue_lower or "particle" in issue_text:
+        return "Particle"
+    elif "order" in issue_lower or "word order" in issue_text:
+        return "Word Order"
+    elif "connective" in issue_lower or "connectives" in issue_text:
+        return "Connectives"
+
     return "Others"
 
 
