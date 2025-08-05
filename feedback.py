@@ -1078,7 +1078,6 @@ def get_fallback_feedback():
         "suggested_model_sentence": "지난 방학에는 가족과 함께 여행을 갔어요. 새로운 도시에서 맛있는 음식도 먹고 사진도 많이 찍었어요. 다음 방학에는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During my last vacation, I went on a trip with my family. We ate delicious food in a new city and took lots of photos. Next vacation, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
         "grammar_issues": get_default_grammar_issues(),
-        "grammar_issues": get_default_grammar_issues(),
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함
         "content_expansion_suggestions": [
             "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
