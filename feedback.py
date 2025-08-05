@@ -686,10 +686,8 @@ Student answered "{question}": {transcript}
 **🔥 GRAMMAR ANALYSIS GUIDELINES:**
 - **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
   * '하고' and '과/와' are both correct for "and/with" 
-  * '에서' and '에' can both be correct depending on context
   * Colloquial forms that are grammatically acceptable should not be flagged
 - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
-- **AVOID OVER-CORRECTION**: Do not suggest changes to already-correct Korean expressions
 
 **🔥 ANALYSIS REQUIREMENTS:** 
 
@@ -698,25 +696,24 @@ Student answered "{question}": {transcript}
      1. 실제로 틀린 문법 (자연스러운 변형은 제외)
      2. 의사소통에 가장 큰 영향을 주는 오류
      3. 초급자가 자주 틀리는 패턴
-     4. 쉽게 고칠 수 있는 오류
      
    - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
-   - **포함할 유형들**:
-     * Particle (조사): 가장 명확한 1-2개만 (을/를, 은/는, 이/가, 에 등) - 단, '하고'와 '과/와'는 둘 다 맞음
-     * Verb Tense (동사 시제): 과거/현재/미래 혼용 오류
-     * Verb Ending (동사 어미): 반말/존댓말, 불규칙 활용, 어미 선택
-     * Word Order (어순): 부자연스러운 어순
-     * Connectives (연결어): 부적절한 연결표현, 그리고 남용
-     * Others: 기타 문법 오류
+    **GRAMMAR ERROR TYPES**
+    - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
+    - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
+    - **Verb Tense**: Incorrect verb tense usage (past/present/future)
+    - **Word Order**: Unnatural word order in sentences
+    - **Connectives**: Inappropriate connecting expressions or overuse of 그리고
+    - **Others**: For grammar mistakes that do not fit the above categories
    
    - **MUST include "Original:" and "→ Fix:" format.**
    - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
-   - **Target: Find 3-6 issues with TYPE DIVERSITY if they exist.**
+   - **Target: Find 5-6 issues with TYPE DIVERSITY if they exist.**
 
 2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
    - **학생이 실제로 사용한 표현의 개선에 초점**
    - **포함할 내용**:
-     * 부자연스러운 표현 → 자연스러운 표현 (예: "많이 갔어요" → "여러 곳에 갔어요")
+     * 부자연스러운 표현 → 자연스러운 표현 
      * 반복된 단어 → 다양한 표현 (예: "그리고" 남용 → 다양한 연결어)
      * 더 정확한 어휘 선택 (맥락에 맞는 단어)
      * vs 형식 유지하되 실용적 개선
@@ -747,13 +744,7 @@ Student answered "{question}": {transcript}
    - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
    - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
 
-**GRAMMAR ERROR TYPES**
-- **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
-- **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
-- **Verb Tense**: Incorrect verb tense usage (past/present/future)
-- **Word Order**: Unnatural word order in sentences
-- **Connectives**: Inappropriate connecting expressions or overuse of 그리고
-- **Others**: For grammar mistakes that do not fit the above categories
+
 
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
 - **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained your vacation experiences clearly")
@@ -787,11 +778,7 @@ Student answered "{question}": {transcript}
     "detailed_feedback": "🌟 What You Did Well\\n- [specific praise point 1 with example from their answer]\\n- [specific praise point 2] 👍\\n\\n🎯 Things to Improve\\n- [specific grammar issue with concrete example: 'Instead of X, try Y']\\n- [specific suggestion with clear example]\\n- [specific content suggestion with example]\\n\\n📝 Try This Next Time\\n1. [actionable tip 1]\\n2. [actionable tip 2]\\n3. [actionable tip 3]"
 }}
 
-**Scoring Guide:**
-- Score 8 to 10: Spoke 60s+, rich personal content, only minor errors
-- Score 6 to 7: Spoke 60s+, good content, some errors but understandable
-- Score 4 to 5: Spoke 60s+, basic content, several errors
-- Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
+"""
 
 
 # === 메인 피드백 함수들 (개선된 프롬프트 적용 + STT 검증) ===
@@ -846,10 +833,7 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
 **IMPORTANT TONE GUIDANCE - SPEAK DIRECTLY TO THE STUDENT:**
 - Always use "You" instead of "The student" 
 - Write feedback as if you're a warm Korean teacher talking directly to the student
-- Be encouraging and personal: "Great job! You spoke for..." instead of "The student spoke for..."
-- Use friendly, supportive language throughout all feedback sections
 
-**REMEMBER: Write ALL feedback sections using "You" and speak directly to the student with warmth and encouragement!**
 
 Use the actual duration ({duration:.1f}s) when generating your feedback and scoring."""
 
@@ -872,7 +856,7 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                timeout=30  # 20초 → 30초로 연장
+                timeout=60  # 30초 → 60초로 연장
             )
             
             raw_content = response.choices[0].message.content.strip()
@@ -1119,11 +1103,8 @@ def get_improvement_assessment(first_transcript, second_transcript, original_fee
         "**Task:** Evaluate improvement between attempts. Be encouraging and specific!",
         """**Task:** Evaluate improvement between attempts. Be encouraging and specific!
 
-**IMPORTANT TONE GUIDANCE - SPEAK DIRECTLY TO THE STUDENT:**
-- Always use "You" instead of "The student" 
-- Write feedback as if you're a warm Korean teacher talking directly to the student
-- Be encouraging and personal: "Great improvement! You spoke much longer..." instead of "The student improved..."
-- Use friendly, supportive language throughout all assessment sections"""
+**TONE:** Use "You" (not "The student"). Be encouraging and speak directly to the student as a warm Korean teacher.
+"""
     )
     
     prompt = generate_prompt(
