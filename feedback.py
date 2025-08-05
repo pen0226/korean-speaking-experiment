@@ -385,138 +385,151 @@ def preprocess_long_transcript(transcript):
 
 
 def classify_error_type(issue_text):
-    """
-    💡 설명 부분을 우선 분석하여 오류 타입 분류
-    - 5개 주요 유형: Particle, Verb Ending, Verb Tense, Word Order, Connectives
-    - 기타: Others (모든 다른 문법 오류)
-    
-    Args:
-        issue_text: 분석할 피드백 텍스트
-        
-    Returns:
-        str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense, Word Order, Connectives, 또는 None)
-              None인 경우 호출부에서 "Others"로 분류됨
-    """
-    issue_lower = issue_text.lower()
-    
-    # 1. 💡 설명 부분 추출 및 우선 분석 (가장 정확함)
-    if "💡" in issue_text:
-        explanation = issue_text.split("💡")[1].strip().lower()
-        
-        # 설명 기반 분류
-        if any(keyword in explanation for keyword in ["tense", "past tense", "future tense", "present tense", "past", "present", "future", "match the context", "time context", "wrong tense", "does not match tense", "change to past tense"]):
-            print(f"✅ Verb Tense detected: explanation keyword")
-            return "Verb Tense"
-        elif any(keyword in explanation for keyword in ["particle", "조사", "use 을", "use 를", "add 이", "add 가"]):
-            print(f"✅ Particle detected: explanation keyword")
-            return "Particle"
-        elif any(keyword in explanation for keyword in ["ending", "verb form", "polite form", "formal form", "should be -요", "verb ending is wrong", "needs polite ending"]):
-            print(f"✅ Verb Ending detected: explanation keyword")
-            return "Verb Ending"
-        elif any(keyword in explanation for keyword in ["word order", "어순", "wrong order", "position", "place"]):
-            print(f"✅ Word Order detected: explanation keyword")
-            return "Word Order"
-        elif any(keyword in explanation for keyword in ["connective", "연결", "그리고", "connecting", "transition","sentence transition", "needs better connection", "connect with 그리고", "add 그래서"]):
-            print(f"✅ Connectives detected: explanation keyword")
-            return "Connectives"
-    
-    # 2. Original과 Fix 부분 추출 (기존 로직 - 보조용)
-    original_text = ""
-    fix_text = ""
-    
-    # GPT 피드백에서 original과 fix 추출
-    if "❌" in issue_text and "✅" in issue_text:
-        try:
-            # ❌ 가족이랑 부산여행 갔다. ✅ 가족이랑 부산여행 갔어요. 형태
-            parts = issue_text.split("❌")[1].split("✅")
-            if len(parts) >= 2:
-                original_text = parts[0].strip().strip(".")
-                fix_text = parts[1].split("💡")[0].strip().strip(".")
-        except:
-            pass
-    elif "Original:" in issue_text and "→" in issue_text:
-        try:
-            original_text = issue_text.split("Original:")[1].split("→")[0].strip().strip("'\"")
-            if "Fix:" in issue_text:
-                fix_text = issue_text.split("Fix:")[1].split("💡")[0].strip().strip("'\"")
-            else:
-                fix_text = issue_text.split("→")[1].split("💡")[0].strip().strip("'\"")
-        except:
-            pass
-    
-    print(f"🔍 Debug - Original: '{original_text}' | Fix: '{fix_text}'")  # 디버깅용
-    
-    # 3. 초급자 자주 틀리는 패턴 확인
-    for pattern_info in COMMON_BEGINNER_ERRORS.values():
-        if pattern_info["pattern"] in original_text and pattern_info["correct"] in fix_text:
-            print(f"✅ {pattern_info['type']} (common pattern): {pattern_info['pattern']} → {pattern_info['correct']}")
-            return pattern_info["type"]
-    
-    # 4. Connectives 확인 (새로 추가)
-    connective_keywords = ["그리고", "그래서", "그런데", "하지만", "그러나", "또한", "또", "그리고"]
-    if any(keyword in issue_text for keyword in connective_keywords):
-        print(f"✅ Connectives detected: connective word found")
-        return "Connectives"
-    
-    if "connective" in issue_lower or "연결" in issue_text or "connecting" in issue_lower:
-        print(f"✅ Connectives detected: keyword")
-        return "Connectives"
-    
-    # 5. Word Order 확인 (새로 추가)
-    if "word order" in issue_lower or "어순" in issue_text or "order" in issue_lower:
-        print(f"✅ Word Order detected: keyword")
-        return "Word Order"
-    
-    # 6. Particle 확인
-    for particle in INDIVIDUAL_PARTICLES:
-        if f"'{particle}'" in issue_text or f" {particle} " in issue_text:
-            print(f"✅ Particle detected: keyword '{particle}'")
-            return "Particle"
-        if original_text and fix_text:
-            if particle in fix_text and particle not in original_text:
-                print(f"✅ Particle detected: added '{particle}'")
-                return "Particle"
-    
-    if "particle" in issue_lower or "조사" in issue_text:
-        print(f"✅ Particle detected: keyword")
-        return "Particle"
-    
-    # 7. Verb Tense 확인 (시간 표현이 있는 경우)
-    for indicator in TIME_INDICATORS + TENSE_MARKERS:
-        if indicator in issue_text:
-            print(f"✅ Verb Tense detected: time indicator '{indicator}'")
-            return "Verb Tense"
-    
-    if "tense" in issue_lower or "시제" in issue_text or "past tense" in issue_lower:
-        print(f"✅ Verb Tense detected: keyword")
-        return "Verb Tense"
-    
-    # 8. Verb Ending 확인
-    for ending in VERB_ENDINGS:
-        if ending in issue_text:
-            print(f"✅ Verb Ending detected: ending '{ending}'")
-            return "Verb Ending"
+   """
+   💡 설명 부분을 우선 분석하여 오류 타입 분류
+   - 5개 주요 유형: Particle, Verb Ending, Verb Tense, Word Order, Connectives
+   - 기타: Others (모든 다른 문법 오류)
+   
+   Args:
+       issue_text: 분석할 피드백 텍스트
+       
+   Returns:
+       str: 분류된 오류 타입 (Particle, Verb Ending, Verb Tense, Word Order, Connectives, 또는 None)
+             None인 경우 호출부에서 "Others"로 분류됨
+   """
+   issue_lower = issue_text.lower()
+   
+   # 1. 💡 설명 부분 추출 및 우선 분석 (가장 정확함)
+   if "💡" in issue_text:
+       explanation = issue_text.split("💡")[1].strip().lower()
+       
+       # 🔥 시제 키워드 강화 - 우선순위 1위
+       tense_keywords = [
+           "tense", "past tense", "future tense", "present tense", "past", "present", "future", 
+           "match the context", "time context", "wrong tense", "does not match tense", 
+           "change to past tense", "match the past context", "use past tense", "should be past",
+           "바빴어요", "갔어요", "했어요", "past form"
+       ]
+       if any(keyword in explanation for keyword in tense_keywords):
+           print(f"✅ Verb Tense detected: explanation keyword")
+           return "Verb Tense"
+       elif any(keyword in explanation for keyword in ["particle", "조사", "use 을", "use 를", "add 이", "add 가"]):
+           print(f"✅ Particle detected: explanation keyword")
+           return "Particle"
+       elif any(keyword in explanation for keyword in ["ending", "verb form", "polite form", "formal form", "should be -요", "verb ending is wrong", "needs polite ending"]):
+           print(f"✅ Verb Ending detected: explanation keyword")
+           return "Verb Ending"
+       elif any(keyword in explanation for keyword in ["word order", "어순", "wrong order", "position", "place"]):
+           print(f"✅ Word Order detected: explanation keyword")
+           return "Word Order"
+       elif any(keyword in explanation for keyword in ["connective", "연결", "connecting", "transition","sentence transition", "needs better connection", "connect with 그리고", "add 그래서"]):
+           print(f"✅ Connectives detected: explanation keyword")
+           return "Connectives"
+   
+   # 2. Original과 Fix 부분 추출 (기존 로직 - 보조용)
+   original_text = ""
+   fix_text = ""
+   
+   # GPT 피드백에서 original과 fix 추출
+   if "❌" in issue_text and "✅" in issue_text:
+       try:
+           # ❌ 가족이랑 부산여행 갔다. ✅ 가족이랑 부산여행 갔어요. 형태
+           parts = issue_text.split("❌")[1].split("✅")
+           if len(parts) >= 2:
+               original_text = parts[0].strip().strip(".")
+               fix_text = parts[1].split("💡")[0].strip().strip(".")
+       except:
+           pass
+   elif "Original:" in issue_text and "→" in issue_text:
+       try:
+           original_text = issue_text.split("Original:")[1].split("→")[0].strip().strip("'\"")
+           if "Fix:" in issue_text:
+               fix_text = issue_text.split("Fix:")[1].split("💡")[0].strip().strip("'\"")
+           else:
+               fix_text = issue_text.split("→")[1].split("💡")[0].strip().strip("'\"")
+       except:
+           pass
+   
+   print(f"🔍 Debug - Original: '{original_text}' | Fix: '{fix_text}'")  # 디버깅용
+   
+   # 3. 초급자 자주 틀리는 패턴 확인
+   for pattern_info in COMMON_BEGINNER_ERRORS.values():
+       if pattern_info["pattern"] in original_text and pattern_info["correct"] in fix_text:
+           print(f"✅ {pattern_info['type']} (common pattern): {pattern_info['pattern']} → {pattern_info['correct']}")
+           return pattern_info["type"]
+   
+   # 🔥 새로 추가: 형용사/동사 시제 변화 패턴 체크
+   tense_patterns = [
+       ("바빠요", "바빴어요"), ("좋아요", "좋았어요"), ("커요", "컸어요"),
+       ("가요", "갔어요"), ("해요", "했어요"), ("와요", "왔어요"),
+       ("있어요", "있었어요"), ("없어요", "없었어요")
+   ]
+   
+   for present, past in tense_patterns:
+       if present in original_text and past in fix_text:
+           print(f"✅ Verb Tense detected: tense pattern {present} → {past}")
+           return "Verb Tense"
+   
+   # 4. Word Order 확인
+   if "word order" in issue_lower or "어순" in issue_text or "order" in issue_lower:
+       print(f"✅ Word Order detected: keyword")
+       return "Word Order"
+   
+   # 5. Particle 확인
+   for particle in INDIVIDUAL_PARTICLES:
+       if f"'{particle}'" in issue_text or f" {particle} " in issue_text:
+           print(f"✅ Particle detected: keyword '{particle}'")
+           return "Particle"
+       if original_text and fix_text:
+           if particle in fix_text and particle not in original_text:
+               print(f"✅ Particle detected: added '{particle}'")
+               return "Particle"
+   
+   if "particle" in issue_lower or "조사" in issue_text:
+       print(f"✅ Particle detected: keyword")
+       return "Particle"
+   
+   # 6. Verb Tense 확인 (시간 표현이 있는 경우)
+   for indicator in TIME_INDICATORS + TENSE_MARKERS:
+       if indicator in issue_text:
+           print(f"✅ Verb Tense detected: time indicator '{indicator}'")
+           return "Verb Tense"
+   
+   if "tense" in issue_lower or "시제" in issue_text or "past tense" in issue_lower:
+       print(f"✅ Verb Tense detected: keyword")
+       return "Verb Tense"
+   
+   # 7. Verb Ending 확인
+   for ending in VERB_ENDINGS:
+       if ending in issue_text:
+           print(f"✅ Verb Ending detected: ending '{ending}'")
+           return "Verb Ending"
 
-    # 반말 → 존댓말 패턴 확인 (정확한 어미 확인)
-    if original_text and fix_text:
-        informal_endings = ["다", "ㄴ다", "는다", "냐", "나", "지", "야"]
-        formal_endings = ["요", "습니다", "세요", "어요", "아요", "이에요", "예요"]
-        
-        # 원본이 반말로 끝나고, 수정본이 존댓말로 끝나는 경우
-        original_has_informal = any(original_text.endswith(ending) for ending in informal_endings)
-        fix_has_formal = any(fix_text.endswith(ending) for ending in formal_endings)
-        
-        if original_has_informal and fix_has_formal:
-            print(f"✅ Verb Ending detected: {original_text} → {fix_text} (informal to formal)")
-            return "Verb Ending"
+   # 반말 → 존댓말 패턴 확인 (정확한 어미 확인)
+   if original_text and fix_text:
+       informal_endings = ["다", "ㄴ다", "는다", "냐", "나", "지", "야"]
+       formal_endings = ["요", "습니다", "세요", "어요", "아요", "이에요", "예요"]
+       
+       # 원본이 반말로 끝나고, 수정본이 존댓말로 끝나는 경우
+       original_has_informal = any(original_text.endswith(ending) for ending in informal_endings)
+       fix_has_formal = any(fix_text.endswith(ending) for ending in formal_endings)
+       
+       if original_has_informal and fix_has_formal:
+           print(f"✅ Verb Ending detected: {original_text} → {fix_text} (informal to formal)")
+           return "Verb Ending"
 
-    if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
-        print(f"✅ Verb Ending detected: keyword")
-        return "Verb Ending"
-    
-    # 🔥 5개 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
-    print(f"❓ No specific type detected, will be classified as 'Others'")
-    return None
+   if "ending" in issue_lower or "verb form" in issue_lower or "어미" in issue_text:
+       print(f"✅ Verb Ending detected: keyword")
+       return "Verb Ending"
+   
+   # 8. Connectives 확인 (더 엄격한 조건)
+   if "connective" in issue_lower or "연결" in issue_text or "connecting" in issue_lower:
+       print(f"✅ Connectives detected: keyword")
+       return "Connectives"
+   
+   # 🔥 주요 유형에 해당하지 않으면 None 반환 (호출부에서 "Others"로 분류됨)
+   print(f"❓ No specific type detected, will be classified as 'Others'")
+   return None
 
 
 # === 🔥 스마트한 중복 필터링 함수 (vs 방식으로 수정됨) ===
