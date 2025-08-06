@@ -429,7 +429,7 @@ def classify_error_type(issue_text):
         # 4. Word Order (어순)
         elif any(keyword in explanation for keyword in [
             "word order", "어순", "wrong order", "position", "structure",
-            "rearrange", "place", "natural order", "more natural word order"
+            "rearrange", "natural order", "more natural word order"
         ]):
             return "Word Order"
 
