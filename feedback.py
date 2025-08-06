@@ -410,7 +410,7 @@ def classify_error_type(issue_text):
         # 2. Particle (조사)
         elif any(keyword in explanation for keyword in [
             "particle", "조사", "subject marker", "object marker",
-            "use '에'", "use '에서'", "add '을'", "add '를'", "use '이'", "use '가'",
+            "use '에'", "use '에서'", "add '을'", "add '를'", "use '이'", "use '가'", "use '은'", "use '는'",
             "mark the subject", "mark the object", "location marker", "direction marker",
             "indicate where", "indicate the location", "place where something exists"
         ]):
