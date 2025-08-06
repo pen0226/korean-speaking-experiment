@@ -399,37 +399,67 @@ def classify_error_type(issue_text):
         # 1. Verb Tense (시제)
         if any(keyword in explanation for keyword in [
             "tense", "past tense", "future tense", "present tense",
-            "past", "present", "future",
-            "match the context", "time context", "wrong tense", "does not match tense",
-            "change to past tense", "match the past context", "should be past", "use past tense",
-            "'-었어요'","'-았어요'", "used present but", "should be past form",
-            "했어요", "갔어요", "왔어요", "있었어요", "없었어요"
+            "past", "present", "future", "yesterday", "tomorrow", "now",
+            "match the context", "time context", "temporal context",
+            "wrong tense", "does not match tense", "incorrect tense",
+            "change to past", "change to future", "change to present",
+            "match the past", "match the future", "match the present",
+            "should be past", "should be future", "should be present",
+            "use past tense", "use future tense", "use present tense",
+            "'-었어요'", "'-았어요'", "'-ㅆ어요'", "'-겠어요'", "'-ㄹ 거예요'",
+            "used present but", "should be past form", "should be future form",
+            "했어요", "갔어요", "왔어요", "있었어요", "없었어요",
+            "할 거예요", "갈 거예요", "올 거예요",
+            "happened", "will happen", "is happening",
+            "completed action", "ongoing action", "planned action",
+            "time indicator", "temporal marker", "time expression"
         ]):
             return "Verb Tense"
 
         # 2. Particle (조사)
         elif any(keyword in explanation for keyword in [
-            "particle", "조사", "subject marker", "object marker",
-            "use '에'", "use '에서'", "add '을'", "add '를'", "use '이'", "use '가'", "use '은'", "use '는'",
-            "mark the subject", "mark the object", "location marker", "direction marker",
-            "indicate where", "indicate the location", "place where something exists"
+            "particle", "조사", "marker", "postposition",
+            "subject marker", "object marker", "topic marker",
+            "use '에'", "use '에서'", "use '에게'", "use '한테'", "use '부터'", "use '까지'",
+            "add '을'", "add '를'", "add '이'", "add '가'", "add '은'", "add '는'",
+            "add '도'", "add '만'", "add '와'", "add '과'", "add '으로'", "add '로'",
+            "use '은'", "use '는'", "use '이'", "use '가'", "use '을'", "use '를'",
+            "'은' to emphasize", "'는' to emphasize", "'은' for emphasis", "'는' for emphasis",
+            "mark the subject", "mark the object", "mark the topic",
+            "location marker", "direction marker", "destination", "starting point",
+            "indicate where", "indicate the location", "indicate the place",
+            "place where something exists", "place where something happens",
+            "emphasize '", "emphasis on", "emphasize the topic",
+            "from", "to", "at", "in", "on", "with"
         ]):
             return "Particle"
 
         # 3. Verb Ending (어미)
         elif any(keyword in explanation for keyword in [
-            "ending", "verb form", "sentence ending",
-            "polite form", "formal form", "casual form",
-            "요", "should be -요", "needs polite ending", "natural ending",
-            "ending is unnatural", "more polite", "appropriate style",
-            "해요", "합니다", "이에요", "예요", "ㅂ니다"
+            "ending", "verb ending", "sentence ending", "conjugation",
+            "verb form", "politeness ending", "speech level",
+            "polite form", "formal form", "casual form", "honorific",
+            "polite", "formal", "casual", "respectful", "informal",
+            "should be -요", "needs polite", "needs formal",
+            "natural ending", "unnatural ending", "appropriate ending",
+            "more polite", "more formal", "more respectful",
+            "appropriate style", "speech style", "formality level",
+            "해요", "합니다", "이에요", "예요", "ㅂ니다", "세요",
+            "conversational", "interview style", "professional"
         ]):
             return "Verb Ending"
 
         # 4. Word Order (어순)
         elif any(keyword in explanation for keyword in [
-            "word order", "어순", "wrong order", "position", "structure",
-            "rearrange", "natural order", "more natural word order"
+            "word order", "어순", "order", "sequence", "arrangement",
+            "wrong order", "incorrect order", "unnatural order",
+            "position", "placement", "structure", "syntax",
+            "rearrange", "reorder", "reorganize", "restructure",
+            "natural order", "more natural word order",
+            "subject-object-verb", "sov", "verb at the end",
+            "comes before", "comes after", "should be first",
+            "should follow", "should precede", "move", "switch",
+            "natural flow", "sentence flow", "better flow"
         ]):
             return "Word Order"
 
@@ -437,7 +467,8 @@ def classify_error_type(issue_text):
         elif any(keyword in explanation for keyword in [
             "connective", "연결", "transition", "connecting word",
             "logical connector", "sentence transition",
-            "needs better connection", "connect with", "add 그래서", "use 그리고"
+            "needs better connection", "connect with", "use '그래서'", "use '그리고'", "use '그런데'", "use '하지만'",
+            "use '그러나'", "use '그렇지만'", "use '또'"
         ]):
             return "Connectives"
 
