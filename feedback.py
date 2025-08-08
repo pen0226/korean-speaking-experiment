@@ -386,102 +386,71 @@ def preprocess_long_transcript(transcript):
 
 def classify_error_type(issue_text):
     """
-    💡 설명 부분을 우선 분석하여 오류 타입 분류
-    - 5개 주요 유형: Particle, Verb Ending, Verb Tense, Word Order, Connectives
-    - 기타: Others (모든 다른 문법 오류)
+    설명(🧠/💡)을 우선 분석해 오류 타입 분류
+    - Particle, Verb Ending, Verb Tense, Word Order, Connectives
+    - 설명이 없을 때만 라벨/문자열 fallback
     """
     issue_lower = issue_text.lower()
 
-    # 1. 💡 설명 부분 우선 분석
+    # 1) 설명 블록 추출: 💡 또는 🧠 모두 허용
+    exp_block = None
     if "💡" in issue_text:
-        explanation = issue_text.split("💡")[1].strip().lower()
+        exp_block = issue_text.split("💡", 1)[1]
+    elif "🧠" in issue_text:
+        exp_block = issue_text.split("🧠", 1)[1]
 
-        # 1. Verb Tense (시제)
-        if any(keyword in explanation for keyword in [
+    if exp_block:
+        explanation = re.sub(r'^(?:simple explanation:)?\s*', '', exp_block, flags=re.I).lower()
+
+        # 1-1) Verb Tense
+        if any(k in explanation for k in [
             "tense", "past tense", "future tense", "present tense",
             "past", "present", "future", "yesterday", "tomorrow", "now",
-            "match the context", "time context", "temporal context",
-            "wrong tense", "does not match tense", "incorrect tense",
-            "change to past", "change to future", "change to present",
-            "match the past", "match the future", "match the present",
-            "should be past", "should be future", "should be present",
-            "use past tense", "use future tense", "use present tense",
-            "'-었어요'", "'-았어요'", "'-ㅆ어요'", "'-겠어요'", "'-ㄹ 거예요'",
-            "used present but", "should be past form", "should be future form",
-            "했어요", "갔어요", "왔어요", "있었어요", "없었어요",
-            "할 거예요", "갈 거예요", "올 거예요",
-            "happened", "will happen", "is happening",
-            "completed action", "ongoing action", "planned action",
-            "time indicator", "temporal marker", "time expression"
+            "wrong tense", "time context", "temporal"
         ]):
             return "Verb Tense"
 
-        # 2. Particle (조사)
-        elif any(keyword in explanation for keyword in [
-            "particle", "조사", "marker", "postposition",
-            "subject marker", "object marker", "topic marker",
-            "use '에'", "use '에서'", "use '에게'", "use '한테'", "use '부터'", "use '까지'",
-            "add '을'", "add '를'", "add '이'", "add '가'", "add '은'", "add '는'",
-            "add '도'", "add '만'", "add '와'", "add '과'", "add '으로'", "add '로'",
-            "use '은'", "use '는'", "use '이'", "use '가'", "use '을'", "use '를'",
-            "'은' to emphasize", "'는' to emphasize", "'은' for emphasis", "'는' for emphasis",
-            "mark the subject", "mark the object", "mark the topic",
-            "location marker", "direction marker", "destination", "starting point",
-            "indicate where", "indicate the location", "indicate the place",
-            "place where something exists", "place where something happens",
-            "emphasize '", "emphasis on", "emphasize the topic",
-            "from", "to", "at", "in", "on", "with"
+        # 1-2) Particle  ← 키워드 보강
+        if any(k in explanation for k in [
+            "particle", "조사", "을/를", "이/가", "은/는", "에/에서", "으로/로",
+            "object marker", "subject marker", "topic marker",
+            "use '을'", "use '를'", "use '이'", "use '가'", "use '은'", "use '는'",
+            "mark the object", "mark the subject", "mark the topic",
+            "location marker", "direction marker", "destination"
         ]):
             return "Particle"
 
-        # 3. Verb Ending (어미)
-        elif any(keyword in explanation for keyword in [
-            "ending", "verb ending", "sentence ending", "conjugation",
-            "verb form", "politeness ending", "speech level",
-            "polite form", "formal form", "casual form", "honorific",
-            "polite", "formal", "casual", "respectful", "informal",
-            "should be -요", "needs polite", "needs formal",
-            "natural ending", "unnatural ending", "appropriate ending",
-            "more polite", "more formal", "more respectful",
-            "appropriate style", "speech style", "formality level",
-            "해요", "합니다", "이에요", "예요", "ㅂ니다", "세요",
-            "conversational", "interview style", "professional"
+        # 1-3) Verb Ending (어미/높임/경어/말끝)
+        if any(k in explanation for k in [
+            "ending", "verb ending", "conjugation", "politeness",
+            "speech level", "formality", "해요", "합니다", "자연스러운 어미"
         ]):
             return "Verb Ending"
 
-        # 4. Word Order (어순)
-        elif any(keyword in explanation for keyword in [
-            "word order", "어순", "order", "sequence", "arrangement",
-            "wrong order", "incorrect order", "unnatural order",
-            "position", "placement", "structure", "syntax",
-            "rearrange", "reorder", "reorganize", "restructure",
-            "natural order", "more natural word order",
-            "subject-object-verb", "sov", "verb at the end",
-            "comes before", "comes after", "should be first",
-            "should follow", "should precede", "move", "switch",
-            "natural flow", "sentence flow", "better flow"
+        # 1-4) Word Order
+        if any(k in explanation for k in [
+            "word order", "어순", "order", "position", "placement",
+            "reorder", "more natural word order", "sov", "comes before", "comes after"
         ]):
             return "Word Order"
 
-        # 5. Connectives (연결어)
-        elif any(keyword in explanation for keyword in [
+        # 1-5) Connectives
+        if any(k in explanation for k in [
             "connective", "연결", "transition", "connecting word",
-            "logical connector", "sentence transition",
-            "needs better connection", "connect with", "use '그래서'", "use '그리고'", "use '그런데'", "use '하지만'",
-            "use '그러나'", "use '그렇지만'", "use '또'"
+            "use '그래서'", "use '그리고'", "use '그런데'", "use '하지만'", "use '또'"
         ]):
             return "Connectives"
 
-    # 2. fallback – 텍스트 전체에서 단서 추정
-    if "tense" in issue_lower or "past tense" in issue_lower or "tense" in issue_text:
+    # 2) 설명이 없을 때만 fallback (라벨/문자열 스캔)
+    if "tense" in issue_lower:
         return "Verb Tense"
-    elif "ending" in issue_lower or "verb form" in issue_lower or "ending" in issue_text:
-        return "Verb Ending"
-    elif "particle" in issue_lower or "particle" in issue_text:
+    if "particle" in issue_lower:
         return "Particle"
-    elif "order" in issue_lower or "word order" in issue_text:
+    if "ending" in issue_lower or "verb form" in issue_lower:
+        return "Verb Ending"
+    if "order" in issue_lower:
         return "Word Order"
-    elif "connective" in issue_lower or "connectives" in issue_text:
+    if "connective" in issue_lower or "connectives" in issue_lower:
         return "Connectives"
 
     return "Others"
