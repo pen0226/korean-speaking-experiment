@@ -679,8 +679,9 @@ def format_detailed_feedback(content):
     # 기본 줄바꿈 처리
     formatted = content.replace('\\n', '\n')
     
-    # 🌟, 🎯, 📝 섹션별로 분리
+    # 🚩, 🌟, 🎯, 📝 섹션별로 분리
     sections = {
+        'task_check': '',
         'what_you_did_well': '',
         'key_improvements': '',
         'improved_examples': ''
@@ -696,10 +697,13 @@ def format_detailed_feedback(content):
             continue
             
         # 섹션 헤더 감지 - 헤더는 건너뛰기
-        if '🌟' in line or 'What You Did Well' in line:
+        if '🚩' in line or 'Task Completion Check' in line:
+            current_section = 'task_check'
+            continue  # 헤더는 건너뛰기
+        elif '🌟' in line or 'What You Did Well' in line:
             current_section = 'what_you_did_well'
             continue  # 헤더는 건너뛰기
-        elif '🎯' in line or 'Key Improvements' in line:
+        elif '🎯' in line or 'Key Improvements' in line or 'Things to Improve' in line:
             current_section = 'key_improvements'
             continue  # 헤더는 건너뛰기
         elif '📝' in line or 'Try This Next Time' in line:
@@ -712,6 +716,20 @@ def format_detailed_feedback(content):
     
     # 섹션별로 HTML 구조화 (나이트 모드 최적화)
     html_parts = []
+    
+    # 🚩 Task Completion Check 섹션 (새로 추가)
+    if sections['task_check'].strip():
+        task_content = format_task_check_items(sections['task_check'].strip())
+        html_parts.append(f"""
+        <div style="margin-bottom: 15px; padding: 12px; background: rgba(251, 191, 36, 0.1); border-left: 3px solid #fbbf24; border-radius: 5px;">
+            <div style="font-weight: bold; color: #f59e0b; margin-bottom: 8px; font-size: 15px;">
+                🚩 Task Completion Check:
+            </div>
+            <div style="color: inherit; line-height: 1.5; font-size: 15px;">
+                {task_content}
+            </div>
+        </div>
+        """)
     
     # 🌟 What You Did Well 섹션
     if sections['what_you_did_well'].strip():
@@ -747,7 +765,7 @@ def format_detailed_feedback(content):
         html_parts.append(f"""
         <div style="margin-bottom: 10px;">
             <div style="font-weight: bold; color: #7c3aed; margin-bottom: 8px; font-size: 15px;">
-                📝 Improved Examples:
+                📝 Try This Next Time:
             </div>
             <div style="color: inherit; line-height: 1.5; font-size: 16px;">
                 {examples_content}
@@ -760,6 +778,49 @@ def format_detailed_feedback(content):
         return f'<div style="color: inherit; line-height: 1.5; font-size: 16px;">{format_bullet_points(formatted)}</div>'
     
     return ''.join(html_parts)
+
+
+def format_task_check_items(text):
+    """
+    Task Completion Check 항목 포맷팅 (✅/❌ 체크마크 강조)
+    
+    Args:
+        text: 원본 텍스트
+        
+    Returns:
+        str: 포맷팅된 HTML
+    """
+    if not text:
+        return ""
+    
+    lines = text.split('\n')
+    formatted_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line == '-':
+            continue
+        
+        # - 제거
+        if line.startswith('- '):
+            line = line[2:]
+        
+        # ✅와 ❌ 스타일 적용
+        if '✅' in line:
+            line = line.replace('✅', '<span style="color: #22c55e; font-weight: bold;">✅</span>')
+        if '❌' in line:
+            line = line.replace('❌', '<span style="color: #ef4444; font-weight: bold;">❌</span>')
+        if '⚠️' in line:
+            line = line.replace('⚠️', '<span style="color: #f59e0b; font-weight: bold;">⚠️</span>')
+        
+        # Past vacation, Future plans 등 키워드 강조
+        line = line.replace('Past vacation:', '<strong>Past vacation:</strong>')
+        line = line.replace('Future plans:', '<strong>Future plans:</strong>')
+        line = line.replace('Tense usage:', '<strong>Tense usage:</strong>')
+        
+        formatted_lines.append(line)
+    
+    return '<br>'.join(formatted_lines)
 
 
 def format_bullet_points(text):

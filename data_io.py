@@ -24,6 +24,66 @@ from config import (
     SESSION_LABELS
 )
 
+def extract_task_completion_check(detailed_feedback):
+    """
+    detailed_feedback에서 Task Completion Check 정보 추출
+    
+    Args:
+        detailed_feedback: GPT가 생성한 detailed_feedback 텍스트
+        
+    Returns:
+        dict: Task completion 정보
+    """
+    result = {
+        'past_vacation_status': 'Unknown',
+        'future_plans_status': 'Unknown',
+        'tense_usage': 'Unknown',
+        'both_topics_covered': False,
+        'missing_topics': []
+    }
+    
+    if not detailed_feedback:
+        return result
+    
+    # Task Completion Check 섹션 찾기
+    if '🚩 Task Completion Check' in detailed_feedback:
+        lines = detailed_feedback.split('\n')
+        for line in lines:
+            line = line.strip()
+            
+            # Past vacation 체크
+            if 'Past vacation:' in line:
+                if '✅' in line:
+                    if 'Covered well' in line:
+                        result['past_vacation_status'] = 'Covered'
+                    elif 'Partially' in line:
+                        result['past_vacation_status'] = 'Partially'
+                elif '❌' in line:
+                    result['past_vacation_status'] = 'Missing'
+                    result['missing_topics'].append('past_vacation')
+            
+            # Future plans 체크
+            elif 'Future plans:' in line:
+                if '✅' in line:
+                    if 'Covered well' in line:
+                        result['future_plans_status'] = 'Covered'
+                    elif 'Partially' in line:
+                        result['future_plans_status'] = 'Partially'
+                elif '❌' in line:
+                    result['future_plans_status'] = 'Missing'
+                    result['missing_topics'].append('future_plans')
+            
+            # Tense usage 체크
+            elif 'Tense usage:' in line:
+                result['tense_usage'] = line.replace('⚠️', '').replace('Tense usage:', '').strip()
+    
+    # 두 주제 모두 다뤘는지 판단
+    result['both_topics_covered'] = (
+        result['past_vacation_status'] in ['Covered', 'Partially'] and
+        result['future_plans_status'] in ['Covered', 'Partially']
+    )
+    
+    return result
 
 def save_session_data():
     """
@@ -78,7 +138,7 @@ def save_session_data():
 
 def build_session_data(timestamp):
     """
-    세션 데이터 딕셔너리 구성 (자기효능감 필드 추가)
+    세션 데이터 딕셔너리 구성 (자기효능감 필드 + Task Completion Check 추가)
     
     ===== CSV 데이터 구조 문서화 =====
     이 함수는 실험 완료 후 저장되는 주요 CSV 파일의 모든 컬럼을 정의합니다.
@@ -93,6 +153,7 @@ def build_session_data(timestamp):
     6. 개선도 평가 (1차→2차 변화 분석)
     7. 동의서 및 윤리 정보 (GDPR 준수)
     8. 데이터 품질 및 관리 (보관기간, 품질 라벨)
+    9. Task Completion Check (두 주제 커버 여부)
     
     📊 활용 목적:
     - 피드백 시스템 효과성 분석 (1차→2차 개선도)
@@ -100,6 +161,7 @@ def build_session_data(timestamp):
     - 발화 길이 최적화 (목표: 60-120초)
     - AI vs 전문가 채점 비교 연구
     - 학습자 유형별 맞춤 피드백 개발
+    - Task Completion 분석 (주제 누락 패턴 연구)
     
     Args:
         timestamp: 타임스탬프
@@ -122,6 +184,9 @@ def build_session_data(timestamp):
     for key, default_value in default_research_scores.items():
         if key not in research_scores:
             research_scores[key] = default_value
+    
+    # Task Completion Check 데이터 추출
+    task_check_data = extract_task_completion_check(st.session_state.feedback.get('detailed_feedback', ''))
 
     session_data = {
         # ===== 1. 기본 식별 정보 =====
@@ -162,6 +227,13 @@ def build_session_data(timestamp):
         'transcription_1': st.session_state.transcription_1,  # 첫 번째 녹음 STT 전사 결과
         'transcription_2': st.session_state.transcription_2,  # 두 번째 녹음 STT 전사 결과 (피드백 적용 후)
         'gpt_feedback_json': json.dumps(st.session_state.feedback, ensure_ascii=False),  # GPT가 생성한 전체 피드백 (JSON 원본)
+        
+        # ===== 4.5. Task Completion Check 데이터 (새로 추가) =====
+        'task_check_past_vacation': task_check_data.get('past_vacation_status', 'Unknown'),  # Covered/Partially/Missing
+        'task_check_future_plans': task_check_data.get('future_plans_status', 'Unknown'),  # Covered/Partially/Missing
+        'task_check_tense_usage': task_check_data.get('tense_usage', 'Unknown'),  # 시제 사용 평가
+        'task_check_both_topics_covered': task_check_data.get('both_topics_covered', False),  # 두 주제 모두 다뤘는지
+        'task_check_json': json.dumps(task_check_data, ensure_ascii=False),  # 전체 Task Check 데이터
         
         # ===== 5. 연구용 정량 점수 (이중 평가 시스템) =====
         # 논문용 객관적 점수 (오류율, 단어수 기반 자동 계산)
@@ -223,7 +295,6 @@ def build_session_data(timestamp):
     }
     
     return session_data
-
 
 def get_audio_quality_label(duration):
     """
@@ -343,7 +414,7 @@ def save_audio_files(timestamp):
 
 def create_participant_info_file(session_id, timestamp):
     """
-    참여자 정보 파일 생성 (자기효능감 포함)
+    참여자 정보 파일 생성 (자기효능감 + Task Completion Check 포함)
     
     Args:
         session_id: 세션 ID
@@ -374,6 +445,9 @@ def create_participant_info_file(session_id, timestamp):
         error_rate = research_scores.get('error_rate', 'N/A')
         word_count = research_scores.get('word_count', 'N/A')
         
+        # Task Completion Check 정보 추출
+        task_check_data = extract_task_completion_check(st.session_state.feedback.get('detailed_feedback', ''))
+        
         info_content = f"""=== PARTICIPANT INFORMATION ===
 Anonymous ID: {session_id}
 Original Nickname: {original_nickname}
@@ -388,6 +462,13 @@ Speaking Confidence: {speaking_confidence}
 === SELF-EFFICACY SCORES (1-5 scale) ===
 {chr(10).join(efficacy_scores)}
 Average Self-Efficacy: {efficacy_avg}/5.0
+
+=== TASK COMPLETION CHECK ===
+Past Vacation Coverage: {task_check_data.get('past_vacation_status', 'Unknown')}
+Future Plans Coverage: {task_check_data.get('future_plans_status', 'Unknown')}
+Tense Usage: {task_check_data.get('tense_usage', 'Unknown')}
+Both Topics Covered: {'Yes' if task_check_data.get('both_topics_covered') else 'No'}
+Missing Topics: {', '.join(task_check_data.get('missing_topics', [])) if task_check_data.get('missing_topics') else 'None'}
 
 === EXPERIMENT DETAILS ===
 Question: {EXPERIMENT_QUESTION}
@@ -416,6 +497,7 @@ Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 This file contains the link between the anonymous ID and the original nickname.
 Data was automatically saved after second recording completion.
 Self-efficacy scores (1-5 scale) collected before experiment.
+Task Completion Check shows whether both topics (past/future) were covered.
 Consent form is stored as HTML file for Korean language compatibility.
 TOPIK reference scores (3 areas) stored in Excel file: reference_scores_{timestamp}.xlsx
 
@@ -429,7 +511,6 @@ Contact: pen0226@gmail.com for any data requests or questions.
     
     except Exception as e:
         return None
-
 
 def create_comprehensive_backup_zip(session_id, timestamp, reference_excel_filename=None):
     """

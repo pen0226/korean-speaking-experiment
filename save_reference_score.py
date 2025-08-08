@@ -10,7 +10,7 @@ from datetime import datetime
 
 def calculate_content_task_score_holistic(transcript):
     """
-    내용 및 과제 수행 점수 계산 (홀리스틱 방식 1-5점 + 이유)
+    내용 및 과제 수행 점수 계산 (Task Completion Check 반영 - 홀리스틱 방식 1-5점 + 이유)
     
     Args:
         transcript: STT 전사 텍스트
@@ -21,37 +21,47 @@ def calculate_content_task_score_holistic(transcript):
     if not transcript or not transcript.strip():
         return 1, "No meaningful content detected"
     
-    # 기본 키워드 확인
-    summer_keywords = ["여름", "방학", "휴가", "여행"]
-    korea_keywords = ["한국", "계획", "할 거예요", "하려고", "갈 거예요", "공부할", "배울"]
-    reason_keywords = ["왜냐하면", "때문에", "해서", "좋아해서", "재미있어서", "아름다워서", "맛있어서", "하고 싶어서"]
+    # 과거 방학 체크 (더 정확한 키워드)
+    past_keywords = ["지난", "작년", "여름", "겨울", "방학", "휴가", "여행", "갔어요", "했어요", "먹었어요", "봤어요", "놀았어요"]
+    past_mentioned = sum(1 for k in past_keywords if k in transcript)
     
-    summer_mentioned = any(keyword in transcript for keyword in summer_keywords)
-    korea_mentioned = any(keyword in transcript for keyword in korea_keywords)
-    reason_mentioned = any(keyword in transcript for keyword in reason_keywords)
+    # 미래 계획 체크 (더 정확한 키워드)
+    future_keywords = ["다음", "내년", "할 거예요", "갈 거예요", "하려고", "계획", "하고 싶어요", "갈 예정", "할 계획"]
+    future_mentioned = sum(1 for k in future_keywords if k in transcript)
+    
+    # 이유 체크
+    reason_keywords = ["왜냐하면", "때문에", "해서", "좋아해서", "싶어서", "위해서", "재미있어서", "배우고 싶어서"]
+    reason_mentioned = any(k in transcript for k in reason_keywords)
     
     word_count = len(transcript.split())
     sentence_count = len([s for s in transcript.split('.') if s.strip()])
     
-    # 홀리스틱 평가 (전체적 인상 기반)
-    if summer_mentioned and korea_mentioned and reason_mentioned and word_count >= 60:
+    # 🆕 두 주제 모두 다뤘는지 명확히 체크
+    both_topics = past_mentioned >= 2 and future_mentioned >= 2
+    one_topic_only = (past_mentioned >= 2 and future_mentioned < 2) or (past_mentioned < 2 and future_mentioned >= 2)
+    
+    # 홀리스틱 평가 (Task Completion 중심)
+    if both_topics and reason_mentioned and word_count >= 60:
         # 5점: 두 주제 완전히 다루고, 이유도 명확, 체계적 구성
         if word_count >= 80 and sentence_count >= 4:
-            return 5, f"Both topics fully covered with clear reasons and good structure ({word_count} words, {sentence_count} sentences)"
+            return 5, f"Both topics FULLY covered with clear reasons ({word_count} words, past:{past_mentioned} keywords, future:{future_mentioned} keywords)"
         # 4점: 두 주제 다루지만 한쪽이 약간 부족하거나 이유가 약함
         else:
-            return 4, f"Both topics covered but one side slightly lacking or weak reasons ({word_count} words)"
-    elif summer_mentioned and korea_mentioned and word_count >= 40:
+            return 4, f"Both topics covered with reasons ({word_count} words, past:{past_mentioned}, future:{future_mentioned})"
+    elif both_topics and word_count >= 40:
         # 3점: 두 주제 언급하지만 내용이 얕거나 구성이 어색
         reason_text = " with some reasons" if reason_mentioned else " but lacks clear reasons"
         return 3, f"Both topics mentioned but shallow content ({word_count} words){reason_text}"
-    elif (summer_mentioned or korea_mentioned) and word_count >= 20:
+    elif one_topic_only and word_count >= 20:
         # 2점: 한 주제만 제대로 다루거나 매우 짧음
-        topic_text = "summer vacation" if summer_mentioned else "Korea plans" if korea_mentioned else "limited topic"
-        return 2, f"Only {topic_text} covered adequately ({word_count} words)"
+        if past_mentioned >= 2:
+            missing = "future plans (다음 방학 계획)"
+        else:
+            missing = "past vacation (지난 방학)"
+        return 2, f"Only one topic covered adequately, MISSING {missing} ({word_count} words)"
     else:
-        # 1점: 최소한의 응답만 시도
-        return 1, f"Minimal response attempt ({word_count} words, incomplete task)"
+        # 1점: 최소한의 응답만 시도 또는 두 주제 모두 미흡
+        return 1, f"Task not completed - both topics missing or minimal ({word_count} words, past:{past_mentioned}, future:{future_mentioned})"
 
 
 def calculate_language_use_score_holistic(transcript):
