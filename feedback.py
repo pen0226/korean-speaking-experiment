@@ -393,6 +393,10 @@ def classify_error_type(issue_text):
     """
     issue_lower = issue_text.lower()
 
+   # 스타일 혼용 체크 - 이것은 오류가 아님
+    if "mixing styles" in issue_lower or "style consistency" in issue_lower:
+        return None  # 스타일 혼용은 오류로 분류하지 않음
+
     # 1) 설명 블록 추출: 💡 또는 🧠 모두 허용
     exp_block = None
     if "💡" in issue_text:
@@ -612,6 +616,8 @@ Student answered "{question}": {transcript}
 - **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
   * '하고' and '과/와' are both correct for "and/with" 
   * Colloquial forms that are grammatically acceptable should not be flagged
+  * **IMPORTANT: Mixing 해요체 and 합니다체 across different sentences is ACCEPTABLE and should NOT be marked as an error**
+  * Only mark as error if 반말 is used or if the same sentence internally mixes styles inconsistently
 - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
 
 **🚩 TASK COMPLETION CHECK (CRITICAL):**
@@ -914,14 +920,20 @@ def validate_and_fix_feedback(feedback):
         valid_issues = []
         for i, issue in enumerate(feedback['grammar_issues'][:6]):  # 최대 6개
             if isinstance(issue, str) and len(issue) > 10:
+
                 # 🎯 오류 타입 분류 (3개 주요 유형 + 기타)
                 error_type = classify_error_type(issue)
+
+                if error_type is None:
+                            continue
+
                 if not error_type:  # 3개 유형에 해당하지 않으면
                     error_type = "Others"  # "Others" 유형으로 분류
                 
                 # 🔥 모든 유효한 문법 오류를 포함 (필터링 제거)
                 standardized_issue = standardize_grammar_issue(issue, error_type)
-                valid_issues.append(standardized_issue)
+                if standardized_issue is not None:
+                    valid_issues.append(standardized_issue)
         
         if valid_issues:
             feedback['grammar_issues'] = valid_issues
@@ -959,6 +971,11 @@ def validate_and_fix_feedback(feedback):
 def standardize_grammar_issue(issue_text, error_type):
     """문법 이슈를 간단한 표준 형식으로 변환"""
     
+# 스타일 혼용 관련 이슈는 제외
+    if "해요" in issue_text and "합니다" in issue_text and "mixing" in issue_text.lower():
+        return None  # 스타일 혼용은 오류가 아니므로 None 반환
+
+
     # Original과 Fix 추출
     original_text = ""
     fix_text = ""
