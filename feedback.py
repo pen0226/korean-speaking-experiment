@@ -387,90 +387,74 @@ def preprocess_long_transcript(transcript):
 
 def classify_error_type(issue_text):
     """
-    GPT를 사용해서 설명 기반으로 오류 타입 분류
+    설명(🧠/💡)을 우선 분석해 오류 타입 분류
+    - Particle, Verb Ending, Tense, Word Order, Connectives
+    - 설명이 없을 때만 라벨/문자열 fallback
     """
     issue_lower = issue_text.lower()
 
-    # 스타일 혼용 체크 - 이것은 오류가 아님
-    if "mixing styles" in issue_lower or "style consistency" in issue_lower:
-        return None  # 스타일 혼용은 오류로 분류하지 않음
+    # 1) 설명 블록 추출: 💡 또는 🧠 모두 허용
+    exp_block = None
+    if "💡" in issue_text:
+        exp_block = issue_text.split("💡", 1)[1]
+    elif "🧠" in issue_text:
+        exp_block = issue_text.split("🧠", 1)[1]
 
-    # 설명 추출 (🧠 또는 💡 둘 다 처리)
-    explanation = ""
-    if "🧠" in issue_text:
-        explanation = issue_text.split("🧠", 1)[1].strip()
-    elif "💡" in issue_text:
-        explanation = issue_text.split("💡", 1)[1].strip()
-    
-    if not explanation:
-        return "Others"
-    
-    # "Simple explanation:" 레이블 제거
-    explanation = re.sub(r'^(?:simple explanation:)?\s*', '', explanation, flags=re.I)
-    
-    # GPT에게 분류 요청
-    classification_prompt = f"""
-    Classify this Korean grammar error into ONE category based on the explanation.
-    
-    Explanation: "{explanation}"
-    
-    Categories:
-    - Particle: Wrong particle usage (은/는, 이/가, 을/를, 에, 에서, 으로, etc.)
-    - Verb Ending: Wrong verb ending or conjugation (아요/어요, 습니다, etc.)
-    - Tense: Wrong tense marker (past/present/future - 했어요, 할 거예요, etc.)
-    - Word Order: Wrong word position in sentence
-    - Connectives: Wrong connecting words (그리고, 그래서, 그런데, etc.)
-    - Expression: Unnatural expression or better idiomatic expression available
-    - Others: Doesn't fit above categories
-    
-    Return ONLY the category name, nothing else.
-    """
-    
-    try:
-        # GPT API 호출
-        import openai
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",  # 빠르고 저렴한 모델 사용
-            messages=[
-                {"role": "system", "content": "You are a Korean grammar expert. Classify the error type based on the explanation. Return only the category name."},
-                {"role": "user", "content": classification_prompt}
-            ],
-            temperature=0,
-            max_tokens=10
-        )
-        
-        error_type = response.choices[0].message.content.strip()
-        
-        # 유효한 카테고리인지 확인
-        valid_categories = ["Particle", "Verb Ending", "Tense", "Word Order", "Connectives", "Expression", "Others"]
-        if error_type in valid_categories:
-            return error_type
-        else:
-            return "Others"
-            
-    except Exception as e:
-        # API 호출 실패시 기존 키워드 방식으로 폴백
-        print(f"Classification API failed: {e}, falling back to keyword matching")
-        
-        # 기존 키워드 매칭 로직 (폴백용)
-        explanation_lower = explanation.lower()
-        
-        if any(k in explanation_lower for k in ["natural expression", "idiomatic", "자연스러운 표현", "관용"]):
-            return "Expression"
-        if any(k in explanation_lower for k in ["particle", "조사", "을/를", "이/가", "은/는"]):
-            return "Particle"
-        if any(k in explanation_lower for k in ["tense", "past", "future", "present"]):
+    if exp_block:
+        explanation = re.sub(r'^(?:simple explanation:)?\s*', '', exp_block, flags=re.I).lower()
+
+        # 1-1) Tense
+        if any(k in explanation for k in [
+            "tense", "past tense", "future tense", "present tense",
+            "past", "present", "future", "yesterday", "tomorrow", "now",
+            "wrong tense", "time context", "temporal"
+        ]):
             return "Tense"
-        if any(k in explanation_lower for k in ["ending", "conjugation", "politeness"]):
+
+        # 1-2) Particle  ← 키워드 보강
+        if any(k in explanation for k in [
+            "particle", "조사", "을/를", "이/가", "은/는", "에/에서", "으로/로",
+            "object marker", "subject marker", "topic marker",
+            "use '을'", "use '를'", "use '이'", "use '가'", "use '은'", "use '는'",
+            "mark the object", "mark the subject", "mark the topic",
+            "location marker", "direction marker", "destination"
+        ]):
+            return "Particle"
+
+        # 1-3) Verb Ending (어미/높임/경어/말끝)
+        if any(k in explanation for k in [
+            "ending", "verb ending", "conjugation", "politeness",
+            "speech level", "speech style ", "formality", "해요", "합니다", "자연스러운 어미"
+        ]):
             return "Verb Ending"
-        if any(k in explanation_lower for k in ["word order", "어순", "position"]):
+
+        # 1-4) Word Order
+        if any(k in explanation for k in [
+            "word order", "어순", "order", "position", "placement",
+            "reorder", "more natural word order", "sov", "comes before", "comes after"
+        ]):
             return "Word Order"
-        if any(k in explanation_lower for k in ["connective", "연결", "그리고", "그래서"]):
+
+        # 1-5) Connectives
+        if any(k in explanation for k in [
+            "connective", "연결", "transition", "connecting word",
+            "use '그래서'", "use '그리고'", "use '그런데'", "use '하지만'", "use '또'"
+        ]):
             return "Connectives"
-            
-        return "Others"
+
+    # 2) 설명이 없을 때만 fallback (라벨/문자열 스캔)
+    if "tense" in issue_lower:
+        return "Tense"
+    if "particle" in issue_lower:
+        return "Particle"
+    if "ending" in issue_lower or "verb form" in issue_lower:
+        return "Verb Ending"
+    if "order" in issue_lower:
+        return "Word Order"
+    if "connective" in issue_lower or "connectives" in issue_lower:
+        return "Connectives"
+
+    return "Others"
 
 
 # === 🔥 스마트한 중복 필터링 함수 (vs 방식으로 수정됨) ===
@@ -628,8 +612,6 @@ Student answered "{question}": {transcript}
 - **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
   * '하고' and '과/와' are both correct for "and/with" 
   * Colloquial forms that are grammatically acceptable should not be flagged
-  * **IMPORTANT: Mixing 해요체 and 합니다체 across different sentences is ACCEPTABLE and should NOT be marked as an error**
-  * Only mark as error if 반말 is used or if the same sentence internally mixes styles inconsistently
 - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
 
 **🚩 TASK COMPLETION CHECK (CRITICAL):**
@@ -663,7 +645,6 @@ If either topic is missing or incomplete:
     - **Tense**: Incorrect tense usage (past/present/future)
     - **Word Order**: Unnatural word order in sentences
     - **Connectives**: Inappropriate connecting expressions or overuse of 그리고
-    - **Expression**: Unnatural expressions or better idiomatic expressions available
     - **Others**: For grammar mistakes that do not fit the above categories
    
    - **MUST include "Original:" and "→ Fix:" format.**
@@ -682,28 +663,29 @@ If either topic is missing or incomplete:
    - **Focus on student's actual expressions that could be more natural**
    - **Target: Provide 2-3 practical improvements when possible.**
 
-3. **One Advanced Pattern (학생 답변 기반)**
-   - **학생이 사용한 패턴을 확장하는 방향**
-   - **예시**: 학생이 "~고 싶다" 많이 사용 → "~고 싶어서" 이유 표현 가르치기
-   - Provide one useful pattern for the placement interview.
-   - Must be appropriate for their level (TOPIK 1–2).
-   - Connect to what the student actually said.   
-   
-   
-4. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
-   - **학생이 실제로 사용한 짧은 문장들을 찾아서 연결 방법 제시**
-   - **연결어 활용**: 그리고, 그래서, -고, -아서/어서
-   - **Before/After 형식**으로 명확한 개선 예시 제공
-   - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
-   - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
-
-5. **Content Expansion (2개, 구체적이고 실용적)**
+3. **Content Expansion (2개, 구체적이고 실용적)**
    - **학생이 언급한 주제를 기반으로 확장**
    - **예시**: 학생이 "바다 갔어요"라고 했으면 → "바다에서 수영도 하고 조개껍데기도 주웠어요" 같은 구체적 확장
    - Give two concrete, personal topics they can add based on what they mentioned.
    - Each idea should help them speak at least 30 more seconds.
    - Use examples they can directly copy.
    - **CRITICAL: Topic names must be in ENGLISH, Korean sentences in Korean.**
+   
+4. **One Advanced Pattern (학생 답변 기반)**
+   - **학생이 사용한 패턴을 확장하는 방향**
+   - **예시**: 학생이 "~고 싶다" 많이 사용 → "~고 싶어서" 이유 표현 가르치기
+   - Provide one useful pattern for the placement interview.
+   - Must be appropriate for their level (TOPIK 1–2).
+   - Connect to what the student actually said.
+
+5. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
+   - **학생이 실제로 사용한 짧은 문장들을 찾아서 연결 방법 제시**
+   - **연결어 활용**: 그리고, 그래서, -고, -아서/어서
+   - **Before/After 형식**으로 명확한 개선 예시 제공
+   - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
+   - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
+
+
 
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
 - **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained your vacation experiences clearly")
@@ -932,20 +914,14 @@ def validate_and_fix_feedback(feedback):
         valid_issues = []
         for i, issue in enumerate(feedback['grammar_issues'][:6]):  # 최대 6개
             if isinstance(issue, str) and len(issue) > 10:
-
                 # 🎯 오류 타입 분류 (3개 주요 유형 + 기타)
                 error_type = classify_error_type(issue)
-
-                if error_type is None:
-                            continue
-
                 if not error_type:  # 3개 유형에 해당하지 않으면
                     error_type = "Others"  # "Others" 유형으로 분류
                 
                 # 🔥 모든 유효한 문법 오류를 포함 (필터링 제거)
                 standardized_issue = standardize_grammar_issue(issue, error_type)
-                if standardized_issue is not None:
-                    valid_issues.append(standardized_issue)
+                valid_issues.append(standardized_issue)
         
         if valid_issues:
             feedback['grammar_issues'] = valid_issues
@@ -983,11 +959,6 @@ def validate_and_fix_feedback(feedback):
 def standardize_grammar_issue(issue_text, error_type):
     """문법 이슈를 간단한 표준 형식으로 변환"""
     
-# 스타일 혼용 관련 이슈는 제외
-    if "해요" in issue_text and "합니다" in issue_text and "mixing" in issue_text.lower():
-        return None  # 스타일 혼용은 오류가 아니므로 None 반환
-
-
     # Original과 Fix 추출
     original_text = ""
     fix_text = ""
@@ -1027,7 +998,6 @@ def get_default_explanation(error_type):
         "Tense": "Use the appropriate tense marker",
         "Word Order": "Use the correct word order for natural Korean",
         "Connectives": "Use appropriate connecting expressions",
-        "Expression": "Use a more natural Korean expression",  # 추가
         "Others": "Review this grammar point carefully"
     }
     return explanations.get(error_type, "Review this grammar point")
