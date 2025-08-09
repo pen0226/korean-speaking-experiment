@@ -449,138 +449,136 @@ def display_question(step_context=""):
     )
 
 
-def record_audio(key, label):
+def record_audio(key, label=""):
     """
-    간소화된 녹음 인터페이스 (실시간 타이머 - 독립 버튼 방식)
-    - 타이머는 iframe 내부 JS로 동작
-    - 사용자 절차: Start Timer → Start Recording → Stop Recording → Stop Timer
+    단일 버튼 + 자동 타이머 + 업로드 대안 (예쁘게 다듬은 버전)
+    - mic_recorder의 버튼 텍스트 변화를 MutationObserver로 감지해 타이머 자동 시작/정지
+    - 명확한 진행 안내/색상 피드백(1분 미만=red, 1~1.5분=orange, 1.5분+=green)
+    - 반환: (audio, "recording") | (uploaded_file, "upload") | (None, None)
     """
+    import streamlit as st
     import streamlit.components.v1 as components
-    
-    # 안내 메시지
-    st.warning("🎙️ **Step 1:** Start Timer → **Step 2:** Start Recording → **Step 3:** Stop Recording → **Step 4:** Stop Timer")
-    
-    # 좌우 배치: 타이머 / 녹음 버튼
-    col_timer, col_rec = st.columns([1, 2])
-    
-    with col_timer:
-        timer_html = """
-        <div style="font-family: system-ui, -apple-system, sans-serif;">
-            <div id="timer" style="
-                display:none; 
-                margin-bottom:10px; 
-                padding:12px; 
-                text-align:center; 
-                font-size:20px;
-                font-weight:700; 
-                border-radius:8px; 
-                background:#eef2ff; 
-                color:#3730a3;
-                transition: all 0.3s;">
-                ⏱️ <span id="t">0:00</span>
-            </div>
-            <div style="display:flex; gap:8px;">
-                <button id="startBtn" style="
-                    flex:1; 
-                    padding:10px; 
-                    border-radius:8px; 
-                    border:1px solid #10b981; 
-                    background:#d1fae5;
-                    font-weight:600;
-                    cursor:pointer;">
-                    ▶️ Start Timer
-                </button>
-                <button id="stopBtn" style="
-                    flex:1; 
-                    padding:10px; 
-                    border-radius:8px; 
-                    border:1px solid #ef4444; 
-                    background:#fee2e2;
-                    font-weight:600;
-                    cursor:pointer;">
-                    ⏸️ Stop Timer
-                </button>
-            </div>
-        </div>
-        
-        <script>
-        let s=0, h=null;
-        const timerDiv = document.getElementById('timer');
-        const timeSpan = document.getElementById('t');
-        
-        const view = () => {
-            const m = Math.floor(s/60);
-            const sec = String(s%60).padStart(2,'0');
-            timeSpan.textContent = m + ":" + sec;
-            
-            // 시간별 색상 변경 (1-2분 목표)
-            if(s < 60) {
-                timerDiv.style.background = '#fee2e2';  // 빨강 (1분 미만)
-                timerDiv.style.color = '#dc2626';
-            } else if(s < 90) {
-                timerDiv.style.background = '#fed7aa';  // 주황 (1-1.5분)
-                timerDiv.style.color = '#ea580c';
-            } else {
-                timerDiv.style.background = '#bbf7d0';  // 초록 (1.5분+)
-                timerDiv.style.color = '#059669';
-            }
-        };
-        
-        const start = () => {
-            if(h) return;  // 이미 실행중이면 무시
-            s = 0;
-            view();
-            timerDiv.style.display = 'block';
-            h = setInterval(() => {
-                s++;
-                view();
-            }, 1000);
-        };
-        
-        const stop = () => {
-            if(h) {
-                clearInterval(h);
-                h = null;
-            }
-            // 타이머는 계속 표시 (시간 확인용)
-        };
-        
-        document.getElementById('startBtn').onclick = start;
-        document.getElementById('stopBtn').onclick = stop;
-        </script>
+    from streamlit_mic_recorder import mic_recorder
+    from config import SUPPORTED_AUDIO_FORMATS
+
+    st.markdown(
         """
-        components.html(timer_html, height=130)
-    
-    with col_rec:
-        # 마이크 녹음
+        <style>
+          .rec-card{
+            border:1px solid rgba(0,0,0,0.08);
+            border-radius:16px;
+            padding:18px 16px;
+            background: linear-gradient(180deg,#ffffff, #fafafa);
+          }
+          .rec-header{
+            display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px;
+          }
+          .badge{
+            font-size:12px; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; font-weight:700;
+          }
+          .hint{
+            margin-top:6px; font-size:13px; color:#64748b;
+          }
+          .timer{
+            margin-top:12px; font-weight:800; font-size:22px; padding:10px 14px; border-radius:12px;
+            display:inline-flex; gap:8px; align-items:center; transition: all .2s ease;
+          }
+          .timer.red{ background:#fee2e2; color:#dc2626; border:1px solid #fecaca;}
+          .timer.orange{ background:#ffedd5; color:#c2410c; border:1px solid #fed7aa;}
+          .timer.green{ background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;}
+          .divider{ height:1px; background:rgba(0,0,0,0.06); margin:14px 0;}
+          .upload-caption{ font-size:12px; color:#64748b; margin-top:4px;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    with st.container():
+        st.markdown(
+            """
+            <div class="rec-card">
+              <div class="rec-header">🎤 Recording
+                <span class="badge">One-tap + Auto Timer</span>
+              </div>
+              <div class="hint">버튼을 누르면 타이머가 자동으로 시작돼요. 1~2분 정도 말해 보세요.</div>
+              <div id="pretty-timer" class="timer red">⏱️ <span id="pt-mm">0</span>:<span id="pt-ss">00</span></div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # 🎙️ 마이크 녹음 (큰 원버튼 스타일은 컴포넌트 기본 UI를 활용)
         audio = mic_recorder(
             start_prompt="🎙️ Start Recording",
-            stop_prompt="⏹️ Stop Recording",
+            stop_prompt="⏹️ Stop",
             format="wav",
             just_once=True,
             use_container_width=True,
-            key=key
+            key=f"{key}_mic",
         )
-    
-    # 결과 처리
-    if audio:
-        st.success("✅ Recording captured successfully.")
-        st.audio(audio["bytes"])
-        return audio, "recording"
-    
-    # 파일 업로드 옵션
-    uploaded_file = st.file_uploader(
-        "Or upload an audio file:", 
-        type=SUPPORTED_AUDIO_FORMATS, 
-        key=f"{key}_upload"
-    )
-    
-    if uploaded_file:
-        st.success("✅ Audio file uploaded successfully.")
-        st.audio(uploaded_file.read())
-        uploaded_file.seek(0)
-        return uploaded_file, "upload"
-    
+
+        # ⏱️ 버튼 텍스트 변화 감지 → 타이머 자동 제어
+        components.html(
+            """
+            <script>
+            const timerBox = parent.document.getElementById("pretty-timer");
+            const mm = parent.document.getElementById("pt-mm");
+            const ss = parent.document.getElementById("pt-ss");
+            let sec = 0, h = null;
+
+            const paint = () => {
+              mm.textContent = Math.floor(sec/60);
+              ss.textContent = String(sec%60).padStart(2,'0');
+              if(sec < 60){ timerBox.className = "timer red"; }
+              else if(sec < 90){ timerBox.className = "timer orange"; }
+              else { timerBox.className = "timer green"; }
+            };
+
+            const start = () => {
+              if(h) return;
+              sec = 0; paint();
+              h = setInterval(()=>{ sec+=1; paint(); }, 1000);
+            };
+            const stop = () => { if(h){ clearInterval(h); h=null; } };
+
+            // mic_recorder 버튼의 문구 변화를 감지
+            const obs = new MutationObserver(()=> {
+              const btns = parent.document.querySelectorAll("button");
+              let recording = false;
+              btns.forEach(b=>{
+                const t = (b.textContent||"").trim();
+                if(t.startsWith("⏹️ Stop")) recording = true;
+              });
+              if(recording) start(); else stop();
+            });
+
+            // 전체 문서 감시 (버튼 텍스트가 바뀔 때 알림)
+            obs.observe(parent.document.body, {subtree:true, childList:true, characterData:true});
+            </script>
+            """,
+            height=0
+        )
+
+        # 결과 처리
+        if audio:
+            st.success("✅ Recording captured.")
+            st.audio(audio["bytes"])
+            return audio, "recording"
+
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+        uploaded = st.file_uploader(
+            "또는 오디오 파일 업로드",
+            type=SUPPORTED_AUDIO_FORMATS,
+            key=f"{key}_upload",
+            help="WAV/MP3/M4A 등 지원"
+        )
+        if uploaded:
+            st.success("✅ File uploaded.")
+            st.audio(uploaded.read())
+            uploaded.seek(0)
+            return uploaded, "upload"
+
     return None, None
 
 def display_transcription_with_highlights(transcription, feedback, title="What You Said", audio_data=None):
