@@ -451,7 +451,7 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (실시간 타이머 추가)
+    간소화된 녹음 인터페이스 (심플한 타이머 추가)
     
     Args:
         key: 컴포넌트 키
@@ -463,36 +463,6 @@ def record_audio(key, label):
     # 노란색 안내 메시지
     st.warning("🎙️ Click Start Recording or upload an audio file")
     
-    # 간단한 JavaScript 타이머 추가
-    st.markdown("""
-    <div id="timer-display" style="margin-top:-10px; margin-bottom:10px; font-size:14px; color:#666;"></div>
-    
-    <script>
-    let recordingStartTime = null;
-    let timerInterval = null;
-    
-    setInterval(() => {
-        const btn = document.querySelector('button');
-        if (btn && btn.textContent.includes('Stop Recording')) {
-            if (!recordingStartTime) {
-                recordingStartTime = Date.now();
-                timerInterval = setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-                    const mins = Math.floor(elapsed / 60);
-                    const secs = elapsed % 60;
-                    document.getElementById('timer-display').innerHTML = 
-                        `⏱️ Recording: ${mins}:${secs.toString().padStart(2, '0')}`;
-                }, 100);
-            }
-        } else if (recordingStartTime) {
-            clearInterval(timerInterval);
-            recordingStartTime = null;
-            document.getElementById('timer-display').innerHTML = '';
-        }
-    }, 100);
-    </script>
-    """, unsafe_allow_html=True)
-    
     # 마이크 녹음
     audio = mic_recorder(
         start_prompt="🎙️ Start Recording",
@@ -502,6 +472,71 @@ def record_audio(key, label):
         use_container_width=True,
         key=key
     )
+    
+    # 버튼 바로 아래에 작은 타이머 표시
+    st.markdown(f"""
+    <script>
+    (function() {{
+        let startTime = null;
+        let interval = null;
+        
+        // 0.5초마다 체크
+        setInterval(() => {{
+            const buttons = document.querySelectorAll('button');
+            let recording = false;
+            
+            buttons.forEach(btn => {{
+                if (btn.textContent.includes('Stop Recording') || btn.textContent.includes('⏹')) {{
+                    recording = true;
+                }}
+            }});
+            
+            // 타이머 엘리먼트 찾기 또는 생성
+            let timer = document.getElementById('rec-timer-{key}');
+            
+            if (recording) {{
+                if (!startTime) {{
+                    startTime = Date.now();
+                    
+                    // 타이머 생성
+                    if (!timer) {{
+                        // Stop Recording 버튼 찾기
+                        const stopBtn = Array.from(buttons).find(b => 
+                            b.textContent.includes('Stop') || b.textContent.includes('⏹')
+                        );
+                        
+                        if (stopBtn) {{
+                            timer = document.createElement('div');
+                            timer.id = 'rec-timer-{key}';
+                            timer.style.cssText = 'font-size: 12px; color: #666; margin-top: 5px; text-align: center;';
+                            stopBtn.parentElement.appendChild(timer);
+                        }}
+                    }}
+                    
+                    // 타이머 업데이트
+                    interval = setInterval(() => {{
+                        if (timer) {{
+                            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                            const min = Math.floor(elapsed / 60);
+                            const sec = elapsed % 60;
+                            timer.textContent = `Recording: ${{min}}:${{sec.toString().padStart(2, '0')}}`;
+                        }}
+                    }}, 100);
+                }}
+            }} else {{
+                if (startTime) {{
+                    // 녹음 종료
+                    clearInterval(interval);
+                    startTime = null;
+                    if (timer) {{
+                        timer.remove();
+                    }}
+                }}
+            }}
+        }}, 500);
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
     
     if audio:
         st.success("✅ Recording captured successfully.")
