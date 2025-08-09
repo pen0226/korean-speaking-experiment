@@ -441,9 +441,11 @@ def find_or_create_anonymous_id(nickname):
         # 1. GCS에서 최신 매핑 파일 다운로드 시도
         gcs_success, gcs_message = download_mapping_file_from_gcs()
         if gcs_success:
-            print(f"✅ GCS download: {gcs_message}")
+            print(f"✅ GCS sync successful: {gcs_message}")
+            import time
+            time.sleep(0.1)
         else:
-            print(f"⚠️ GCS download failed: {gcs_message}")
+            print(f"⚠️ GCS sync failed: {gcs_message}")
         
         # 2. 로컬 매핑 파일 확인
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
@@ -485,6 +487,8 @@ def generate_new_anonymous_id():
     Returns:
         str: 생성된 새 익명 ID
     """
+    download_mapping_file_from_gcs() 
+    
     try:
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
         existing_ids = set()  # 중복 방지를 위한 집합
@@ -651,7 +655,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         # 🔥 GCS에 업로드 시도
         upload_success, upload_message = upload_mapping_file_to_gcs()
         if upload_success:
-            print(f"☁️ GCS upload: {upload_message}")
+            print(f"☁️ Mapping synced to GCS immediately")
         else:
             print(f"⚠️ GCS upload failed: {upload_message}")
         
