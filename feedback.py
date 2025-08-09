@@ -417,7 +417,7 @@ def classify_error_type(issue_text):
     Categories:
     - Particle: Wrong particle usage (은/는, 이/가, 을/를, 에, 에서, 으로, etc.)
     - Verb Ending: Wrong verb ending or conjugation (아요/어요, 습니다, etc.)
-    - Verb Tense: Wrong tense marker (past/present/future - 했어요, 할 거예요, etc.)
+    - Tense: Wrong tense marker (past/present/future - 했어요, 할 거예요, etc.)
     - Word Order: Wrong word position in sentence
     - Connectives: Wrong connecting words (그리고, 그래서, 그런데, etc.)
     - Expression: Unnatural expression or better idiomatic expression available
@@ -444,7 +444,7 @@ def classify_error_type(issue_text):
         error_type = response.choices[0].message.content.strip()
         
         # 유효한 카테고리인지 확인
-        valid_categories = ["Particle", "Verb Ending", "Verb Tense", "Word Order", "Connectives", "Expression", "Others"]
+        valid_categories = ["Particle", "Verb Ending", "Tense", "Word Order", "Connectives", "Expression", "Others"]
         if error_type in valid_categories:
             return error_type
         else:
@@ -462,7 +462,7 @@ def classify_error_type(issue_text):
         if any(k in explanation_lower for k in ["particle", "조사", "을/를", "이/가", "은/는"]):
             return "Particle"
         if any(k in explanation_lower for k in ["tense", "past", "future", "present"]):
-            return "Verb Tense"
+            return "Tense"
         if any(k in explanation_lower for k in ["ending", "conjugation", "politeness"]):
             return "Verb Ending"
         if any(k in explanation_lower for k in ["word order", "어순", "position"]):
@@ -660,7 +660,7 @@ If either topic is missing or incomplete:
     **GRAMMAR ERROR TYPES**
     - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
     - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
-    - **Verb Tense**: Incorrect verb tense usage (past/present/future)
+    - **Tense**: Incorrect tense usage (past/present/future)
     - **Word Order**: Unnatural word order in sentences
     - **Connectives**: Inappropriate connecting expressions or overuse of 그리고
     - **Expression**: Unnatural expressions or better idiomatic expressions available
@@ -682,29 +682,28 @@ If either topic is missing or incomplete:
    - **Focus on student's actual expressions that could be more natural**
    - **Target: Provide 2-3 practical improvements when possible.**
 
-3. **Content Expansion (2개, 구체적이고 실용적)**
-   - **학생이 언급한 주제를 기반으로 확장**
-   - **예시**: 학생이 "바다 갔어요"라고 했으면 → "바다에서 수영도 하고 조개껍데기도 주웠어요" 같은 구체적 확장
-   - Give two concrete, personal topics they can add based on what they mentioned.
-   - Each idea should help them speak at least 30 more seconds.
-   - Use examples they can directly copy.
-   - **CRITICAL: Topic names must be in ENGLISH, Korean sentences in Korean.**
-   
-4. **One Advanced Pattern (학생 답변 기반)**
+3. **One Advanced Pattern (학생 답변 기반)**
    - **학생이 사용한 패턴을 확장하는 방향**
    - **예시**: 학생이 "~고 싶다" 많이 사용 → "~고 싶어서" 이유 표현 가르치기
    - Provide one useful pattern for the placement interview.
    - Must be appropriate for their level (TOPIK 1–2).
-   - Connect to what the student actually said.
-
-5. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
+   - Connect to what the student actually said.   
+   
+   
+4. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
    - **학생이 실제로 사용한 짧은 문장들을 찾아서 연결 방법 제시**
    - **연결어 활용**: 그리고, 그래서, -고, -아서/어서
    - **Before/After 형식**으로 명확한 개선 예시 제공
    - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
    - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
 
-
+5. **Content Expansion (2개, 구체적이고 실용적)**
+   - **학생이 언급한 주제를 기반으로 확장**
+   - **예시**: 학생이 "바다 갔어요"라고 했으면 → "바다에서 수영도 하고 조개껍데기도 주웠어요" 같은 구체적 확장
+   - Give two concrete, personal topics they can add based on what they mentioned.
+   - Each idea should help them speak at least 30 more seconds.
+   - Use examples they can directly copy.
+   - **CRITICAL: Topic names must be in ENGLISH, Korean sentences in Korean.**
 
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
 - **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained your vacation experiences clearly")
@@ -1025,7 +1024,7 @@ def get_default_explanation(error_type):
     explanations = {
         "Particle": "Use the appropriate particle to mark the grammatical role",
         "Verb Ending": "Use the correct verb ending form",
-        "Verb Tense": "Use the appropriate tense marker",
+        "Tense": "Use the appropriate tense marker",
         "Word Order": "Use the correct word order for natural Korean",
         "Connectives": "Use appropriate connecting expressions",
         "Expression": "Use a more natural Korean expression",  # 추가
@@ -1039,7 +1038,7 @@ def get_default_grammar_issues():
     return [
         "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object",
         "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing preferences",
-        "Verb Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'",
+        "Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'",
         "Word Order|한국에서 저는 공부해요|저는 한국에서 공부해요|Subject comes before location",
         "Connectives|그리고 그리고 또|그리고... 또한|Avoid repeating the same connector"
     ]
