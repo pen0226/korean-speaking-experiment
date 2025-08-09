@@ -341,27 +341,10 @@ def handle_feedback_step():
                 display_vocabulary_tips_simplified(feedback)
         # 🔥 어휘 제안이 없으면 expander 자체를 표시하지 않음 (학생이 모든 단어를 올바르게 사용한 경우)
         
-        # Content Ideas (줄바꿈 처리 개선)
-        content_suggestions = feedback.get('content_expansion_suggestions', [])
-        if content_suggestions:
-            with st.expander("💡 Content Ideas - Make Your Answer Longer", expanded=False):
-                st.markdown("*You can add these topics to speak for at least 1~2 minutes (90+ seconds):*")
-                for i, suggestion in enumerate(content_suggestions[:2], 1):  # 최대 2개만
-                    # Content suggestion 줄바꿈 처리
-                    formatted_suggestion = format_content_ideas(suggestion)
-                    
-                    # 새로운 포맷으로 표시 (번호 없이 깔끔하게)
-                    st.markdown(f"{formatted_suggestion}", unsafe_allow_html=True)
-                    
-                    # 각 항목 사이에 여백 추가
-                    if i < len(content_suggestions[:2]):
-                        st.markdown("")
-                
-                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1~2 minutes (90+ seconds)!")
         
-        # Grammar & Sentence Tips (통합된 형태) - 포맷 개선
+        # Pattern & Sentence Tips (통합된 형태) - 포맷 개선
         if feedback.get('grammar_expression_tip') or feedback.get('sentence_connection_tip'):
-            with st.expander("🚀 Grammar & Sentence Tips", expanded=False):
+            with st.expander("🚀 Pattern & Sentence Tips", expanded=False):
                 st.markdown("*Use these patterns to make your Korean more natural and fluent!*")
                 
                 # Advanced Pattern 섹션
@@ -420,6 +403,26 @@ def handle_feedback_step():
                         <span style='color: inherit; opacity: 0.7; font-size: 14px;'>💡 Use connectives like <strong>그리고</strong>, <strong>그래서</strong>, <strong>-고</strong>, <strong>-아서/어서</strong> to sound more natural</span>
                     </div>
                     """, unsafe_allow_html=True)
+
+
+        # Content Ideas (줄바꿈 처리 개선)
+        content_suggestions = feedback.get('content_expansion_suggestions', [])
+        if content_suggestions:
+            with st.expander("💡 Content Ideas - Make Your Answer Longer", expanded=False):
+                st.markdown("*You can add these topics to speak for at least 1~2 minutes (90+ seconds):*")
+                for i, suggestion in enumerate(content_suggestions[:2], 1):  # 최대 2개만
+                    # Content suggestion 줄바꿈 처리
+                    formatted_suggestion = format_content_ideas(suggestion)
+                    
+                    # 새로운 포맷으로 표시 (번호 없이 깔끔하게)
+                    st.markdown(f"{formatted_suggestion}", unsafe_allow_html=True)
+                    
+                    # 각 항목 사이에 여백 추가
+                    if i < len(content_suggestions[:2]):
+                        st.markdown("")
+                
+                st.success("🎯 **Tip:** Try to include 1-2 of these ideas to reach at least 1~2 minutes (90+ seconds)!")
+
         
         # Performance Summary (간소화된 형태)
         with st.expander("📊 Performance Summary", expanded=False):
