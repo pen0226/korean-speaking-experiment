@@ -619,16 +619,28 @@ You MUST check if the student addressed BOTH parts of the question:
 1. Past vacation (지난 방학): Check for past tense usage (갔어요, 했어요, 있었어요, etc.)
 2. Future plans (다음 방학): Check for future tense usage (할 거예요, 하려고 해요, 갈 거예요, etc.)
 
-In the "detailed_feedback" field, ALWAYS start with a "🚩 Task Completion Check" section that includes:
-- ✅ or ❌ Past vacation: [Covered well/Partially covered/Missing] - Brief specific comment
-- ✅ or ❌ Future plans: [Covered well/Partially covered/Missing] - Brief specific comment  
+In the "detailed_feedback" field, ALWAYS start with a "🚩 Task Completion Check" section that includes exactly these four lines in this order:
+
+- ✅ or ❌ Past vacation: [Covered well / Partially covered / Missing] — Brief specific comment
+- ✅ or ❌ Future plans: [Covered well / Partially covered / Missing] — Brief specific comment
+- 📌 Detail richness: Comment on whether the answer included enough specific details (e.g., where, with whom, why). If lacking, say "Details missing" and suggest 1–2 things to add.
 - ⚠️ Tense usage: Comment on past/future tense accuracy
 
 If either topic is missing or incomplete:
-- Lower the interview_readiness_score by 2-3 points
-- Add specific guidance in Korean: "지난 방학과 다음 방학 두 가지 모두 말해 주세요"
-- Provide example sentences for the missing part
-- Make this the FIRST point in "Key Improvements"
+- Lower the "interview_readiness_score" by 2–3 points (keep it within 1–10).
+- Add an English guidance sentence: "Please talk about BOTH your past vacation and your future plans."
+- Provide 2 short example sentences in Korean for the missing part (TOPIK 1–2 level, 해요체).
+
+If details are missing for a covered topic:
+- Mention this in "Key Improvements" with a specific example of what detail to add.
+- Example: "Add where you went, with whom, and why" or "Explain your reason for the plan."
+
+Formatting rules:
+- Explanations and guidance must be in English.
+- Korean appears ONLY inside the example sentences.
+- Keep this section concise (maximum 5 lines before moving to other feedback).
+
+Make this the FIRST point in "Key Improvements".
 
 **🔥 ANALYSIS REQUIREMENTS:** 
 
@@ -664,12 +676,22 @@ If either topic is missing or incomplete:
    - **Target: Provide 2-3 practical improvements when possible.**
 
 3. **Content Expansion (2개, 구체적이고 실용적)**
-   - **학생이 언급한 주제를 기반으로 확장**
-   - **예시**: 학생이 "바다 갔어요"라고 했으면 → "바다에서 수영도 하고 조개껍데기도 주웠어요" 같은 구체적 확장
-   - Give two concrete, personal topics they can add based on what they mentioned.
-   - Each idea should help them speak at least 30 more seconds.
-   - Use examples they can directly copy.
-   - **CRITICAL: Topic names must be in ENGLISH, Korean sentences in Korean.**
+   - **PRIORITY RULE: If a topic (past vacation OR future plans) is missing or weak, MUST suggest content for that topic FIRST**
+   - **If both topics covered**: Expand on what student mentioned (e.g., "바다 갔어요" → add "바다에서 수영도 하고 조개껍데기도 주웠어요")
+   - **If past vacation missing/weak**: First suggestion MUST be about past vacation activities
+   - **If future plans missing/weak**: First suggestion MUST be about future vacation plans with reasons
+   - Give two concrete, personal topics they can add
+   - Each idea should help them speak at least 30 more seconds
+   - Use examples they can directly copy
+   - **Format: Topic names in ENGLISH, example sentences in Korean**
+   
+   **Content Expansion Priority Logic:**
+   1. If "past vacation" marked as ❌ Missing → First suggestion MUST be past vacation example with "(MISSING TOPIC)" label
+   2. If "future plans" marked as ❌ Missing → First suggestion MUST be future plans example with "(MISSING TOPIC)" label
+   3. If marked as "Partially covered" → Add "(NEEDS MORE DETAIL)" label
+   4. If both well covered → Expand on existing content with more details
+   5. Always mark missing/weak topics clearly in the topic name
+   6. Maintain coherence with student's overall narrative
    
 4. **One Advanced Pattern (학생 답변 기반)**
    - **학생이 사용한 패턴을 확장하는 방향**
@@ -902,7 +924,7 @@ def validate_and_fix_feedback(feedback):
         "fluency_comment": "Keep practicing to speak more naturally!",
         "interview_readiness_score": 6,
         "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
-        "detailed_feedback": "🚩 Task Completion Check\\n- ✅ Past vacation: Covered well! You talked about your vacation experiences\\n- ✅ Future plans: Covered well! You mentioned your plans for next vacation\\n- ⚠️ Tense usage: Good use of both past and future tenses\\n\\n🌟 What You Did Well\\n- You answered both topics really well! I could clearly understand your summer vacation activities and your plans for Korea 😊\\n- Your motivation was so clear when you said '한국 문화를 좋아해서' - that connection was perfect! 👍\\n- I loved how you mentioned specific activities like going to the beach. That made your answer much more interesting!\\n\\n🎯 Key Improvements\\n- I noticed some particles were missing. For example, you said '친구 만났어요' but it should be '친구를 만났어요' to sound more natural\\n- Try to keep your tense consistent - when talking about past vacation, stick with past tense endings like '갔어요, 했어요'\\n- Your answer was a bit short (about 45 seconds). Try to add one more detail for each topic to reach 90+ seconds\\n\\n📝 Try This Next Time\\n1. Always check: Did I answer ALL parts of the question? (past AND future)\\n2. Before speaking, quickly think: 'Am I using 을/를 correctly?'\\n3. Add one specific example when explaining reasons: 'I like Korean food, especially kimchi and bulgogi'\\n4. Use connecting words like '그리고' or '그래서' to make longer, smoother sentences",
+        "detailed_feedback": "🚩 Task Completion Check\\n- ✅ Past vacation: Covered well — You talked about your vacation experiences\\n- ✅ Future plans: Covered well — You mentioned your plans for next vacation\\n- 📌 Detail richness: Good details about activities and reasons\\n- ⚠️ Tense usage: Good use of both past and future tenses\\n\\n...",
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
 
@@ -1029,7 +1051,7 @@ def get_fallback_feedback():
         "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ 바다 갔어요. 수영했어요.\\n✅ 바다에 가서 수영했어요.\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",  # 🔥 새로 추가
         "fluency_comment": "Keep practicing! Try to speak for at least 60+ seconds to build fluency.",
         "interview_readiness_score": 5,  # 🔥 기본 점수는 5점 (STT 검증에서 0으로 오버라이드됨)
-        "detailed_feedback": "🚩 Task Completion Check\\n- ❌ Past vacation: Missing - Please talk about what you did last vacation\\n- ❌ Future plans: Missing - Please talk about your next vacation plans\\n- ⚠️ Tense usage: Need to use past tense (갔어요, 했어요) and future tense (할 거예요)\\n\\n🌟 What You Did Well\\n- Good effort attempting both topics!\\n\\n🎯 Things to Improve\\n- You need to answer BOTH parts: 지난 방학 AND 다음 방학\\n- Try to speak for at least 60+ seconds to meet interview expectations\\n- Add specific details about your experiences - what exactly did you do?\\n\\n📝 Try This Next Time\\n1. Always check: Did I answer ALL parts of the question?\\n2. Practice connecting your ideas with phrases like '그리고' (and) and '그래서' (so/therefore)\\n3. Use correct tenses: past (갔어요) for last vacation, future (갈 거예요) for next vacation",
+        "detailed_feedback": "🚩 Task Completion Check\\n- ❌ Past vacation: Missing — Please talk about what you did last vacation\\n- ❌ Future plans: Missing — Please talk about your next vacation plans\\n- 📌 Detail richness: Details missing — Add where, with whom, and specific activities\\n- ⚠️ Tense usage: Need to use past tense (갔어요, 했어요) and future tense (할 거예요)\\n\\n...",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
 
