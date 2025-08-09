@@ -451,7 +451,7 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (2분 목표) - 노란색 박스로 변경
+    간소화된 녹음 인터페이스 (실시간 타이머 추가)
     
     Args:
         key: 컴포넌트 키
@@ -460,8 +460,38 @@ def record_audio(key, label):
     Returns:
         tuple: (audio_data, source_type) - audio_data와 타입 정보 반환
     """
-    # 노란색 안내 메시지 (학생들이 해야할 일이므로)
+    # 노란색 안내 메시지
     st.warning("🎙️ Click Start Recording or upload an audio file")
+    
+    # 간단한 JavaScript 타이머 추가
+    st.markdown("""
+    <div id="timer-display" style="margin-top:-10px; margin-bottom:10px; font-size:14px; color:#666;"></div>
+    
+    <script>
+    let recordingStartTime = null;
+    let timerInterval = null;
+    
+    setInterval(() => {
+        const btn = document.querySelector('button');
+        if (btn && btn.textContent.includes('Stop Recording')) {
+            if (!recordingStartTime) {
+                recordingStartTime = Date.now();
+                timerInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    const mins = Math.floor(elapsed / 60);
+                    const secs = elapsed % 60;
+                    document.getElementById('timer-display').innerHTML = 
+                        `⏱️ Recording: ${mins}:${secs.toString().padStart(2, '0')}`;
+                }, 100);
+            }
+        } else if (recordingStartTime) {
+            clearInterval(timerInterval);
+            recordingStartTime = null;
+            document.getElementById('timer-display').innerHTML = '';
+        }
+    }, 100);
+    </script>
+    """, unsafe_allow_html=True)
     
     # 마이크 녹음
     audio = mic_recorder(
