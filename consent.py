@@ -550,7 +550,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         
         # 헤더가 없으면 생성 (자기효능감 필드 6개 추가)
         if not os.path.exists(mapping_file):
-            with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
+            with open(mapping_file, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 headers = [
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
@@ -600,7 +600,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
             session_count = int(existing_entry.get('Session_Count', 0)) + 1
             print(f"📝 Updating existing entry: {nickname} (session #{session_count})")
             
-            with open(mapping_file, 'w', newline='', encoding='utf-8-sig') as f:
+            with open(mapping_file, 'w', newline='', encoding='utf-8') as f:
                 fieldnames = [
                     'Anonymous_ID', 'Nickname', 'Timestamp', 'Data_Retention_Until',
                     'Deletion_Requested', 'Consent_Participation', 'Consent_Processing',
@@ -632,7 +632,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
             # 새 엔트리 추가
             print(f"🆕 Creating new entry: {nickname} → {anonymous_id}")
             
-            with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
+            with open(mapping_file, 'a', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 row_data = [
                     anonymous_id, nickname, datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S'),  # 🔥 KST 추가
