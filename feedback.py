@@ -424,7 +424,7 @@ def classify_error_type(issue_text):
         # 1-3) Verb Ending (어미/높임/경어/말끝)
         if any(k in explanation for k in [
             "ending", "verb ending", "conjugation", "politeness",
-            "speech level", "speech style ", "formality", "해요", "합니다", "자연스러운 어미"
+            "speech level", "speech style ", "speech consistency" "formality", "해요", "합니다", "자연스러운 어미"
         ]):
             return "Verb Ending"
 
@@ -675,23 +675,24 @@ Make this the FIRST point in "Key Improvements".
    - **Focus on student's actual expressions that could be more natural**
    - **Target: Provide 2-3 practical improvements when possible.**
 
-3. **Content Expansion (2개, 구체적이고 실용적)**
-   - **PRIORITY RULE: If a topic (past vacation OR future plans) is missing or weak, MUST suggest content for that topic FIRST**
-   - **If both topics covered**: Expand on what student mentioned (e.g., "바다 갔어요" → add "바다에서 수영도 하고 조개껍데기도 주웠어요")
-   - **If past vacation missing/weak**: First suggestion MUST be about past vacation activities
-   - **If future plans missing/weak**: First suggestion MUST be about future vacation plans with reasons
+3. **Content Expansion (2개, 누락된 주제 우선 + 학생 답변 연결)**
+   - **PRIORITY RULE: If a topic is missing/weak, suggest content for that topic FIRST, but connect it to what the student DID mention when possible**
+   - **If both topics covered**: Expand directly on what student mentioned
+   - **If past vacation missing**: Suggest past vacation content (can mirror their future plans if mentioned - e.g., if they said "will study Korean", suggest "studied Korean last vacation")
+   - **If future plans missing**: Suggest future plans (can extend their past experience - e.g., if they said "went to Busan", suggest "will visit Seoul next time")
    - Give two concrete, personal topics they can add
    - Each idea should help them speak at least 30 more seconds
-   - Use examples they can directly copy
+   - **IMPORTANT: Keep suggestions related to student's interests/context when visible**
    - **Format: Topic names in ENGLISH, example sentences in Korean**
    
    **Content Expansion Priority Logic:**
-   1. If "past vacation" marked as ❌ Missing → First suggestion MUST be past vacation example with "(MISSING TOPIC)" label
-   2. If "future plans" marked as ❌ Missing → First suggestion MUST be future plans example with "(MISSING TOPIC)" label
-   3. If marked as "Partially covered" → Add "(NEEDS MORE DETAIL)" label
-   4. If both well covered → Expand on existing content with more details
-   5. Always mark missing/weak topics clearly in the topic name
-   6. Maintain coherence with student's overall narrative
+   1. If "past vacation" marked as ❌ Missing → First suggestion about past vacation with "(MISSING TOPIC)" label
+      - Try to connect to their mentioned interests (e.g., if they mentioned wanting to learn Korean, suggest they watched Korean dramas last vacation)
+   2. If "future plans" marked as ❌ Missing → First suggestion about future plans with "(MISSING TOPIC)" label  
+      - Try to extend their past experience (e.g., if they went to beach, suggest mountain trip next time)
+   3. If marked as "Partially covered" → Add "(NEEDS MORE DETAIL)" label and expand on what they said
+   4. If both well covered → Direct expansion of their specific mentions
+   5. Always maintain coherence with student's overall narrative
    
 4. **One Advanced Pattern (학생 답변 기반)**
    - **학생이 사용한 패턴을 확장하는 방향**
