@@ -2,7 +2,7 @@
 utils.py
 시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (나이트 모드 최적화) - vs 방식 어휘 팁으로 업데이트
 """
-
+import time
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
 import difflib
@@ -451,46 +451,72 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (2분 목표) - 노란색 박스로 변경
-    
-    Args:
-        key: 컴포넌트 키
-        label: 라벨 텍스트
-        
-    Returns:
-        tuple: (audio_data, source_type) - audio_data와 타입 정보 반환
+    간소화된 녹음 인터페이스 + 실시간 타이머
     """
-    # 노란색 안내 메시지 (학생들이 해야할 일이므로)
     st.warning("🎙️ Click Start Recording or upload an audio file")
-    
-    # 마이크 녹음
+
+    # 타이머 placeholder & 상태
+    timer_box = st.empty()
+    start_key = f"{key}_rec_start"
+    running_key = f"{key}_rec_running"
+
+    if start_key not in st.session_state:
+        st.session_state[start_key] = None
+    if running_key not in st.session_state:
+        st.session_state[running_key] = False
+
+    # 타이머 시작/정지 보조버튼(간단한 UX용)
+    colA, colB = st.columns([1, 1])
+    with colA:
+        if st.button("▶ Start Timer", key=f"{key}_timer_start", use_container_width=True, disabled=st.session_state[running_key]):
+            st.session_state[start_key] = time.time()
+            st.session_state[running_key] = True
+            st.rerun()
+    with colB:
+        if st.button("⏹ Stop Timer", key=f"{key}_timer_stop", use_container_width=True, disabled=not st.session_state[running_key]):
+            st.session_state[running_key] = False
+            st.session_state[start_key] = None
+            st.rerun()
+
+    # 마이크 녹음 UI
     audio = mic_recorder(
         start_prompt="🎙️ Start Recording",
-        stop_prompt="⏹️ Stop Recording", 
+        stop_prompt="⏹️ Stop Recording",
         format="wav",
         just_once=True,
         use_container_width=True,
         key=key
     )
-    
+
+    # 타이머 표시(실시간)
+    if st.session_state[running_key] and st.session_state[start_key] is not None and audio is None:
+        elapsed = time.time() - st.session_state[start_key]
+        timer_box.markdown(f"⏱ **Recording: {elapsed:.1f} s**")
+        time.sleep(0.1)
+        st.rerun()
+
+    # 녹음 완료 시 타이머 자동 정지
     if audio:
+        st.session_state[running_key] = False
+        st.session_state[start_key] = None
+        timer_box.empty()
+
         st.success("✅ Recording captured successfully.")
         st.audio(audio['bytes'])
         return audio, "recording"
-    
+
     # 파일 업로드 옵션
     uploaded_file = st.file_uploader(
-        "Or upload an audio file:", 
-        type=SUPPORTED_AUDIO_FORMATS, 
+        "Or upload an audio file:",
+        type=SUPPORTED_AUDIO_FORMATS,
         key=f"{key}_upload"
     )
-    
     if uploaded_file:
         st.success("✅ Audio file uploaded successfully.")
         st.audio(uploaded_file.read())
-        uploaded_file.seek(0)  # 포인터 리셋
+        uploaded_file.seek(0)
         return uploaded_file, "upload"
-    
+
     return None, None
 
 
