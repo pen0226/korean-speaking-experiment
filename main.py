@@ -8,7 +8,7 @@ from datetime import datetime
 import re
 
 # 모듈 imports (간단한 참고용 점수 모듈 추가)
-from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO
+from config import PAGE_CONFIG, GOOGLE_FORM_URL, CURRENT_SESSION, SESSION_LABELS, BACKGROUND_INFO, KST 
 from stt import process_audio_input
 from feedback import get_gpt_feedback, get_improvement_assessment
 from tts import process_feedback_audio, display_model_audio
@@ -224,7 +224,7 @@ def process_first_recording():
             st.session_state.audio_duration_1 = duration
             
             # 🔥 timestamp 생성 (나중에 모든 파일에서 같은 timestamp 사용)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(KST).strftime("%Y%m%d_%H%M%S")  # 🔥 KST 추가
             st.session_state.current_timestamp = timestamp
             
             # GPT 피드백 생성 (duration 정보 포함)
@@ -566,7 +566,7 @@ def process_second_recording():
             st.session_state.audio_duration_2 = duration
             
             # 🔥 첫 번째 녹음에서 생성한 timestamp 재사용 (파일들 간 일관성 유지)
-            timestamp = getattr(st.session_state, 'current_timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
+            timestamp = getattr(st.session_state, 'current_timestamp', datetime.now(KST).strftime("%Y%m%d_%H%M%S"))  # 🔥 KST 추가
             
             # 🆕 간단한 참고용 점수 저장 (같은 timestamp 사용)
             save_reference_score(

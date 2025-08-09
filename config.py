@@ -6,6 +6,10 @@ config.py
 import os
 import streamlit as st
 from dotenv import load_dotenv
+from pytz import timezone  # 🔥 이 줄 추가!
+
+# 한국 시간대 설정 🔥 이 줄도 추가!
+KST = timezone('Asia/Seoul')
 
 # 환경변수 로드 (로컬 개발용)
 load_dotenv()

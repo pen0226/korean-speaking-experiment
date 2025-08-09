@@ -8,8 +8,7 @@ import streamlit as st
 import csv
 import os
 from datetime import datetime, timedelta
-from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION, SELF_EFFICACY_ITEMS, SELF_EFFICACY_SCALE
-
+from config import DATA_RETENTION_DAYS, FOLDERS, BACKGROUND_INFO, CURRENT_SESSION, SELF_EFFICACY_ITEMS, SELF_EFFICACY_SCALE, KST  # 🔥 KST 추가!
 
 def enhanced_consent_section():
     """
@@ -129,7 +128,7 @@ def enhanced_consent_section():
     
     if all(essential_consents):
         # 동의 완료 시점에 timestamp 생성
-        consent_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        consent_timestamp = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")  # 🔥 KST 추가
         
         # 성공 메시지 (원래 메시지 유지)
         st.success(f"🌟 Awesome! Welcome to your Korean practice session! ({consent_timestamp})")
@@ -433,8 +432,11 @@ def find_or_create_anonymous_id(nickname):
         str: 기존 또는 새로 생성된 익명 ID
     """
     try:
+        # 🔥 닉네임 정규화: 앞뒤 공백 제거 + 소문자 변환
+        normalized_nickname = nickname.strip().lower()
+        
         # 디버깅용 로그
-        print(f"🔍 Finding ID for nickname: '{nickname}'")
+        print(f"🔍 Finding ID for nickname: '{nickname}' (normalized: '{normalized_nickname}')")
         
         # 1. GCS에서 최신 매핑 파일 다운로드 시도
         gcs_success, gcs_message = download_mapping_file_from_gcs()
@@ -453,11 +455,15 @@ def find_or_create_anonymous_id(nickname):
                 reader = csv.DictReader(f)
                 for row in reader:
                     stored_nickname = row.get('Nickname', '').strip()
-                    if stored_nickname.lower() == nickname.lower():
+                    # 🔥 저장된 닉네임도 정규화하여 비교
+                    if stored_nickname.strip().lower() == normalized_nickname:
                         existing_id = row.get('Anonymous_ID', '').strip()
                         if existing_id:
                             print(f"✅ Found existing ID: {existing_id} for nickname: {nickname}")
                             return existing_id
+            
+            # 닉네임이 없으면 새 ID 생성
+            print(f"⚠️ Nickname '{nickname}' not found in mapping file")
         else:
             print(f"❌ No local mapping file found: {mapping_file}")
         
@@ -468,7 +474,8 @@ def find_or_create_anonymous_id(nickname):
         
     except Exception as e:
         print(f"❌ Error in find_or_create_anonymous_id: {str(e)}")
-        return f"Student{datetime.now().strftime('%m%d%H%M')}"
+        # 에러 시 타임스탬프 기반 ID 생성
+        return f"Student{datetime.now(KST).strftime('%m%d%H%M')}"  # 🔥 KST 추가
 
 
 def generate_new_anonymous_id():
@@ -480,28 +487,42 @@ def generate_new_anonymous_id():
     """
     try:
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
-        last_number = 0
+        existing_ids = set()  # 중복 방지를 위한 집합
         
         if os.path.exists(mapping_file):
             with open(mapping_file, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     anonymous_id = row.get('Anonymous_ID', '').strip()
-                    if anonymous_id.startswith('Student'):
-                        try:
-                            number = int(anonymous_id.replace('Student', ''))
-                            last_number = max(last_number, number)
-                        except ValueError:
-                            continue
+                    if anonymous_id and anonymous_id.startswith('Student'):
+                        existing_ids.add(anonymous_id)
         
-        next_number = last_number + 1
+        # 사용 중인 번호들 추출
+        used_numbers = []
+        for id_str in existing_ids:
+            if id_str.startswith('Student'):
+                try:
+                    # Student01, Student02 등에서 숫자 부분만 추출
+                    number_str = id_str.replace('Student', '')
+                    number = int(number_str)
+                    used_numbers.append(number)
+                except ValueError:
+                    continue
+        
+        # 다음 사용 가능한 번호 찾기
+        if used_numbers:
+            next_number = max(used_numbers) + 1
+        else:
+            next_number = 1
+        
         new_id = f"Student{next_number:02d}"
-        print(f"🔢 Generated sequential ID: {new_id} (last was: Student{last_number:02d})")
+        print(f"🔢 Generated new ID: {new_id} (existing IDs: {existing_ids})")
         return new_id
         
     except Exception as e:
         print(f"❌ Error generating ID: {str(e)}")
-        return f"Student{datetime.now().strftime('%m%d%H%M')}"
+        # 에러 시 타임스탬프 기반 ID 생성
+        return f"Student{datetime.now(KST).strftime('%m%d%H%M')}"  # 🔥 KST 추가
 
 
 def save_nickname_mapping(anonymous_id, nickname, consent_details=None, background_details=None):
@@ -562,7 +583,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         if not background_details:
             background_details = {'learning_duration': '', 'speaking_confidence': ''}
         
-        retention_until = (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')
+        retention_until = (datetime.now(KST) + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')  # 🔥 KST 추가
         
         # 자기효능감 점수 추출 (6개)
         efficacy_scores = []
@@ -592,7 +613,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                 for row in all_rows:
                     if row.get('Nickname', '').strip().lower() == nickname.lower():
                         row.update({
-                            'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'Timestamp': datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S'),
                             'Session_Count': session_count,
                             'Last_Session': CURRENT_SESSION,
                             'Learning_Duration': background_details.get('learning_duration', row.get('Learning_Duration', '')),
@@ -610,7 +631,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
             with open(mapping_file, 'a', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f)
                 row_data = [
-                    anonymous_id, nickname, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    anonymous_id, nickname, datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S'),  # 🔥 KST 추가
                     retention_until, 'FALSE',
                     consent_details.get('consent_participation', True),
                     consent_details.get('consent_processing', True),
@@ -1029,7 +1050,7 @@ def _process_background_completion(background_details):
         'consent_processing': getattr(st.session_state, 'consent_processing', True),
         'consent_data_rights': getattr(st.session_state, 'consent_data_rights', True),
         'consent_final_confirm': getattr(st.session_state, 'consent_final_confirmation', True),
-        'consent_timestamp': getattr(st.session_state, 'consent_timestamp', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        'consent_timestamp': getattr(st.session_state, 'consent_timestamp', datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"))  # 🔥 KST 추가
     }
     
     # 🔥 GCS 동기화를 포함한 매핑 정보 저장 (자기효능감 포함)

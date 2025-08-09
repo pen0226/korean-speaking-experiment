@@ -21,8 +21,10 @@ from config import (
     GCS_SIMPLE_STRUCTURE,
     LOG_FORMAT,
     CURRENT_SESSION,
-    SESSION_LABELS
+    SESSION_LABELS,
+    KST
 )
+
 
 def extract_task_completion_check(detailed_feedback):
     """
@@ -97,7 +99,7 @@ def save_session_data():
         if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
             if hasattr(st.session_state, 'saved_files'):
                 st.info("ℹ️ Data already saved, using existing files.")
-                existing_timestamp = getattr(st.session_state, 'saved_timestamp', datetime.now().strftime("%Y%m%d_%H%M%S"))
+                existing_timestamp = getattr(st.session_state, 'saved_timestamp', datetime.now(KST).strftime("%Y%m%d_%H%M%S"))  # 🔥 KST 추가
                 
                 # 🔥 기존 저장된 파일들에 reference 엑셀 추가
                 from save_reference_score import get_latest_reference_file
@@ -111,10 +113,11 @@ def save_session_data():
         for folder in FOLDERS.values():
             os.makedirs(folder, exist_ok=True)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(KST).strftime("%Y%m%d_%H%M%S")  # 🔥 KST 추가
         session_data = build_session_data(timestamp)
         csv_filename = save_to_csv(session_data, timestamp)
-        
+
+        # 🔥 이 부분 추가 필요!
         audio_folder, saved_files = save_audio_files(timestamp)
         
         # 🔥 참고용 엑셀 파일 경로 가져오기 (ZIP 생성 전에 확인)
@@ -190,11 +193,11 @@ def build_session_data(timestamp):
 
     session_data = {
         # ===== 1. 기본 식별 정보 =====
-        'session_id': st.session_state.session_id,  # 실험 세션 고유번호 (익명화된 ID)
-        'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),  # 세션 차수 (1 or 2)
-        'session_label': getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1")),  # 세션 라벨
-        'original_nickname': getattr(st.session_state, 'original_nickname', ''),  # 참여자가 입력한 원래 닉네임 (연구자 참조용)
-        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 실험 완료 시각
+        'session_id': st.session_state.session_id,
+        'session_number': getattr(st.session_state, 'session_number', CURRENT_SESSION),
+        'session_label': getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1")),
+        'original_nickname': getattr(st.session_state, 'original_nickname', ''),
+        'timestamp': datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"),  # 🔥 KST 추가
         
         # ===== 2. 배경 정보 및 사전 측정 =====
         'learning_duration': getattr(st.session_state, 'learning_duration', ''),  # 한국어 학습 기간 선택지
@@ -285,13 +288,13 @@ def build_session_data(timestamp):
         'gpt_attempts': st.session_state.gpt_debug_info.get('attempts', 0),  # GPT API 시도 횟수
         'dual_evaluation_used': st.session_state.gpt_debug_info.get('dual_evaluation', False),  # 이중 평가 시스템 사용 여부
         
-        # ===== 11. 파일 관리 정보 =====
-        'audio_folder': f"{FOLDERS['audio_recordings']}/{getattr(st.session_state, 'session_number', CURRENT_SESSION)}_{st.session_state.session_id}_{timestamp}",  # 음성 파일 저장 폴더
-        'data_retention_until': (datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d'),  # 데이터 보관 만료일
-        'deletion_requested': False,  # 삭제 요청 여부
-        'last_updated': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 마지막 업데이트 시각
-        'saved_at_step': 'second_recording_complete',  # 저장 시점 단계
-        'save_trigger': 'auto_after_second_recording'  # 저장 트리거 방식
+        # ===== 11. 파일 관리 정보 ===== (맨 아래쪽)
+        'audio_folder': f"{FOLDERS['audio_recordings']}/{getattr(st.session_state, 'session_number', CURRENT_SESSION)}_{st.session_state.session_id}_{timestamp}",
+        'data_retention_until': (datetime.now(KST) + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d'),  # 🔥 KST 추가
+        'deletion_requested': False,
+        'last_updated': datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"),  # 🔥 KST 추가
+        'saved_at_step': 'second_recording_complete',
+        'save_trigger': 'auto_after_second_recording'
     }
     
     return session_data
@@ -452,7 +455,7 @@ def create_participant_info_file(session_id, timestamp):
 Anonymous ID: {session_id}
 Original Nickname: {original_nickname}
 Session: {session_label} (Session {CURRENT_SESSION})
-Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Timestamp: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')}  # 🔥 KST 추가
 Save Trigger: Auto-save after second recording completion
 
 === BACKGROUND INFORMATION ===
@@ -489,9 +492,9 @@ Zoom Interview Consent: {getattr(st.session_state, 'consent_zoom_interview', Fal
 Consent File Type: HTML (Korean language support)
 
 === DATA MANAGEMENT ===
-Data Retention Until: {(datetime.now() + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')}
+Data Retention Until: {(datetime.now(KST) + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')}  # 🔥 KST 추가
 Storage Method: GCS ZIP Archive (Auto-save after 2nd recording)
-Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Last Updated: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')}  # 🔥 KST 추가
 
 === FOR RESEARCHER ===
 This file contains the link between the anonymous ID and the original nickname.
@@ -906,7 +909,7 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
     try:
         os.makedirs(FOLDERS["logs"], exist_ok=True)
         
-        log_date = datetime.now().strftime('%Y%m%d')
+        log_date = datetime.now(KST).strftime('%Y%m%d')  # 🔥 KST 추가
         log_filename = os.path.join(
             FOLDERS["logs"], 
             f"upload_log_{log_date}.txt"
@@ -931,7 +934,7 @@ def log_upload_status(session_id, timestamp, uploaded_files, errors, email_sent=
         upload_status = "SUCCESS" if uploaded_files and not errors else "PARTIAL" if uploaded_files else "FAILED"
         
         log_entry = f"""
-[{datetime.now().strftime(LOG_FORMAT['timestamp_format'])}] SESSION: {session_label} - {session_id}_{timestamp}
+[{datetime.now(KST).strftime(LOG_FORMAT['timestamp_format'])}] SESSION: {session_label} - {session_id}_{timestamp}  # 🔥 KST 추가
 Nickname: {original_nickname}
 Status: {upload_status}
 Save Trigger: Auto-save after second recording completion
@@ -1029,7 +1032,7 @@ def display_session_details():
     st.write(f"**Participant:** {display_name} (ID: {st.session_state.session_id})")
     st.write(f"**Session:** {session_label}")
     st.write(f"**Question:** {EXPERIMENT_QUESTION}")
-    st.write(f"**Completed:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    st.write(f"**Completed:** {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')}")  # 🔥 KST 추가
     st.write(f"**Data Saved:** After second recording completion")
     
     # 배경 정보 표시

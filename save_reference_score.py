@@ -7,6 +7,7 @@ import pandas as pd
 import os
 import re
 from datetime import datetime
+from config import KST
 
 def calculate_content_task_score_holistic(transcript):
     """
@@ -224,7 +225,7 @@ def save_reference_score(session_id, attempt, transcript, duration, timestamp=No
         str: 저장된 파일명
     """
     if not timestamp:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(KST).strftime("%Y%m%d_%H%M%S")  # 🔥 KST 추가
     
     # 홀리스틱 방식으로 3영역 점수 + 이유 계산
     content_task_score, content_task_reason = calculate_content_task_score_holistic(transcript)
