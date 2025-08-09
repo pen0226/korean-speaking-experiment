@@ -387,7 +387,7 @@ def preprocess_long_transcript(transcript):
 
 def classify_error_type(issue_text):
     """
-    GPT가 이미 분류한 타입을 추출 (API 호출 없음!)
+    GPT를 사용해서 설명 기반으로 오류 타입 분류
     """
     issue_lower = issue_text.lower()
 
@@ -395,57 +395,82 @@ def classify_error_type(issue_text):
     if "mixing styles" in issue_lower or "style consistency" in issue_lower:
         return None  # 스타일 혼용은 오류로 분류하지 않음
 
-    # ❗️ 다음에 오는 타입 추출
-    if "❗️" in issue_text:
-        try:
-            # "❗️ Particle\\n" → "Particle" 추출
-            after_emoji = issue_text.split("❗️")[1].strip()
-            # \\n 또는 \n 또는 실제 줄바꿈 전까지 추출
-            if "\\n" in after_emoji:
-                type_name = after_emoji.split("\\n")[0].strip()
-            elif "\n" in after_emoji:
-                type_name = after_emoji.split("\n")[0].strip()
-            else:
-                # 공백이나 다른 구분자로 시도
-                type_name = after_emoji.split()[0].strip()
-            
-            # 유효한 타입인지 확인
-            valid_types = ["Particle", "Verb Ending", "Verb Tense", 
-                          "Word Order", "Connectives", "Expression", "Others"]
-            
-            if type_name in valid_types:
-                return type_name
-        except:
-            pass
-    
-    # 타입을 못 찾았으면 설명에서 키워드로 추론 (폴백)
+    # 설명 추출 (🧠 또는 💡 둘 다 처리)
     explanation = ""
     if "🧠" in issue_text:
-        explanation = issue_text.split("🧠", 1)[1].strip().lower()
+        explanation = issue_text.split("🧠", 1)[1].strip()
     elif "💡" in issue_text:
-        explanation = issue_text.split("💡", 1)[1].strip().lower()
+        explanation = issue_text.split("💡", 1)[1].strip()
     
-    if explanation:
-        # Expression 체크
-        if any(k in explanation for k in ["natural expression", "idiomatic", "자연스러운 표현", "관용"]):
+    if not explanation:
+        return "Others"
+    
+    # "Simple explanation:" 레이블 제거
+    explanation = re.sub(r'^(?:simple explanation:)?\s*', '', explanation, flags=re.I)
+    
+    # GPT에게 분류 요청
+    classification_prompt = f"""
+    Classify this Korean grammar error into ONE category based on the explanation.
+    
+    Explanation: "{explanation}"
+    
+    Categories:
+    - Particle: Wrong particle usage (은/는, 이/가, 을/를, 에, 에서, 으로, etc.)
+    - Verb Ending: Wrong verb ending or conjugation (아요/어요, 습니다, etc.)
+    - Verb Tense: Wrong tense marker (past/present/future - 했어요, 할 거예요, etc.)
+    - Word Order: Wrong word position in sentence
+    - Connectives: Wrong connecting words (그리고, 그래서, 그런데, etc.)
+    - Expression: Unnatural expression or better idiomatic expression available
+    - Others: Doesn't fit above categories
+    
+    Return ONLY the category name, nothing else.
+    """
+    
+    try:
+        # GPT API 호출
+        import openai
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # 빠르고 저렴한 모델 사용
+            messages=[
+                {"role": "system", "content": "You are a Korean grammar expert. Classify the error type based on the explanation. Return only the category name."},
+                {"role": "user", "content": classification_prompt}
+            ],
+            temperature=0,
+            max_tokens=10
+        )
+        
+        error_type = response.choices[0].message.content.strip()
+        
+        # 유효한 카테고리인지 확인
+        valid_categories = ["Particle", "Verb Ending", "Verb Tense", "Word Order", "Connectives", "Expression", "Others"]
+        if error_type in valid_categories:
+            return error_type
+        else:
+            return "Others"
+            
+    except Exception as e:
+        # API 호출 실패시 기존 키워드 방식으로 폴백
+        print(f"Classification API failed: {e}, falling back to keyword matching")
+        
+        # 기존 키워드 매칭 로직 (폴백용)
+        explanation_lower = explanation.lower()
+        
+        if any(k in explanation_lower for k in ["natural expression", "idiomatic", "자연스러운 표현", "관용"]):
             return "Expression"
-        # Particle 체크
-        if any(k in explanation for k in ["particle", "조사", "marker", "을/를", "이/가", "은/는"]):
+        if any(k in explanation_lower for k in ["particle", "조사", "을/를", "이/가", "은/는"]):
             return "Particle"
-        # Verb Tense 체크
-        if any(k in explanation for k in ["tense", "past", "future", "present", "했어요", "할 거예요"]):
+        if any(k in explanation_lower for k in ["tense", "past", "future", "present"]):
             return "Verb Tense"
-        # Verb Ending 체크
-        if any(k in explanation for k in ["ending", "conjugation", "politeness", "speech level"]):
+        if any(k in explanation_lower for k in ["ending", "conjugation", "politeness"]):
             return "Verb Ending"
-        # Word Order 체크
-        if any(k in explanation for k in ["word order", "어순", "position", "placement"]):
+        if any(k in explanation_lower for k in ["word order", "어순", "position"]):
             return "Word Order"
-        # Connectives 체크
-        if any(k in explanation for k in ["connective", "연결", "그리고", "그래서"]):
+        if any(k in explanation_lower for k in ["connective", "연결", "그리고", "그래서"]):
             return "Connectives"
-    
-    return "Others"
+            
+        return "Others"
 
 
 # === 🔥 스마트한 중복 필터링 함수 (vs 방식으로 수정됨) ===
@@ -623,6 +648,8 @@ If either topic is missing or incomplete:
 - Provide example sentences for the missing part
 - Make this the FIRST point in "Key Improvements"
 
+**🔥 ANALYSIS REQUIREMENTS:** 
+
 1. **Grammar Issues (5-6개, 다양한 유형 우선)**
    - **우선순위 적용**: 
      1. 실제로 틀린 문법 (자연스러운 변형은 제외)
@@ -630,27 +657,17 @@ If either topic is missing or incomplete:
      3. 초급자가 자주 틀리는 패턴
      
    - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
+    **GRAMMAR ERROR TYPES**
+    - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
+    - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
+    - **Verb Tense**: Incorrect verb tense usage (past/present/future)
+    - **Word Order**: Unnatural word order in sentences
+    - **Connectives**: Inappropriate connecting expressions or overuse of 그리고
+    - **Expression**: Unnatural expressions or better idiomatic expressions available
+    - **Others**: For grammar mistakes that do not fit the above categories
    
-   **CRITICAL: You MUST classify each error as EXACTLY ONE of these types:**
-   - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
-   - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
-   - **Verb Tense**: Incorrect verb tense usage (past/present/future)
-   - **Word Order**: Unnatural word order in sentences
-   - **Connectives**: Inappropriate connecting expressions or overuse of 그리고
-   - **Expression**: Unnatural expressions or better idiomatic expressions available
-   - **Others**: For grammar mistakes that do not fit the above categories
-   
-   **MANDATORY FORMAT - MUST START WITH THE EXACT TYPE NAME:**
-   "❗️ [TYPE NAME]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 [explanation]"
-   
-   **CORRECT EXAMPLES:**
-   "❗️ Particle\\n• Original: '친구 만났어요' → Fix: '친구를 만났어요'\\n🧠 Need object marker 를 for the object"
-   "❗️ Expression\\n• Original: '기억하고 있어요' → Fix: '기억에 남아요'\\n🧠 '기억에 남다' is more natural"
-   "❗️ Verb Tense\\n• Original: '내일 갔어요' → Fix: '내일 갈 거예요'\\n🧠 Use future tense with 내일"
-   
-   **CRITICAL: The type name MUST be EXACTLY one of: Particle, Verb Ending, Verb Tense, Word Order, Connectives, Expression, Others**
-   **DO NOT use any other type names or variations**
-   
+   - **MUST include "Original:" and "→ Fix:" format.**
+   - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
    - **Target: Find 5-6 issues with TYPE DIVERSITY if they exist.**
 
 2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
