@@ -451,105 +451,121 @@ def display_question(step_context=""):
 
 def record_audio(key, label):
     """
-    간소화된 녹음 인터페이스 (실시간 타이머 추가 - components 버전)
-    
-    Args:
-        key: 컴포넌트 키
-        label: 라벨 텍스트
-        
-    Returns:
-        tuple: (audio_data, source_type) - audio_data와 타입 정보 반환
+    간소화된 녹음 인터페이스 (실시간 타이머 - 독립 버튼 방식)
+    - 타이머는 iframe 내부 JS로 동작
+    - 사용자 절차: Start Timer → Start Recording → Stop Recording → Stop Timer
     """
     import streamlit.components.v1 as components
     
-    # 노란색 안내 메시지
-    st.warning("🎙️ Click Start Recording or upload an audio file")
+    # 안내 메시지
+    st.warning("🎙️ **Step 1:** Start Timer → **Step 2:** Start Recording → **Step 3:** Stop Recording → **Step 4:** Stop Timer")
     
-    # 마이크 녹음
-    audio = mic_recorder(
-        start_prompt="🎙️ Start Recording",
-        stop_prompt="⏹️ Stop Recording", 
-        format="wav",
-        just_once=True,
-        use_container_width=True,
-        key=key
-    )
+    # 좌우 배치: 타이머 / 녹음 버튼
+    col_timer, col_rec = st.columns([1, 2])
     
-    # JavaScript 타이머 컴포넌트
-    timer_html = f"""
-    <div id="recording-timer" style="
-        text-align: center; 
-        font-size: 16px; 
-        font-weight: bold; 
-        color: #666;
-        padding: 10px;
-        background: #f0f0f0;
-        border-radius: 5px;
-        margin: 10px 0;
-        display: none;
-    ">
-        ⏱️ <span id="timer-display">0:00</span>
-    </div>
-    
-    <script>
-    let startTime = null;
-    let timerInterval = null;
-    
-    function checkButtons() {{
-        const buttons = document.parent.document.querySelectorAll('button');
-        let isRecording = false;
+    with col_timer:
+        timer_html = """
+        <div style="font-family: system-ui, -apple-system, sans-serif;">
+            <div id="timer" style="
+                display:none; 
+                margin-bottom:10px; 
+                padding:12px; 
+                text-align:center; 
+                font-size:20px;
+                font-weight:700; 
+                border-radius:8px; 
+                background:#eef2ff; 
+                color:#3730a3;
+                transition: all 0.3s;">
+                ⏱️ <span id="t">0:00</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button id="startBtn" style="
+                    flex:1; 
+                    padding:10px; 
+                    border-radius:8px; 
+                    border:1px solid #10b981; 
+                    background:#d1fae5;
+                    font-weight:600;
+                    cursor:pointer;">
+                    ▶️ Start Timer
+                </button>
+                <button id="stopBtn" style="
+                    flex:1; 
+                    padding:10px; 
+                    border-radius:8px; 
+                    border:1px solid #ef4444; 
+                    background:#fee2e2;
+                    font-weight:600;
+                    cursor:pointer;">
+                    ⏸️ Stop Timer
+                </button>
+            </div>
+        </div>
         
-        buttons.forEach(btn => {{
-            if (btn.textContent.includes('Stop Recording') || btn.textContent.includes('⏹')) {{
-                isRecording = true;
-            }}
-        }});
+        <script>
+        let s=0, h=null;
+        const timerDiv = document.getElementById('timer');
+        const timeSpan = document.getElementById('t');
         
-        const timerDiv = document.getElementById('recording-timer');
-        const timerDisplay = document.getElementById('timer-display');
-        
-        if (isRecording && !startTime) {{
-            // 녹음 시작
-            startTime = Date.now();
-            timerDiv.style.display = 'block';
+        const view = () => {
+            const m = Math.floor(s/60);
+            const sec = String(s%60).padStart(2,'0');
+            timeSpan.textContent = m + ":" + sec;
             
-            timerInterval = setInterval(() => {{
-                const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                const minutes = Math.floor(elapsed / 60);
-                const seconds = elapsed % 60;
-                timerDisplay.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
-                
-                // 색상 변경 (시간에 따라)
-                if (elapsed < 60) {{
-                    timerDiv.style.background = '#ffebee'; // 연한 빨강
-                    timerDiv.style.color = '#c62828';
-                }} else if (elapsed < 90) {{
-                    timerDiv.style.background = '#fff3e0'; // 연한 주황
-                    timerDiv.style.color = '#ef6c00';
-                }} else {{
-                    timerDiv.style.background = '#e8f5e9'; // 연한 초록
-                    timerDiv.style.color = '#2e7d32';
-                }}
-            }}, 100);
-        }} else if (!isRecording && startTime) {{
-            // 녹음 종료
-            clearInterval(timerInterval);
-            startTime = null;
-            timerDiv.style.display = 'none';
-        }}
-    }}
+            // 시간별 색상 변경 (1-2분 목표)
+            if(s < 60) {
+                timerDiv.style.background = '#fee2e2';  // 빨강 (1분 미만)
+                timerDiv.style.color = '#dc2626';
+            } else if(s < 90) {
+                timerDiv.style.background = '#fed7aa';  // 주황 (1-1.5분)
+                timerDiv.style.color = '#ea580c';
+            } else {
+                timerDiv.style.background = '#bbf7d0';  // 초록 (1.5분+)
+                timerDiv.style.color = '#059669';
+            }
+        };
+        
+        const start = () => {
+            if(h) return;  // 이미 실행중이면 무시
+            s = 0;
+            view();
+            timerDiv.style.display = 'block';
+            h = setInterval(() => {
+                s++;
+                view();
+            }, 1000);
+        };
+        
+        const stop = () => {
+            if(h) {
+                clearInterval(h);
+                h = null;
+            }
+            // 타이머는 계속 표시 (시간 확인용)
+        };
+        
+        document.getElementById('startBtn').onclick = start;
+        document.getElementById('stopBtn').onclick = stop;
+        </script>
+        """
+        components.html(timer_html, height=130)
     
-    // 0.2초마다 버튼 상태 체크
-    setInterval(checkButtons, 200);
-    </script>
-    """
+    with col_rec:
+        # 마이크 녹음
+        audio = mic_recorder(
+            start_prompt="🎙️ Start Recording",
+            stop_prompt="⏹️ Stop Recording",
+            format="wav",
+            just_once=True,
+            use_container_width=True,
+            key=key
+        )
     
-    # HTML 컴포넌트로 타이머 삽입
-    components.html(timer_html, height=80)
-    
+    # 결과 처리
     if audio:
         st.success("✅ Recording captured successfully.")
-        st.audio(audio['bytes'])
+        st.audio(audio["bytes"])
         return audio, "recording"
     
     # 파일 업로드 옵션
@@ -562,11 +578,10 @@ def record_audio(key, label):
     if uploaded_file:
         st.success("✅ Audio file uploaded successfully.")
         st.audio(uploaded_file.read())
-        uploaded_file.seek(0)  # 포인터 리셋
+        uploaded_file.seek(0)
         return uploaded_file, "upload"
     
     return None, None
-
 
 def display_transcription_with_highlights(transcription, feedback, title="What You Said", audio_data=None):
     """
