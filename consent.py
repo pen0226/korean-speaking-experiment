@@ -208,7 +208,7 @@ def collect_background_information():
     
     st.markdown("---")
     
-    # 자기효능감 문항 6개 추가
+    # 자기효능감 문항 9개 추가
     st.markdown("### 🎯 Korean Speaking Self-Efficacy")
     st.markdown("*Please rate how much you agree with each statement:*")
     
@@ -278,8 +278,8 @@ def save_background_to_session(background_details):
     st.session_state.learning_duration = background_details['learning_duration']
     st.session_state.speaking_confidence = background_details['speaking_confidence']
     
-    # 자기효능감 점수 6개 저장
-    for i in range(1, 7):
+    # 자기효능감 점수 9개 저장
+    for i in range(1, 10):
         key = f'self_efficacy_{i}'
         if key in background_details:
             setattr(st.session_state, key, background_details[key])
@@ -548,7 +548,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         os.makedirs(FOLDERS["data"], exist_ok=True)
         mapping_file = os.path.join(FOLDERS["data"], 'nickname_mapping.csv')
         
-        # 헤더가 없으면 생성 (자기효능감 필드 6개 추가)
+        # 헤더가 없으면 생성 (자기효능감 필드 9개 추가)
         if not os.path.exists(mapping_file):
             with open(mapping_file, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
@@ -558,8 +558,8 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant',
                     'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session'
                 ]
-                # 자기효능감 필드 6개 추가
-                for i in range(1, 7):
+                # 자기효능감 필드 9개 추가
+                for i in range(1, 10):
                     headers.append(f'Self_Efficacy_{i}')
                 headers.append('Notes')
                 
@@ -589,9 +589,9 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
         
         retention_until = (datetime.now(KST) + timedelta(days=DATA_RETENTION_DAYS)).strftime('%Y-%m-%d')  # 🔥 KST 추가
         
-        # 자기효능감 점수 추출 (6개)
+        # 자기효능감 점수 추출 (9개)
         efficacy_scores = []
-        for i in range(1, 7):
+        for i in range(1, 10):
             key = f'self_efficacy_{i}'
             efficacy_scores.append(background_details.get(key, ''))
         
@@ -607,7 +607,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     'Consent_Data_Rights', 'Consent_Final_Confirm', 'GDPR_Compliant',
                     'Learning_Duration', 'Speaking_Confidence', 'Session_Count', 'Last_Session'
                 ]
-                for i in range(1, 7):
+                for i in range(1, 10):
                     fieldnames.append(f'Self_Efficacy_{i}')
                 fieldnames.append('Notes')
                 
@@ -623,8 +623,8 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                             'Learning_Duration': background_details.get('learning_duration', row.get('Learning_Duration', '')),
                             'Speaking_Confidence': background_details.get('speaking_confidence', row.get('Speaking_Confidence', ''))
                         })
-                        # 자기효능감 점수 업데이트 (6개)
-                        for i in range(1, 7):
+                        # 자기효능감 점수 업데이트 (9개)
+                        for i in range(1, 10):
                             key = f'Self_Efficacy_{i}'
                             row[key] = background_details.get(f'self_efficacy_{i}', row.get(key, ''))
                     writer.writerow(row)
@@ -646,7 +646,7 @@ def save_nickname_mapping(anonymous_id, nickname, consent_details=None, backgrou
                     background_details.get('speaking_confidence', ''),
                     1, CURRENT_SESSION
                 ]
-                # 자기효능감 점수 6개 추가
+                # 자기효능감 점수 9개 추가
                 row_data.extend(efficacy_scores)
                 row_data.append('')  # Notes
                 

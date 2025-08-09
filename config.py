@@ -83,14 +83,17 @@ BACKGROUND_INFO = {
     ]
 }
 
-# 자기효능감 문항 설정 (6개 문항 - 5점 만점)
+# 자기효능감 문항 설정 (9개 문항 - 5점 만점)
 SELF_EFFICACY_ITEMS = [
     "I can talk about the given topic in Korean.",
     "I can speak in a clear and logical way in Korean.",
+    "I can give enough details and examples to fully explain my ideas in Korean.",
     "I can use Korean grammar correctly when I speak.",
     "I can use appropriate vocabulary when I speak Korean.",
+    "I can choose the right level of formality (speech style) for the situation when I speak Korean.",
     "I can pronounce Korean accurately and naturally.",
-    "I can speak with natural Korean intonation."
+    "I can speak with natural Korean intonation.",
+    "I can adjust my speaking speed and pauses to make my Korean easier to understand."
 ]
 
 SELF_EFFICACY_SCALE = [

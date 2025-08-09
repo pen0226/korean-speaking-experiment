@@ -100,8 +100,8 @@ def initialize_session_state():
         st.session_state.learning_duration = ""
         st.session_state.speaking_confidence = ""
         
-        # 자기효능감 점수 초기화 (6개)
-        for i in range(1, 7):
+        # 자기효능감 점수 초기화 (9개)
+        for i in range(1, 10):
             setattr(st.session_state, f'self_efficacy_{i}', '')
 
 

@@ -203,13 +203,16 @@ def build_session_data(timestamp):
         'learning_duration': getattr(st.session_state, 'learning_duration', ''),  # 한국어 학습 기간 선택지
         'speaking_confidence': getattr(st.session_state, 'speaking_confidence', ''),  # 말하기 자신감 5점 척도
         
-        # 자기효능감 6개 항목 (각 1-5점 리커트 척도)
-        'self_efficacy_1': getattr(st.session_state, 'self_efficacy_1', ''),  # "I can use grammar accurately when speaking Korean"
-        'self_efficacy_2': getattr(st.session_state, 'self_efficacy_2', ''),  # "I can use appropriate words when speaking Korean"
-        'self_efficacy_3': getattr(st.session_state, 'self_efficacy_3', ''),  # "I can deliver what I want to say in Korean with confidence"
-        'self_efficacy_4': getattr(st.session_state, 'self_efficacy_4', ''),  # "I can express my ideas clearly in Korean"
-        'self_efficacy_5': getattr(st.session_state, 'self_efficacy_5', ''),  # "I can answer related questions well in Korean"
-        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),  # "I can improve my speaking on my own through feedback"
+        # 자기효능감 9개 항목 (각 1-5점 리커트 척도)
+        'self_efficacy_1': getattr(st.session_state, 'self_efficacy_1', ''),  # "I can talk about the given topic in Korean"
+        'self_efficacy_2': getattr(st.session_state, 'self_efficacy_2', ''),  # "I can speak in a clear and logical way in Korean"
+        'self_efficacy_3': getattr(st.session_state, 'self_efficacy_3', ''),  # "I can give enough details and examples to fully explain my ideas in Korean"
+        'self_efficacy_4': getattr(st.session_state, 'self_efficacy_4', ''),  # "I can use Korean grammar correctly when I speak"
+        'self_efficacy_5': getattr(st.session_state, 'self_efficacy_5', ''),  # "I can use appropriate vocabulary when I speak Korean"
+        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),  # "I can choose the right level of formality (speech style) for the situation when I speak Korean"
+        'self_efficacy_7': getattr(st.session_state, 'self_efficacy_7', ''),  # "I can pronounce Korean accurately and naturally"
+        'self_efficacy_8': getattr(st.session_state, 'self_efficacy_8', ''),  # "I can speak with natural Korean intonation"
+        'self_efficacy_9': getattr(st.session_state, 'self_efficacy_9', ''),  # "I can adjust my speaking speed and pauses to make my Korean easier to understand"
         
         # ===== 3. 동의서 및 윤리 정보 =====
         'consent_given': getattr(st.session_state, 'consent_given', False),  # 동의서 작성 완료 여부
@@ -327,7 +330,7 @@ def calculate_self_efficacy_average():
         float: 자기효능감 평균 (1-5점)
     """
     efficacy_scores = []
-    for i in range(1, 7):
+    for i in range(1, 10):
         score = getattr(st.session_state, f'self_efficacy_{i}', 0)
         if score and isinstance(score, (int, float)) and 1 <= score <= 5:
             efficacy_scores.append(score)
@@ -434,9 +437,9 @@ def create_participant_info_file(session_id, timestamp):
         learning_duration = getattr(st.session_state, 'learning_duration', 'Not specified')
         speaking_confidence = getattr(st.session_state, 'speaking_confidence', 'Not specified')
         
-        # 자기효능감 점수 수집 (6개)
+        # 자기효능감 점수 수집 (9개)
         efficacy_scores = []
-        for i in range(1, 7):
+        for i in range(1, 10):
             score = getattr(st.session_state, f'self_efficacy_{i}', 'N/A')
             efficacy_scores.append(f"Item {i}: {score}/5")
         

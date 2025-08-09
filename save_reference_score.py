@@ -1,6 +1,7 @@
 """
 save_reference_score.py
 TOPIK 참고용 점수 저장 모듈 (홀리스틱 루브릭 - 채점자 감각 기반 + 이유 컬럼 추가)
+자기효능감 9문항 반영
 """
 
 import pandas as pd
@@ -23,11 +24,11 @@ def calculate_content_task_score_holistic(transcript):
         return 1, "No meaningful content detected"
     
     # 과거 방학 체크 (더 정확한 키워드)
-    past_keywords = ["지난", "작년", "여름", "겨울", "방학", "휴가", "여행", "갔어요", "했어요", "먹었어요", "봤어요", "놀았어요"]
+    past_keywords = ["지난", "작년", "여름", "겨울", "방학", "휴가", "여행", "갔어요", "했어요", "먹었어요", "봤어요", "놀았어요", "있었어요", "만났어요", "공부했어요"]
     past_mentioned = sum(1 for k in past_keywords if k in transcript)
     
     # 미래 계획 체크 (더 정확한 키워드)
-    future_keywords = ["다음", "내년", "할 거예요", "갈 거예요", "하려고", "계획", "하고 싶어요", "갈 예정", "할 계획"]
+    future_keywords = ["다음", "내년", "할 거예요", "갈 거예요", "하려고", "계획", "하고 싶어요", "갈 예정", "할 계획", "볼 거예요", "만날 거예요"]
     future_mentioned = sum(1 for k in future_keywords if k in transcript)
     
     # 이유 체크
