@@ -609,10 +609,10 @@ Student answered "{question}": {transcript}
 - **STRICTLY PROHIBITED:** Do NOT use 반말 or plain dictionary-style endings (e.g., "‑다"). ONLY use speech styles that are appropriate for an interview: either 합니다-style or 해요-style, following the student's usage.
 
 **🔥 GRAMMAR ANALYSIS GUIDELINES:**
+- **Consider full context: Analyze grammar within the student's complete narrative, not isolated sentences**
 - **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
   * '하고' and '과/와' are both correct for "and/with"
-  * **Particle omission (을/를, 이/가) is natural in speech - DO NOT mark as error**
-  * Examples: "경제 전공이에요" ✅, "한국어 공부해요" ✅, "밥 먹었어요" ✅
+  * **Natural particle omission is NOT an error** (경제 전공이에요 ✅, 한국어 공부해요 ✅)
   * Colloquial forms that are grammatically acceptable should not be flagged
 - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
   * Wrong particle usage (을 vs 에): "학교를 가요" ❌ → "학교에 가요" ✅
@@ -1032,7 +1032,7 @@ def get_default_explanation(error_type):
 def get_default_grammar_issues():
     """기본 문법 이슈들 (5개 주요 유형)"""
     return [
-        "Particle|저는 경제 전공이에요|저는 경제를 전공해요|Use '를' to indicate the object",
+        "Particle|학교를 가요|학교에 가요|Use '에' for destination, not '를'",  # 잘못된 조사 사용으로 변경,
         "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing preferences",
         "Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'",
         "Word Order|한국에서 저는 공부해요|저는 한국에서 공부해요|Subject comes before location",
