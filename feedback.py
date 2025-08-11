@@ -610,10 +610,13 @@ Student answered "{question}": {transcript}
 
 **🔥 GRAMMAR ANALYSIS GUIDELINES:**
 - **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
-  * '하고' and '과/와' are both correct for "and/with" 
+  * '하고' and '과/와' are both correct for "and/with"
+  * **Particle omission (을/를, 이/가) is natural in speech - DO NOT mark as error**
+  * Examples: "경제 전공이에요" ✅, "한국어 공부해요" ✅, "밥 먹었어요" ✅
   * Colloquial forms that are grammatically acceptable should not be flagged
 - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
-
+  * Wrong particle usage (을 vs 에): "학교를 가요" ❌ → "학교에 가요" ✅
+  
 **🚩 TASK COMPLETION CHECK (CRITICAL):**
 You MUST check if the student addressed BOTH parts of the question:
 1. Past vacation (지난 방학): Check for past tense usage (갔어요, 했어요, 있었어요, etc.)
