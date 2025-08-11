@@ -611,10 +611,10 @@ Student answered "{question}": {transcript}
 **🔥 GRAMMAR ANALYSIS GUIDELINES:**
 - **Consider full context: Analyze grammar within the student's complete narrative, not isolated sentences**
 - **ACCEPT NATURAL VARIATIONS**: Do not mark natural Korean variations as errors
-  * '하고' and '과/와' are both correct for "and/with"
-  * **Natural particle omission is NOT an error** (경제 전공이에요 ✅, 한국어 공부해요 ✅)
   * Colloquial forms that are grammatically acceptable should not be flagged
-- **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
+  * '하고' and '과/와' are both correct for "and/with"
+  * Natural omission of the object particle (을/를) is NOT an error if the meaning is clear and natural in spoken Korean (예: "사과 먹어요" ✅, "책 읽어요" ✅)
+  - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
   * Wrong particle usage (을 vs 에): "학교를 가요" ❌ → "학교에 가요" ✅
   
 **🚩 TASK COMPLETION CHECK (CRITICAL):**
