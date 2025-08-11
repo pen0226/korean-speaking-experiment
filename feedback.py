@@ -614,7 +614,9 @@ Student answered "{question}": {transcript}
   * Colloquial forms that are grammatically acceptable should not be flagged
   * '하고' and '과/와' are both correct for "and/with"
   * Natural omission of the object particle (을/를) is NOT an error if the meaning is clear and natural in spoken Korean (예: "사과 먹어요" ✅, "책 읽어요" ✅)
-  - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
+  * Even in formal contexts such as interviews, natural omission of the object particle (을/를) should NOT be marked as a grammar error.
+  * If desired, mention it only as an optional improvement in a separate note, not in the main grammar issues list.
+- **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
   * Wrong particle usage (을 vs 에): "학교를 가요" ❌ → "학교에 가요" ✅
   
 **🚩 TASK COMPLETION CHECK (CRITICAL):**
