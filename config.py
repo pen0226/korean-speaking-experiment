@@ -321,10 +321,11 @@ Student answered "{question}": {transcript}
 }}
 
 **Scoring Guide:**
-- Score 8 to 10: Spoke 60s+, rich personal content, only minor errors
-- Score 6 to 7: Spoke 60s+, good content, some errors but understandable
-- Score 4 to 5: Spoke 60s+, basic content, several errors
-- Score 1 to 3: Spoke under 60s, limited content, major communication issues"""
+- Score 8 to 10: Spoke 60s+, covered BOTH past vacation AND future plans completely with rich personal details, only minor errors
+- Score 6 to 7: Spoke 60s+, covered BOTH topics with good details, some errors but understandable
+- Score 4 to 5: Spoke 60s+, covered BOTH topics with basic content, OR covered only ONE topic well, several errors
+- Score 2 to 3: Spoke 60s+ but missing one major topic OR spoke under 60s with limited content
+- Score 1: Spoke under 60s, missing both topics or major communication issues"""
 
 # 🔥 개선도 평가 프롬프트 템플릿 (수정된 질문 반영)
 IMPROVEMENT_PROMPT_TEMPLATE = """Compare two Korean speaking attempts from a beginner student.
