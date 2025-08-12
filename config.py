@@ -105,7 +105,7 @@ SELF_EFFICACY_SCALE = [
 ]
 
 # AI 모델 설정
-GPT_MODELS = ["gpt-5"]
+GPT_MODELS = ["gpt-4o"]
 ELEVENLABS_MODEL = "eleven_multilingual_v2"
 
 # GPT 피드백 토큰 제한 설정
