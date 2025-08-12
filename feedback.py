@@ -817,7 +817,7 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
         
         try:
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-5",
                 messages=[
                     {"role": "system", "content": GPT_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt}
@@ -1084,7 +1084,7 @@ def get_improvement_assessment(first_transcript, second_transcript, original_fee
     try:
         client = openai.OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5",
             messages=[
                 {"role": "system", "content": "You are a Korean teacher evaluating progress. Respond only with valid JSON. Always speak directly to the student using 'You' instead of 'The student'."},
                 {"role": "user", "content": prompt}
