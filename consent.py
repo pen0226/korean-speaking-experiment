@@ -31,10 +31,11 @@ def enhanced_consent_section():
         
         🎙️ First Record → 🤖 AI Feedback → 🎙️ Second Record → 📝 Survey
         
-        **💻 Optional:** 15-min Zoom chat about your experience
+        **💻 (After all sessions)** 
+        20-min Zoom chat about your experience (Will be scheduled individually)
         
         🔔 **Notice**
-        This activity is part of a real research study.
+        This activity is part of a research study.
         Please try to speak clearly and naturally in each recording.
         Your recordings will help this research a lot.
         감사합니다!
@@ -66,7 +67,7 @@ def enhanced_consent_section():
         - Only the researcher can access your data
         
         **⏰ How Long It's Kept:**
-        - Maximum 2 years after the study ends
+        - Maximum 1 year after the study ends
         
         **🌍 International Processing:**
         - AI services process data internationally (standard for AI tools)
