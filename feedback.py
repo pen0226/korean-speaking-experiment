@@ -711,8 +711,7 @@ Make this the FIRST point in "Key Improvements".
    - **학생의 실제 발화에서 2-3개 짧은 문장을 선택하여 하나의 긴 문장으로 연결**
    - **Format**: "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences] \\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural"
 
-
-
+   
 **🔥 Performance Summary (구체적 맞춤형 피드백)**
 - **구체적 칭찬**: 학생이 실제로 잘한 부분 언급 (예: "Excellent! You covered both topics completely and explained your vacation experiences clearly")
 - **핵심 개선점**: 2-3개로 집중
@@ -721,7 +720,7 @@ Make this the FIRST point in "Key Improvements".
 
 **Required JSON Structure:**
 {{
-    "suggested_model_sentence": "Natural Korean paragraph showing a clear and complete answer for both past vacation and future plans with details, using several connecting words (그리고, 그래서, 하지만, ~면서, ~고 나서) to link ideas naturally.",
+    "suggested_model_sentence": "Natural Korean paragraph showing a clear and complete answer for both past vacation and future plans with relevant details, using 1–2 simple connecting words (그리고, 그래서, 하지만, ~면서, ~고 나서). Base it strictly on the student's actual answer content, improving clarity and flow",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
