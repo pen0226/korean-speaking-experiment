@@ -25,19 +25,6 @@ from config import (
 )
 
 
-# === 간소화된 오류 분류 상수 ===
-INDIVIDUAL_PARTICLES = ["을", "를", "은", "는", "이", "가", "에서", "에게", "에", "와", "과", "의", "로", "으로"]
-TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에", "지난", "다음"]
-VERB_ENDINGS = ["예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다", "다", "ㄴ다", "는다"]
-TENSE_MARKERS = ["했어요", "할 거예요", "하고 있어요", "한 적이", "했었어요", "할게요"]
-
-# 초급 학습자 자주 틀리는 패턴
-COMMON_BEGINNER_ERRORS = {
-    "좋아요_좋아해요": {"pattern": "좋아요", "correct": "좋아해요", "type": "Verb Ending"},
-    "입니다_이에요": {"pattern": "입니다", "correct": "이에요", "type": "Verb Ending"},
-}
-
-
 def generate_encouraging_feedback_message(word_count, error_rate, duration_s, score):
     """격려적인 피드백 메시지 생성 (60-120초 기준)"""
     messages = []
@@ -750,30 +737,6 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
     
     return student_feedback
 
-# === STT 검증 함수 ===
-def is_valid_transcript(text: str) -> bool:
-    """
-    STT 결과가 유효한지 검증
-    
-    Args:
-        text: STT 전사 텍스트
-        
-    Returns:
-        bool: 유효한 전사 텍스트인지 여부
-    """
-    if not text:
-        return False
-    
-    cleaned = text.strip()
-    if len(cleaned) < 5:  # 5글자 미만
-        return False
-    
-    # 점만 있는 경우 체크 (예: ". . . . . .")
-    if cleaned.replace('.', '').replace(' ', '') == '':
-        return False
-    
-    return True
-
 
 def parse_gpt_response(raw_content):
     """GPT 응답을 JSON으로 파싱"""
@@ -1046,78 +1009,6 @@ def get_fallback_improvement_assessment():
         "encouragement_message": "Every practice session makes you better! Keep going!"
     }
 
-# === 이중 평가 시스템: 연구용 함수들 ===
-
-def count_grammar_errors(grammar_issues):
-    """
-    GPT가 찾은 실제 문법 오류만 정확히 카운팅
-    
-    Args:
-        grammar_issues: GPT가 생성한 문법 이슈 리스트
-        
-    Returns:
-        int: 실제 유효한 문법 오류 개수
-    """
-    valid_errors = 0
-    for issue in grammar_issues:
-        if isinstance(issue, str) and '|' in issue:
-            # "error_type|original|fix|explanation" 형식 검증
-            parts = issue.split('|')
-            if len(parts) >= 3 and parts[1].strip() and parts[2].strip():
-                valid_errors += 1
-    return valid_errors
-
-
-def get_research_scores(transcript, grammar_issues, duration_s):
-    """
-    연구용 정확한 수치 계산 (논문용) - 60-120초 기준으로 수정
-    - Accuracy: 오류율 기반 (10 - (error_rate / 10))
-    - Fluency: 단어수 기반 (word_count / 120 * 10) - 1.5분 기준으로 120단어
-    
-    Args:
-        transcript: STT 전사 텍스트
-        grammar_issues: GPT가 찾은 문법 이슈들
-        duration_s: 녹음 길이 (초)
-        
-    Returns:
-        dict: 연구용 점수 데이터
-    """
-    # 기본값 설정
-    if not transcript or not isinstance(transcript, str):
-        transcript = ""
-    
-    if not grammar_issues or not isinstance(grammar_issues, list):
-        grammar_issues = []
-    
-    if not duration_s or not isinstance(duration_s, (int, float)):
-        duration_s = 0.0
-    
-    # 단어 수 계산 (공백 기준)
-    total_words = len(transcript.split()) if transcript.strip() else 0
-    
-    # 실제 문법 오류 개수 계산
-    error_count = count_grammar_errors(grammar_issues)
-    
-    # 오류율 계산 (0으로 나누기 방지)
-    if total_words > 0:
-        error_rate = (error_count / total_words) * 100
-    else:
-        error_rate = 0.0
-    
-    # Accuracy Score: 10에서 오류율의 1/10을 뺀 값 (최소 0, 최대 10)
-    accuracy_score = max(0, min(10, 10 - (error_rate / 10)))
-    
-    # 🔥 Fluency Score: 120단어를 기준으로 10점 만점 (1.5분 기준으로 수정)
-    fluency_score = max(0, min(10, (total_words / 120) * 10))
-    
-    return {
-        "accuracy_score": round(accuracy_score, 1),
-        "fluency_score": round(fluency_score, 1),
-        "error_rate": round(error_rate, 2),
-        "word_count": total_words,
-        "duration_s": round(duration_s, 1),
-        "error_count": error_count
-    }
 
 def get_score_category_info(score):
     """점수에 따른 카테고리 정보 반환"""
@@ -1198,3 +1089,163 @@ def display_score_with_encouragement(score, duration=0):
         """,
         unsafe_allow_html=True
     )
+
+    # === STT 검증 함수 ===
+def is_valid_transcript(text: str) -> bool:
+    """
+    STT 결과가 유효한지 검증
+    
+    Args:
+        text: STT 전사 텍스트
+        
+    Returns:
+        bool: 유효한 전사 텍스트인지 여부
+    """
+    if not text:
+        return False
+    
+    cleaned = text.strip()
+    if len(cleaned) < 5:  # 5글자 미만
+        return False
+    
+    # 점만 있는 경우 체크 (예: ". . . . . .")
+    if cleaned.replace('.', '').replace(' ', '') == '':
+        return False
+    
+    return True
+
+
+# === 간소화된 오류 분류 상수 ===
+INDIVIDUAL_PARTICLES = ["을", "를", "은", "는", "이", "가", "에서", "에게", "에", "와", "과", "의", "로", "으로"]
+TIME_INDICATORS = ["어제", "내일", "지금", "오늘", "내년", "작년", "다음 주", "지난주", "방금", "나중에", "지난", "다음"]
+VERB_ENDINGS = ["예요", "이에요", "아요", "어요", "습니다", "세요", "ㅂ니다", "다", "ㄴ다", "는다"]
+TENSE_MARKERS = ["했어요", "할 거예요", "하고 있어요", "한 적이", "했었어요", "할게요"]
+
+# 초급 학습자 자주 틀리는 패턴
+COMMON_BEGINNER_ERRORS = {
+    "좋아요_좋아해요": {"pattern": "좋아요", "correct": "좋아해요", "type": "Verb Ending"},
+    "입니다_이에요": {"pattern": "입니다", "correct": "이에요", "type": "Verb Ending"},
+}
+
+
+# === 이중 평가 시스템: 연구용 함수들 ===
+
+def count_grammar_errors(grammar_issues):
+    """
+    GPT가 찾은 실제 문법 오류만 정확히 카운팅
+    
+    Args:
+        grammar_issues: GPT가 생성한 문법 이슈 리스트
+        
+    Returns:
+        int: 실제 유효한 문법 오류 개수
+    """
+    valid_errors = 0
+    for issue in grammar_issues:
+        if isinstance(issue, str) and '|' in issue:
+            # "error_type|original|fix|explanation" 형식 검증
+            parts = issue.split('|')
+            if len(parts) >= 3 and parts[1].strip() and parts[2].strip():
+                valid_errors += 1
+    return valid_errors
+
+
+def get_research_scores(transcript, grammar_issues, duration_s):
+    """
+    연구용 정확한 수치 계산 (논문용) - 60-120초 기준으로 수정
+    - Accuracy: 오류율 기반 (10 - (error_rate / 10))
+    - Fluency: 단어수 기반 (word_count / 120 * 10) - 1.5분 기준으로 120단어
+    
+    Args:
+        transcript: STT 전사 텍스트
+        grammar_issues: GPT가 찾은 문법 이슈들
+        duration_s: 녹음 길이 (초)
+        
+    Returns:
+        dict: 연구용 점수 데이터
+    """
+    # 기본값 설정
+    if not transcript or not isinstance(transcript, str):
+        transcript = ""
+    
+    if not grammar_issues or not isinstance(grammar_issues, list):
+        grammar_issues = []
+    
+    if not duration_s or not isinstance(duration_s, (int, float)):
+        duration_s = 0.0
+    
+    # 단어 수 계산 (공백 기준)
+    total_words = len(transcript.split()) if transcript.strip() else 0
+    
+    # 실제 문법 오류 개수 계산
+    error_count = count_grammar_errors(grammar_issues)
+    
+    # 오류율 계산 (0으로 나누기 방지)
+    if total_words > 0:
+        error_rate = (error_count / total_words) * 100
+    else:
+        error_rate = 0.0
+    
+    # Accuracy Score: 10에서 오류율의 1/10을 뺀 값 (최소 0, 최대 10)
+    accuracy_score = max(0, min(10, 10 - (error_rate / 10)))
+    
+    # 🔥 Fluency Score: 120단어를 기준으로 10점 만점 (1.5분 기준으로 수정)
+    fluency_score = max(0, min(10, (total_words / 120) * 10))
+    
+    return {
+        "accuracy_score": round(accuracy_score, 1),
+        "fluency_score": round(fluency_score, 1),
+        "error_rate": round(error_rate, 2),
+        "word_count": total_words,
+        "duration_s": round(duration_s, 1),
+        "error_count": error_count
+    }
+
+def get_student_feedback(transcript, research_scores, original_feedback):
+    """
+    학생용 격려적 피드백 생성 (원본 GPT 피드백 유지)
+    - 원본 GPT 피드백을 그대로 유지하여 교육적 가치 보존
+    - 연구용 점수는 백그라운드에서만 계산
+    
+    Args:
+        transcript: STT 전사 텍스트
+        research_scores: 연구용 점수 데이터
+        original_feedback: GPT가 생성한 원본 피드백
+        
+    Returns:
+        dict: 학생용 피드백 데이터 (원본 GPT 피드백 유지)
+    """
+    # 기본값 처리
+    if not original_feedback or not isinstance(original_feedback, dict):
+        original_feedback = get_fallback_feedback()
+    
+    if not research_scores or not isinstance(research_scores, dict):
+        research_scores = {
+            "accuracy_score": 5.0,
+            "fluency_score": 5.0,
+            "error_rate": 20.0,
+            "word_count": 60,
+            "duration_s": 60.0,
+            "error_count": 3
+        }
+    
+    # 🎯 원본 GPT 피드백을 그대로 반환 (교육적 가치 유지)
+    # 연구용 점수는 이미 st.session_state.research_scores에 저장되어 있음
+    
+    # 원본 피드백 그대로 사용 (GPT가 생성한 교육적 피드백 유지)
+    student_feedback = original_feedback.copy()
+    
+    # 연구용 메타데이터만 추가 (학생에게는 보이지 않음)
+    student_feedback.update({
+        "_research_metadata": {
+            "accuracy_score": research_scores.get("accuracy_score", 0),
+            "fluency_score": research_scores.get("fluency_score", 0),
+            "error_rate": research_scores.get("error_rate", 0),
+            "word_count": research_scores.get("word_count", 0),
+            "duration_s": research_scores.get("duration_s", 0),
+            "dual_evaluation_applied": True
+        }
+    })
+    
+    return student_feedback
+
