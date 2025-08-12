@@ -85,7 +85,7 @@ def enhanced_consent_section():
         ### 🛠️ AI Tools Used:
         
         - **OpenAI Whisper** for transcription
-        - **GPT-4** for feedback
+        - **GPT-5** for feedback
         - **ElevenLabs** for pronunciation samples
         """)
     
