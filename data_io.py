@@ -209,7 +209,7 @@ def build_session_data(timestamp):
         'self_efficacy_3': getattr(st.session_state, 'self_efficacy_3', ''),  # "I can give enough details and examples to fully explain my ideas in Korean"
         'self_efficacy_4': getattr(st.session_state, 'self_efficacy_4', ''),  # "I can use Korean grammar correctly when I speak"
         'self_efficacy_5': getattr(st.session_state, 'self_efficacy_5', ''),  # "I can use appropriate vocabulary when I speak Korean"
-        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),  # "I can choose the right level of formality (speech style) for the situation when I speak Korean"
+        'self_efficacy_6': getattr(st.session_state, 'self_efficacy_6', ''),  # "I can use connecting words to make my sentences flow naturally in Korean"
         'self_efficacy_7': getattr(st.session_state, 'self_efficacy_7', ''),  # "I can pronounce Korean accurately and naturally"
         'self_efficacy_8': getattr(st.session_state, 'self_efficacy_8', ''),  # "I can speak with natural Korean intonation"
         'self_efficacy_9': getattr(st.session_state, 'self_efficacy_9', ''),  # "I can adjust my speaking speed and pauses to make my Korean easier to understand"
