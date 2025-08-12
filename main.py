@@ -461,10 +461,12 @@ def handle_feedback_step():
         # 🔥 간단한 팁 리스트 (1-2분 목표로 수정)
         st.info("""
         **Quick Tips for Your Next Recording:**
-        1. 🎯 Aim for **about 1~2 minutes total** of speaking
-        2. 🎤 Listen to the model pronunciation above
-        3. 📝 Try to fix the grammar points
-        4. 💡 Add details for both topics (last vacation experiences + next vacation plans with reasons)
+        1. 🎤 **Listen to the model pronunciation above**
+        2. 📝 **Use the grammar fixes** from the feedback
+        3. 💡 **Add 2–3 extra details** for each topic (time, place, feelings, reasons)
+        4. 🔄 **Try 1–2 new words or expressions** you learned from the model sentence
+        5. 🎯 **Speak for 1~2 minutes** and answer **both topics fully**
+        6. 🎤 **Speak clearly** and keep a steady speed for easier listening
         """)
         
         # 다음 단계 버튼

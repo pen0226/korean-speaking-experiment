@@ -60,7 +60,6 @@ TENSE_MARKERS = ["했어요", "할 거예요", "하고 있어요", "한 적이",
 COMMON_BEGINNER_ERRORS = {
     "좋아요_좋아해요": {"pattern": "좋아요", "correct": "좋아해요", "type": "Verb Ending"},
     "입니다_이에요": {"pattern": "입니다", "correct": "이에요", "type": "Verb Ending"},
-    "전공이에요_전공해요": {"pattern": "전공이에요", "correct": "전공해요", "type": "Verb Ending"}
 }
 
 
@@ -615,7 +614,6 @@ Student answered "{question}": {transcript}
   * '하고' and '과/와' are both correct for "and/with"
   * Natural omission of the object particle (을/를) is NOT an error if the meaning is clear and natural in spoken Korean (예: "사과 먹어요" ✅, "책 읽어요" ✅)
   * Even in formal contexts such as interviews, natural omission of the object particle (을/를) should NOT be marked as a grammar error.
-  * If desired, mention it only as an optional improvement in a separate note, not in the main grammar issues list.
 - **FOCUS ON ACTUAL ERRORS**: Only flag grammar issues that genuinely impede communication or are clearly incorrect
   * Wrong particle usage (을 vs 에): "학교를 가요" ❌ → "학교에 가요" ✅
   
