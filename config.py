@@ -297,7 +297,7 @@ Student answered "{question}": {transcript}
 
 **Required JSON Structure:**
 {{
-    "suggested_model_sentence": "Natural Korean sentence showing a clear and complete answer, using 1–2 simple connecting words (그리고, 그래서, 하지만, ~면서, ~고 나서).",
+    "suggested_model_sentence": "Natural Korean paragraph showing a clear and complete answer for both past vacation and future plans with details, using several connecting words (그리고, 그래서, 하지만, ~면서, ~고 나서) to link ideas naturally.",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
