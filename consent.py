@@ -180,7 +180,7 @@ def collect_background_information():
     st.markdown("### 📊 Tell About Your Korean Learning Journey")
     
     # 안내 문구 추가 (노란색)
-    st.warning("💡 This short survey has 8 questions and takes about 1 minute. Please answer honestly for better feedback.")
+    st.warning("💡 This short survey has 11 questions and takes about 1 minute. Please answer honestly for better feedback.")
     
     # 학습 기간 질문
     st.markdown("**🕐 How long have you been learning Korean?**")
