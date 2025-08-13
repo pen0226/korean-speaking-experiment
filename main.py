@@ -652,6 +652,9 @@ def handle_survey_step():
     
     st.markdown("### 📋 Step 6: Required Survey")
     
+    # 진행상황 표시 (선택사항)
+    display_optional_progress_view()
+
     # 데이터 저장 상태 확인 및 안내
     if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
         st.success("✅ Your experiment data has been safely saved!")
@@ -777,8 +780,6 @@ def handle_completion_step():
     st.markdown("### 🙏 Thank You! 감사합니다!")
     display_info_message(f"🚀 Your participation in {st.session_state.session_label} helps advance AI-powered language education!")
     
-    # 진행상황 표시 (선택사항)
-    display_optional_progress_view()
     
     # 연구자 모드
     display_researcher_mode()
