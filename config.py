@@ -224,7 +224,7 @@ TTS_SETTINGS = {
         "similarity_boost": 0.4,
         "style": 0.1,
         "use_speaker_boost": True,
-        "speed": 1.0
+        "speed": 0.9
     },
     "slow": {
         "stability": 0.95,
