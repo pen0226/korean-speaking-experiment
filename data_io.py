@@ -187,6 +187,10 @@ def build_session_data(timestamp):
     for key, default_value in default_research_scores.items():
         if key not in research_scores:
             research_scores[key] = default_value
+
+    # 🆕 전사본별 word count 개별 계산 (변수 정의 먼저!)
+    transcription_1_word_count = len(st.session_state.transcription_1.split()) if st.session_state.transcription_1 else 0
+    transcription_2_word_count = len(st.session_state.transcription_2.split()) if st.session_state.transcription_2 else 0
     
     # Task Completion Check 데이터 추출
     task_check_data = extract_task_completion_check(st.session_state.feedback.get('detailed_feedback', ''))
