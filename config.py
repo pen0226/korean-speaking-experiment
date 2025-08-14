@@ -55,14 +55,13 @@ SESSION_LABELS = {
 }
 
 # 🔥 수정된 실험 질문
-EXPERIMENT_QUESTION = "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요? 특별한 일이 있었어요? 2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?"
+EXPERIMENT_QUESTION = "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요?  2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?"
 
 # 🔥 수정된 세션별 질문 설정
 SESSION_QUESTIONS = {
-    1: "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요? 특별한 일이 있었어요? 2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?",
-    2: "지난 방학에 뭐 하셨어요? 다음 방학에는 특별한 계획이 있으세요?"
+    1: "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요?  2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?",
+    2: "Please speak for about 1~2 minutes in total and talk about both topics below. 1️⃣ 지난 방학에 뭐 했어요?  2️⃣ 다음 방학에는 뭐 할 거예요? 왜요?"
 }
-
 # 현재 세션에 맞는 질문으로 자동 설정
 EXPERIMENT_QUESTION = SESSION_QUESTIONS.get(CURRENT_SESSION, SESSION_QUESTIONS[1])
 
@@ -73,17 +72,10 @@ BACKGROUND_INFO = {
         "6 months – 1 year",
         "1 – 2 years", 
         "More than 2 years"
-    ],
-    "confidence_options": [
-        "1️⃣ Not confident at all",
-        "2️⃣ Not very confident",
-        "3️⃣ Neutral", 
-        "4️⃣ Quite confident",
-        "5️⃣ Very confident"
     ]
 }
 
-# 자기효능감 문항 설정 (9개 문항 - 5점 만점)
+# 자기효능감 문항 설정 (12개 문항 - 5점 만점)
 SELF_EFFICACY_ITEMS = [
     "I can talk about the given topic in Korean.",
     "I can speak in a clear and logical way in Korean.",
@@ -93,7 +85,10 @@ SELF_EFFICACY_ITEMS = [
     "I can use connecting words to make my sentences flow naturally in Korean.",
     "I can pronounce Korean accurately and naturally.",
     "I can speak with natural Korean intonation.",
-    "I can adjust my speaking speed and pauses to make my Korean easier to understand."
+    "I can adjust my speaking speed and pauses to make my Korean easier to understand.",
+    "I can continue speaking in Korean even if I make mistakes.",
+    "I can speak in Korean even when I feel nervous.",
+    "I can answer in Korean even if I am asked an unexpected question."
 ]
 
 SELF_EFFICACY_SCALE = [

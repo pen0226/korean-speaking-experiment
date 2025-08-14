@@ -201,7 +201,6 @@ def build_session_data(timestamp):
         
         # ===== 2. 배경 정보 및 사전 측정 =====
         'learning_duration': getattr(st.session_state, 'learning_duration', ''),  # 한국어 학습 기간 선택지
-        'speaking_confidence': getattr(st.session_state, 'speaking_confidence', ''),  # 말하기 자신감 5점 척도
         
         # 자기효능감 9개 항목 (각 1-5점 리커트 척도)
         'self_efficacy_1': getattr(st.session_state, 'self_efficacy_1', ''),  # "I can talk about the given topic in Korean"
@@ -213,7 +212,11 @@ def build_session_data(timestamp):
         'self_efficacy_7': getattr(st.session_state, 'self_efficacy_7', ''),  # "I can pronounce Korean accurately and naturally"
         'self_efficacy_8': getattr(st.session_state, 'self_efficacy_8', ''),  # "I can speak with natural Korean intonation"
         'self_efficacy_9': getattr(st.session_state, 'self_efficacy_9', ''),  # "I can adjust my speaking speed and pauses to make my Korean easier to understand"
-        
+        'self_efficacy_10': getattr(st.session_state, 'self_efficacy_10', ''), # "I can continue speaking in Korean even if I make mistakes."
+        'self_efficacy_11': getattr(st.session_state, 'self_efficacy_11', ''), # "I can speak in Korean even when I feel nervous."
+        'self_efficacy_12': getattr(st.session_state, 'self_efficacy_12', ''), # "I can answer in Korean even if I am asked an unexpected question."
+
+
         # ===== 3. 동의서 및 윤리 정보 =====
         'consent_given': getattr(st.session_state, 'consent_given', False),  # 동의서 작성 완료 여부
         'consent_timestamp': getattr(st.session_state, 'consent_timestamp', ''),  # 동의서 작성 시각
@@ -232,6 +235,11 @@ def build_session_data(timestamp):
         'question': EXPERIMENT_QUESTION,  # 실험에서 제시된 질문 (한국어)
         'transcription_1': st.session_state.transcription_1,  # 첫 번째 녹음 STT 전사 결과
         'transcription_2': st.session_state.transcription_2,  # 두 번째 녹음 STT 전사 결과 (피드백 적용 후)
+ # 🆕    추가: 각 전사본의 word count
+        'transcription_1_word_count': transcription_1_word_count,
+        'transcription_2_word_count': transcription_2_word_count,
+        'transcription_word_count_difference': transcription_2_word_count - transcription_1_word_count,  # 개선도 측정용
+
         'gpt_feedback_json': json.dumps(st.session_state.feedback, ensure_ascii=False),  # GPT가 생성한 전체 피드백 (JSON 원본)
         
         # ===== 4.5. Task Completion Check 데이터 (새로 추가) =====
@@ -330,7 +338,7 @@ def calculate_self_efficacy_average():
         float: 자기효능감 평균 (1-5점)
     """
     efficacy_scores = []
-    for i in range(1, 10):
+    for i in range(1, 13):
         score = getattr(st.session_state, f'self_efficacy_{i}', 0)
         if score and isinstance(score, (int, float)) and 1 <= score <= 5:
             efficacy_scores.append(score)
@@ -435,11 +443,10 @@ def create_participant_info_file(session_id, timestamp):
         original_nickname = getattr(st.session_state, 'original_nickname', 'Unknown')
         session_label = getattr(st.session_state, 'session_label', SESSION_LABELS.get(CURRENT_SESSION, "Session 1"))
         learning_duration = getattr(st.session_state, 'learning_duration', 'Not specified')
-        speaking_confidence = getattr(st.session_state, 'speaking_confidence', 'Not specified')
         
-        # 자기효능감 점수 수집 (9개)
+        # 자기효능감 점수 수집 (12개)
         efficacy_scores = []
-        for i in range(1, 10):
+        for i in range(1, 13):
             score = getattr(st.session_state, f'self_efficacy_{i}', 'N/A')
             efficacy_scores.append(f"Item {i}: {score}/5")
         
@@ -463,10 +470,9 @@ Save Trigger: Auto-save after second recording completion
 
 === BACKGROUND INFORMATION ===
 Learning Duration: {learning_duration}
-Speaking Confidence: {speaking_confidence}
 
 === SELF-EFFICACY SCORES (1-5 scale) ===
-{chr(10).join(efficacy_scores)}
+{chr(13).join(efficacy_scores)}
 Average Self-Efficacy: {efficacy_avg}/5.0
 
 === TASK COMPLETION CHECK ===
@@ -625,9 +631,9 @@ Files included:
 - audio/: All recorded audio files (student + model pronunciations)
 
 SELF-EFFICACY DATA:
-- 6 items measured on 1-5 scale
+- 12 items measured on 1-5 scale
 - Average self-efficacy score: {efficacy_avg}/5.0
-- Individual scores stored in CSV under self_efficacy_1 through self_efficacy_6
+- Individual scores stored in CSV under self_efficacy_1 through self_efficacy_12
 
 TOPIK REFERENCE SCORES:
 - Holistic rubric scoring: Content/Task, Language Use, Delivery (STT-based)
@@ -1040,18 +1046,15 @@ def display_session_details():
     
     # 배경 정보 표시
     learning_duration = getattr(st.session_state, 'learning_duration', '')
-    speaking_confidence = getattr(st.session_state, 'speaking_confidence', '')
     if learning_duration:
         st.write(f"**Learning Duration:** {learning_duration}")
-    if speaking_confidence:
-        st.write(f"**Speaking Confidence:** {speaking_confidence}")
-    
-    # 자기효능감 점수 표시 (6개)
+
+    # 자기효능감 점수 표시 (12개)
     efficacy_avg = calculate_self_efficacy_average()
     if efficacy_avg > 0:
-        st.write(f"**Self-Efficacy:** {efficacy_avg}/5.0 (6 items)")
+        st.write(f"**Self-Efficacy:** {efficacy_avg}/5.0 (12 items)")
         with st.expander("🎯 Self-Efficacy Details", expanded=False):
-            for i in range(1, 7):
+            for i in range(1, 13):
                 score = getattr(st.session_state, f'self_efficacy_{i}', 0)
                 if score:
                     st.write(f"Item {i}: {score}/5")
@@ -1100,7 +1103,7 @@ def display_session_details():
             st.write(f"Bucket: {GCS_BUCKET_NAME}")
             st.write(f"Storage method: ZIP archives only")
             st.write(f"Consent format: HTML (Korean language support)")
-            st.write(f"Self-efficacy: 6 items (1-5 scale) included")
+            st.write(f"Self-efficacy: 12 items (1-5 scale) included")
             st.write(f"TOPIK scores: 3-area Excel inside ZIP")
             st.write(f"Save timing: Auto-save after 2nd recording")
             st.write(f"Mapping sync: Smart upload (avoid duplicates from consent.py)")
@@ -1141,7 +1144,7 @@ def display_data_quality_info():
             student_score = st.session_state.feedback.get('interview_readiness_score', 'N/A')
             st.write(f"Student UI Score: {student_score}/10")
         
-        # 자기효능감 요약 (6개)
+        # 자기효능감 요약 (12개)
         efficacy_avg = calculate_self_efficacy_average()
         if efficacy_avg > 0:
             st.write(f"**🎯 Self-Efficacy:** {efficacy_avg}/5.0")

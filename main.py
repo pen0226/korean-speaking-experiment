@@ -98,10 +98,9 @@ def initialize_session_state():
         
         # 배경 정보 초기화
         st.session_state.learning_duration = ""
-        st.session_state.speaking_confidence = ""
         
-        # 자기효능감 점수 초기화 (9개)
-        for i in range(1, 10):
+        # 자기효능감 점수 초기화 (12개)
+        for i in range(1, 13):
             setattr(st.session_state, f'self_efficacy_{i}', '')
 
 
@@ -163,7 +162,7 @@ def handle_first_recording_step():
                     Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
-                    1️⃣ <strong>지난 방학에 뭐 했어요? 특별한 일이 있었어요?</strong>
+                    1️⃣ <strong>지난 방학에 뭐 했어요? </strong>
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     2️⃣ <strong>다음 방학에는 뭐 할 거예요? 왜요?</strong>
@@ -511,7 +510,7 @@ def handle_second_recording_step():
                     Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
-                    1️⃣ <strong>지난 방학에 뭐 했어요? 특별한 일이 있었어요?</strong>
+                    1️⃣ <strong>지난 방학에 뭐 했어요? </strong>
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     2️⃣ <strong>다음 방학에는 뭐 할 거예요? 왜요?</strong>
