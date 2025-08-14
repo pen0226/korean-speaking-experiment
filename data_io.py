@@ -1057,7 +1057,9 @@ def display_session_details():
     efficacy_avg = calculate_self_efficacy_average()
     if efficacy_avg > 0:
         st.write(f"**Self-Efficacy:** {efficacy_avg}/5.0 (12 items)")
-        with st.expander("🎯 Self-Efficacy Details", expanded=False):
+        
+        # expander 대신 버튼으로 토글 방식 사용
+        if st.button("🎯 Show Self-Efficacy Details"):
             for i in range(1, 13):
                 score = getattr(st.session_state, f'self_efficacy_{i}', 0)
                 if score:
