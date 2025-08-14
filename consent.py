@@ -31,7 +31,7 @@ def enhanced_consent_section():
         
         🎙️ First Record → 🤖 AI Feedback → 🎙️ Second Record → 📝 Survey
         
-        **💻 (Optional, after all sessions)** 
+        💻 (Optional) After all sessions, 
         20-min Zoom chat about your experience 
         
         🔔 **Notice**
