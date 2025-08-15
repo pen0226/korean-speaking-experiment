@@ -465,7 +465,6 @@ def record_audio(key, label):
     """
     # 노란색 안내 메시지 (학생들이 해야할 일이므로)
     st.warning("🎙️ Click Start Recording or upload an audio file")
-    st.info("📱 **On mobile, do not leave this page. The recording will stop.**")
     
     # 🔥 모바일 화면 꺼짐 방지: NoSleep.js (iPhone 녹음 문제 해결)
     components.html("""
