@@ -31,7 +31,10 @@ from utils import (
 
 def inject_global_scroll_manager():
     # 전역 앵커 (페이지 최상단 기준점)
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div id="page-top" style="position:absolute;top:0;height:1px;"></div>',
+        unsafe_allow_html=True
+    )
 
     # iOS Safari 대응: 렌더 완료 후/가시성 변화/해시변경 등 여러 트리거에서 반복 스크롤
     components.html(
@@ -46,12 +49,10 @@ def inject_global_scroll_manager():
           function forceTop(){
             tried++;
             try {
-              // 현재 문서
               window.scrollTo(0,0);
               document.body && (document.body.scrollTop = 0);
               document.documentElement && (document.documentElement.scrollTop = 0);
 
-              // Streamlit 컨테이너들
               const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
               for (const sel of sels){
                 const el = document.querySelector(sel);
@@ -61,13 +62,11 @@ def inject_global_scroll_manager():
                 }
               }
 
-              // 앵커로도 한 번 (일부 브라우저가 이걸 더 잘 먹음)
               const topEl = document.getElementById('page-top');
               if (topEl && topEl.scrollIntoView) {
                 topEl.scrollIntoView({behavior:'auto', block:'start'});
               }
 
-              // 부모 프레임에도 시도 (허용되는 환경에서만)
               try {
                 if (window.parent && window.parent !== window) {
                   window.parent.scrollTo(0,0);
@@ -81,13 +80,11 @@ def inject_global_scroll_manager():
               } catch(e){}
             } catch(e){}
 
-            // 몇 번 반복 시도 (iOS 렌더 타이밍 이슈 대비)
             if (tried < MAX_TRIES){
               setTimeout(forceTop, [60, 120, 300, 600, 900][Math.min(tried-1,4)]);
             }
           }
 
-          // 초기 여러 트리거
           forceTop();
           requestAnimationFrame(forceTop);
           window.addEventListener('load', forceTop, {once:false});
@@ -96,65 +93,66 @@ def inject_global_scroll_manager():
           });
           window.addEventListener('hashchange', forceTop, {passive:true});
 
-          // Streamlit DOM 변화 감지 → 최초 몇 번 반응
           const target = document.querySelector('body');
           if (target && 'MutationObserver' in window) {
             const mo = new MutationObserver(() => {
-              if (tried < MAX_TRIES) forceTop();
+              forceTop();
             });
             mo.observe(target, {childList:true, subtree:true});
           }
         })();
         </script>
         """,
-        height=0,
+        height=1,                      # ← 0 → 1
+        key="global-scroll-manager"    # ← 고유 key 추가
     )
 
 def enforce_top_after_render(step_key: str):
-    # 렌더가 다 끝난 뒤에 실행되도록, handlers 마지막에 주입
+    # 렌더가 끝난 직후 여러 번 상단으로 보정
+    html = """
+    <script>
+    (function(){
+      try { history.scrollRestoration = 'manual'; } catch(e) {}
+
+      function top(){
+        try {
+          window.scrollTo(0,0);
+          document.body && (document.body.scrollTop = 0);
+          document.documentElement && (document.documentElement.scrollTop = 0);
+
+          const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
+          for (const sel of sels){
+            const el = document.querySelector(sel);
+            if (el){
+              el.scrollTop = 0;
+              if (el.scrollTo) el.scrollTo(0,0);
+            }
+          }
+
+          const topEl = document.getElementById('page-top');
+          if (topEl && topEl.scrollIntoView) topEl.scrollIntoView({behavior:'auto', block:'start'});
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.scrollTo(0,0);
+            }
+          } catch(e){}
+        } catch(e){}
+      }
+
+      top();
+      requestAnimationFrame(top);
+      setTimeout(top, 60);
+      setTimeout(top, 180);
+      setTimeout(top, 400);
+      setTimeout(top, 800);
+    })();
+    </script>
+    """
+
     components.html(
-        f"""
-        <script>
-        (function(){{
-          try {{ history.scrollRestoration = 'manual'; }} catch(e) {{}}
-
-          function top(){{
-            try {{
-              window.scrollTo(0,0);
-              document.body && (document.body.scrollTop = 0);
-              document.documentElement && (document.documentElement.scrollTop = 0);
-
-              const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
-              for (const sel of sels){{
-                const el = document.querySelector(sel);
-                if (el){{
-                  el.scrollTop = 0;
-                  if (el.scrollTo) el.scrollTo(0,0);
-                }}
-              }}
-
-              const topEl = document.getElementById('page-top');
-              if (topEl && topEl.scrollIntoView) topEl.scrollIntoView({{behavior:'auto', block:'start'}});
-              try {{
-                if (window.parent && window.parent !== window) {{
-                  window.parent.scrollTo(0,0);
-                }}
-              }} catch(e){{}}
-            }} catch(e){{}}
-          }}
-
-          // 렌더 종료 직후/연쇄적으로 여러 번 보정
-          top();
-          requestAnimationFrame(top);
-          setTimeout(top, 60);
-          setTimeout(top, 180);
-          setTimeout(top, 400);
-          setTimeout(top, 800);
-        }})();
-        </script>
-        """,
-        height=0,
-        key=f"postrender-scroll-{step_key}"
+        html,
+        height=1,                                   # ← 0 → 1
+        key=f"postrender-scroll-{step_key}"         # ← 단계별로 고유 key
     )
 
 def initialize_session_state():
