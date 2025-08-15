@@ -28,95 +28,7 @@ from utils import (
 )
 
 
-def scroll_to_top():
-    """모바일 브라우저용 강력한 스크롤 초기화"""
-    st.markdown(
-        """
-        <style>
-        /* CSS 스크롤 앵커링 완전 비활성화 */
-        html, body, .main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
-            scroll-behavior: auto !important;
-            overflow-anchor: none !important;
-        }
-        </style>
-        <script>
-        // 브라우저 스크롤 복원 완전 차단
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-        
-        // 강력한 즉시 스크롤
-        const forceScroll = () => {
-            window.scrollTo({top: 0, left: 0, behavior: 'auto'});
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            
-            // 앵커로도 스크롤
-            const pageTop = document.getElementById('page-top');
-            if(pageTop) {
-                pageTop.scrollIntoView({behavior:'auto', block:'start'});
-            }
-            
-            // 모든 Streamlit 컨테이너 초기화
-            const containers = document.querySelectorAll('.main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp');
-            containers.forEach(el => {
-                if (el) {
-                    el.scrollTop = 0;
-                    if (el.scrollTo) el.scrollTo(0, 0);
-                }
-            });
-            
-            // 모든 스크롤 가능한 요소 초기화
-            const allElements = document.querySelectorAll('*');
-            allElements.forEach(el => {
-                if (el.scrollTop > 0) el.scrollTop = 0;
-                if (el.scrollLeft > 0) el.scrollLeft = 0;
-            });
-        };
-        
-        // 즉시 + 지속적 실행
-        forceScroll();
-        
-        // DOM 변화 감지하여 계속 스크롤 초기화 (더 공격적)
-        const observer = new MutationObserver(() => {
-            forceScroll();
-        });
-        
-        observer.observe(document.body, {
-            childList: true, 
-            subtree: true,
-            attributes: true,
-            attributeOldValue: true
-        });
-        
-        // 정기적으로 강제 스크롤 (0.1초마다)
-        let intervalCount = 0;
-        const scrollInterval = setInterval(() => {
-            forceScroll();
-            intervalCount++;
-            if (intervalCount > 50) { // 5초 후 중지
-                clearInterval(scrollInterval);
-            }
-        }, 100);
-        
-        // 5초 후 관찰 중지
-        setTimeout(() => {
-            observer.disconnect();
-            clearInterval(scrollInterval);
-        }, 5000);
-        
-        // 모바일 viewport 대응
-        if(window.visualViewport) {
-            window.visualViewport.addEventListener('resize', forceScroll);
-        }
-        
-        // 페이지 포커스 시에도 스크롤 초기화
-        window.addEventListener('focus', forceScroll);
-        window.addEventListener('pageshow', forceScroll);
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+# scroll_to_top 함수 완전 삭제됨
 
 def initialize_session_state():
     """세션 상태 초기화 (자기효능감 필드 추가)"""
@@ -141,59 +53,30 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('consent')
     
     st.markdown("### 📝 Consent to Participate")
     st.markdown("Please read and agree to participate in this research study.")
     
     if handle_consent_only():
-        # 페이지 전환 전 강제 스크롤 초기화
-        st.markdown("""
-        <script>
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-        setTimeout(function() { window.scrollTo(0, 0); }, 50);
-        </script>
-        """, unsafe_allow_html=True)
-        
         st.session_state.step = 'background_info'
         st.rerun()
 
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('background_info')
     
     st.markdown("### 📊 Background Information")
     st.markdown("Please provide some information about your Korean learning journey.")
     
     if handle_background_info_only():
-        # 페이지 전환 전 강제 스크롤 초기화
-        st.markdown("""
-        <script>
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-        setTimeout(function() { window.scrollTo(0, 0); }, 50);
-        </script>
-        """, unsafe_allow_html=True)
-        
         st.session_state.step = 'first_recording'
         st.rerun()
 
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('first_recording')
     
     # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
@@ -297,16 +180,6 @@ def process_first_recording():
                 model_audio = process_feedback_audio(feedback)
                 st.session_state.model_audio = model_audio
                 
-                # 페이지 전환 전 강제 스크롤 초기화
-                st.markdown("""
-                <script>
-                window.scrollTo(0, 0);
-                document.body.scrollTop = 0;
-                document.documentElement.scrollTop = 0;
-                setTimeout(function() { window.scrollTo(0, 0); }, 50);
-                </script>
-                """, unsafe_allow_html=True)
-                
                 st.session_state.step = 'feedback'
                 st.rerun()
             else:
@@ -317,9 +190,6 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('feedback')
 
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -531,16 +401,6 @@ def handle_feedback_step():
         
         # 다음 단계 버튼
         if create_styled_button("🎤 Record Again with Improvements", "primary"):
-            # 페이지 전환 전 강제 스크롤 초기화
-            st.markdown("""
-            <script>
-            window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
-            setTimeout(function() { window.scrollTo(0, 0); }, 50);
-            </script>
-            """, unsafe_allow_html=True)
-            
             st.session_state.step = 'second_recording'
             st.rerun()
     
@@ -550,25 +410,12 @@ def handle_feedback_step():
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")
     
     # 뒤로가기 버튼
     if create_styled_button("Back to Feedback", "secondary"):
-        # 페이지 전환 전 강제 스크롤 초기화
-        st.markdown("""
-        <script>
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-        setTimeout(function() { window.scrollTo(0, 0); }, 50);
-        </script>
-        """, unsafe_allow_html=True)
-        
         st.session_state.step = 'feedback'
         st.rerun()
     
@@ -702,6 +549,16 @@ def process_second_recording():
             </script>
             """, unsafe_allow_html=True)
             
+            # 페이지 전환 전 강제 스크롤 초기화
+            st.markdown("""
+            <script>
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            setTimeout(function() { window.scrollTo(0, 0); }, 50);
+            </script>
+            """, unsafe_allow_html=True)
+            
             st.session_state.step = 'survey'
             st.rerun()
         else:
@@ -733,9 +590,6 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 6: Required Survey")
@@ -803,16 +657,6 @@ def handle_survey_step():
     with col2:
         if survey_completed:
             if st.button("🎉 Finish Experiment", type="primary", use_container_width=True):
-                # 페이지 전환 전 강제 스크롤 초기화
-                st.markdown("""
-                <script>
-                window.scrollTo(0, 0);
-                document.body.scrollTop = 0;
-                document.documentElement.scrollTop = 0;
-                setTimeout(function() { window.scrollTo(0, 0); }, 50);
-                </script>
-                """, unsafe_allow_html=True)
-                
                 st.session_state.step = 'completion'
                 st.rerun()
         else:
@@ -864,9 +708,6 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
-    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-    scroll_to_top()
-    
     show_progress_indicator('completion')
     
     # 완료 축하 (간소화된 버전)
@@ -1154,43 +995,6 @@ def main():
     """메인 애플리케이션 함수 (iPhone 스크롤 최적화 + 참고용 TOPIK 점수 통합)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
-    
-    # 🔥 모바일 전용 CSS transform으로 페이지 위치 조정
-    st.markdown("""
-    <style>
-    @media only screen and (max-width: 768px) {
-        .main .block-container {
-            transform: translateY(-200px) !important;
-            margin-top: 200px !important;
-        }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # 🔥 브라우저 스크롤 복원 완전 비활성화 (모바일 필수)
-    st.markdown("""
-    <script>
-    // 페이지 로드 즉시 스크롤 복원 비활성화
-    if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
-    
-    // 즉시 최상단으로 강제 이동
-    window.scrollTo(0, 0);
-    document.body.scrollTop = 0;
-    document.documentElement.scrollTop = 0;
-    
-    // 페이지 로드 완료 후에도 최상단 유지
-    window.addEventListener('load', function() {
-        window.scrollTo(0, 0);
-    });
-    
-    // Streamlit rerun 이벤트 감지해서 스크롤 초기화
-    window.addEventListener('beforeunload', function() {
-        window.scrollTo(0, 0);
-    });
-    </script>
-    """, unsafe_allow_html=True)
     
     # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
