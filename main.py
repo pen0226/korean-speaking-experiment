@@ -29,59 +29,82 @@ from utils import (
 
 
 def scroll_to_top():
-    """강화된 페이지 스크롤 초기화 (iPhone Safari 완벽 호환)"""
+    """강화된 페이지 스크롤 초기화 (모바일 완벽 호환)"""
     st.markdown(
         """
+        <style>
+        /* CSS 스크롤 앵커링 완전 비활성화 */
+        html, body, .main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+            scroll-behavior: auto !important;
+            overflow-anchor: none !important;
+        }
+        </style>
         <script>
-        // 0.1초 뒤 강제 스크롤 (렌더링 이후 적용)
+        // 즉시 실행 (브라우저 복원 방지)
+        window.scrollTo(0,0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        
+        // 모바일 viewport 강제 리셋
+        if(window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() {
+                window.scrollTo(0,0);
+            });
+        }
+        
+        // 100ms 후 첫 번째 강제 스크롤
         setTimeout(function(){
-            // 앵커 스크롤
             var pageTop = document.getElementById('page-top');
-            if(pageTop && pageTop.scrollIntoView){
+            if(pageTop) {
                 pageTop.scrollIntoView({behavior:'auto', block:'start'});
             }
             
-            // 기본 스크롤
             window.scrollTo(0,0);
             document.body.scrollTop = 0;
             document.documentElement.scrollTop = 0;
             
-            // Streamlit 컨테이너까지 스크롤
-            var containers = ['.main','.block-container','[data-testid="stAppViewContainer"]','[data-testid="stApp"]','.stApp'];
+            // Streamlit 컨테이너들 모두 초기화
+            var containers = ['.main', '.block-container', '[data-testid="stAppViewContainer"]', '[data-testid="stApp"]', '.stApp'];
             containers.forEach(function(sel){
-                var el = document.querySelector(sel);
-                if(el){
-                    el.scrollTop = 0;
-                    if(el.scrollTo) el.scrollTo(0,0);
-                }
-            });
-            
-            // 상위 프레임 처리 (iframe 환경)
-            try {
-                window.parent.scrollTo(0,0);
-                var parentContainers = window.parent.document.querySelectorAll('.main,.block-container');
-                parentContainers.forEach(function(el){
-                    if(el){
+                var elements = document.querySelectorAll(sel);
+                elements.forEach(function(el){
+                    if(el) {
                         el.scrollTop = 0;
                         if(el.scrollTo) el.scrollTo(0,0);
                     }
                 });
-            } catch(e) {
-                // 크로스 오리진 오류 무시
-            }
-        }, 300);
+            });
+        }, 100);
         
-        // 즉시 한 번 더 시도 (보험)
-        var pageTop = document.getElementById('page-top');
-        if(pageTop && pageTop.scrollIntoView){
-            pageTop.scrollIntoView({behavior:'auto', block:'start'});
-        }
-        window.scrollTo(0,0);
+        // 500ms 후 두 번째 강제 스크롤 (Streamlit 렌더링 완료 후)
+        setTimeout(function(){
+            window.scrollTo(0,0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            
+            // 모든 스크롤 가능한 요소 초기화
+            var allScrollable = document.querySelectorAll('*');
+            for(var i = 0; i < allScrollable.length; i++) {
+                var el = allScrollable[i];
+                if(el.scrollTop > 0) {
+                    el.scrollTop = 0;
+                }
+                if(el.scrollLeft > 0) {
+                    el.scrollLeft = 0;
+                }
+            }
+        }, 500);
+        
+        // 1초 후 최종 확인 스크롤
+        setTimeout(function(){
+            window.scrollTo(0,0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        }, 1000);
         </script>
         """,
         unsafe_allow_html=True
     )
-
 
 def initialize_session_state():
     """세션 상태 초기화 (자기효능감 필드 추가)"""
@@ -106,8 +129,7 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('consent')
@@ -122,8 +144,7 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('background_info')
@@ -138,8 +159,7 @@ def handle_background_info_step():
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('first_recording')
@@ -255,12 +275,11 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('feedback')
-    
+
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
     st.warning("⚠️ This feedback is automatically generated by AI and may not be perfect. Please use it as a helpful reference.")
     
@@ -479,8 +498,7 @@ def handle_feedback_step():
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('second_recording')
@@ -643,8 +661,7 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('survey')
@@ -765,8 +782,7 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
-    # 🔥 앵커 + 스크롤을 맨 처음에!
-    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
     show_progress_indicator('completion')
