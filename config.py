@@ -292,7 +292,7 @@ Student answered "{question}": {transcript}
 
 **Required JSON Structure:**
 {{
-    "suggested_model_sentence": "Natural Korean paragraph showing a clear and complete answer for both past vacation and future plans with relevant details, using 1–2 simple connecting words (그리고, 그래서, 하지만, ~면서, ~고 나서). Base it strictly on the student's actual answer content, improving clarity and flow",
+    "suggested_model_sentence": "Write one natural Korean paragraph that answers both the past vacation and future plans questions, based strictly on the student's answer. Keep all original ideas and details from the student's response, correcting any grammar or vocabulary errors and using appropriate TOPIK 2 level expressions. If the student's sentences are too short, connect them smoothly with linking words. If the student skipped part of the question, add a relevant and realistic detail to complete the answer. You may also add small, realistic details to make the story more vivid, but ensure they fit naturally with the student's content. The final paragraph should be clear, cohesive, and natural, and long enough to be spoken at a normal pace for about 1 to 2 minutes.",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
