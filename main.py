@@ -110,6 +110,52 @@ def inject_global_scroll_manager():
         height=0,
     )
 
+def enforce_top_after_render(step_key: str):
+    # 렌더가 다 끝난 뒤에 실행되도록, handlers 마지막에 주입
+    components.html(
+        f"""
+        <script>
+        (function(){{
+          try {{ history.scrollRestoration = 'manual'; }} catch(e) {{}}
+
+          function top(){{
+            try {{
+              window.scrollTo(0,0);
+              document.body && (document.body.scrollTop = 0);
+              document.documentElement && (document.documentElement.scrollTop = 0);
+
+              const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
+              for (const sel of sels){{
+                const el = document.querySelector(sel);
+                if (el){{
+                  el.scrollTop = 0;
+                  if (el.scrollTo) el.scrollTo(0,0);
+                }}
+              }}
+
+              const topEl = document.getElementById('page-top');
+              if (topEl && topEl.scrollIntoView) topEl.scrollIntoView({{behavior:'auto', block:'start'}});
+              try {{
+                if (window.parent && window.parent !== window) {{
+                  window.parent.scrollTo(0,0);
+                }}
+              }} catch(e){{}}
+            }} catch(e){{}}
+          }}
+
+          // 렌더 종료 직후/연쇄적으로 여러 번 보정
+          top();
+          requestAnimationFrame(top);
+          setTimeout(top, 60);
+          setTimeout(top, 180);
+          setTimeout(top, 400);
+          setTimeout(top, 800);
+        }})();
+        </script>
+        """,
+        height=0,
+        key=f"postrender-scroll-{step_key}"
+    )
 
 def initialize_session_state():
     """세션 상태 초기화 (자기효능감 필드 추가)"""
@@ -144,6 +190,7 @@ def handle_consent_step():
         st.session_state.step = 'background_info'
         st.rerun()
 
+    enforce_top_after_render('consent')          # -> handle_consent_step()의 맨 끝
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
@@ -158,6 +205,7 @@ def handle_background_info_step():
         st.session_state.step = 'first_recording'
         st.rerun()
 
+    enforce_top_after_render('background_info')  # -> handle_background_info_step()의 맨 끝
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
@@ -219,6 +267,7 @@ def handle_first_recording_step():
         if create_styled_button("🔄 Process First Recording", "primary", "🎙️"):
             process_first_recording()
 
+    enforce_top_after_render('first_recording')  # -> handle_first_recording_step()의 맨 끝
 
 def process_first_recording():
     """첫 번째 녹음 처리 (참고용 TOPIK 점수 생성 추가)"""
@@ -494,6 +543,7 @@ def handle_feedback_step():
     else:
         st.error("❌ No feedback available. Please try recording again.")
 
+    enforce_top_after_render('feedback')         # -> handle_feedback_step()의 맨 끝
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
@@ -560,6 +610,7 @@ def handle_second_recording_step():
         if create_styled_button("🔄 Process Second Recording", "primary", "🎤"):
             process_second_recording()
 
+    enforce_top_after_render('second_recording') # -> handle_second_recording_step()의 맨 끝
 
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장 (참고용 TOPIK 점수 생성 추가)"""
@@ -733,6 +784,7 @@ def handle_survey_step():
             st.button("🎉 Finish Experiment", disabled=True, use_container_width=True)
             st.caption("👆 Please complete the survey first, then check the box above")
 
+    enforce_top_after_render('survey')           # -> handle_survey_step()의 맨 끝
 
 def save_and_backup_data():
     """데이터 저장 및 백업 (중복 저장 방지 포함 + 참고용 엑셀)"""
@@ -801,6 +853,7 @@ def handle_completion_step():
     # 연락처 정보
     display_contact_info(st.session_state.session_id)
 
+    enforce_top_after_render('completion')       # -> handle_completion_step()의 맨 끝
 
 def display_optional_progress_view():
     """선택적 진행상황 표시 (2인칭 톤으로 수정)"""
