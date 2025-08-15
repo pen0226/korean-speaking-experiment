@@ -82,7 +82,7 @@ SELF_EFFICACY_ITEMS = [
     "I can give enough details and examples to fully explain my ideas in Korean.",
     "I can use Korean grammar correctly when I speak.",
     "I can use appropriate vocabulary when I speak Korean.",
-    "I can use connecting words to make my sentences flow naturally in Korean.",
+    "I can choose the appropriate level of politeness and speech style when speaking Korean.",
     "I can pronounce Korean accurately and naturally.",
     "I can speak with natural Korean intonation.",
     "I can adjust my speaking speed and pauses to make my Korean easier to understand.",
