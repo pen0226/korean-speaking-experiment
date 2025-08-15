@@ -142,7 +142,8 @@ def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
 
     show_progress_indicator('first_recording')
-    
+
+    st.markdown('<div id="question-top" style="position:relative;top:-1px;height:1px;"></div>', unsafe_allow_html=True)
     # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
     st.markdown(
         """
@@ -485,6 +486,7 @@ def handle_second_recording_step():
         st.session_state.step = 'feedback'
         st.rerun()
     
+    st.markdown('<div id="question-top" style="position:relative;top:-1px;height:1px;"></div>', unsafe_allow_html=True)
     # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
     st.markdown(
         """
