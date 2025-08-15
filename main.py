@@ -4,7 +4,6 @@ AI 기반 한국어 말하기 피드백 시스템 - 메인 애플리케이션 (i
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 from datetime import datetime
 import re
 
@@ -29,131 +28,60 @@ from utils import (
 )
 
 
-def inject_global_scroll_manager():
-    # 전역 앵커 (페이지 최상단 기준점)
+def scroll_to_top():
+    """강화된 페이지 스크롤 초기화 (iPhone Safari 완벽 호환)"""
     st.markdown(
-        '<div id="page-top" style="position:absolute;top:0;height:1px;"></div>',
+        """
+        <script>
+        // 0.1초 뒤 강제 스크롤 (렌더링 이후 적용)
+        setTimeout(function(){
+            // 앵커 스크롤
+            var pageTop = document.getElementById('page-top');
+            if(pageTop && pageTop.scrollIntoView){
+                pageTop.scrollIntoView({behavior:'auto', block:'start'});
+            }
+            
+            // 기본 스크롤
+            window.scrollTo(0,0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            
+            // Streamlit 컨테이너까지 스크롤
+            var containers = ['.main','.block-container','[data-testid="stAppViewContainer"]','[data-testid="stApp"]','.stApp'];
+            containers.forEach(function(sel){
+                var el = document.querySelector(sel);
+                if(el){
+                    el.scrollTop = 0;
+                    if(el.scrollTo) el.scrollTo(0,0);
+                }
+            });
+            
+            // 상위 프레임 처리 (iframe 환경)
+            try {
+                window.parent.scrollTo(0,0);
+                var parentContainers = window.parent.document.querySelectorAll('.main,.block-container');
+                parentContainers.forEach(function(el){
+                    if(el){
+                        el.scrollTop = 0;
+                        if(el.scrollTo) el.scrollTo(0,0);
+                    }
+                });
+            } catch(e) {
+                // 크로스 오리진 오류 무시
+            }
+        }, 100);
+        
+        // 즉시 한 번 더 시도 (보험)
+        var pageTop = document.getElementById('page-top');
+        if(pageTop && pageTop.scrollIntoView){
+            pageTop.scrollIntoView({behavior:'auto', block:'start'});
+        }
+        window.scrollTo(0,0);
+        </script>
+        """,
         unsafe_allow_html=True
     )
 
-    # iOS Safari 대응: 렌더 완료 후/가시성 변화/해시변경 등 여러 트리거에서 반복 스크롤
-    components.html(
-        """
-        <script>
-        (function(){
-          try { history.scrollRestoration = 'manual'; } catch(e) {}
-
-          let tried = 0;
-          const MAX_TRIES = 6;
-
-          function forceTop(){
-            tried++;
-            try {
-              window.scrollTo(0,0);
-              document.body && (document.body.scrollTop = 0);
-              document.documentElement && (document.documentElement.scrollTop = 0);
-
-              const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
-              for (const sel of sels){
-                const el = document.querySelector(sel);
-                if (el){
-                  el.scrollTop = 0;
-                  if (el.scrollTo) el.scrollTo(0,0);
-                }
-              }
-
-              const topEl = document.getElementById('page-top');
-              if (topEl && topEl.scrollIntoView) {
-                topEl.scrollIntoView({behavior:'auto', block:'start'});
-              }
-
-              try {
-                if (window.parent && window.parent !== window) {
-                  window.parent.scrollTo(0,0);
-                  const pdoc = window.parent.document;
-                  const pcands = pdoc ? pdoc.querySelectorAll('.block-container,.main,[data-testid="stAppViewContainer"],.stApp') : [];
-                  pcands.forEach(el => {
-                    el.scrollTop = 0;
-                    if (el.scrollTo) el.scrollTo(0,0);
-                  });
-                }
-              } catch(e){}
-            } catch(e){}
-
-            if (tried < MAX_TRIES){
-              setTimeout(forceTop, [60, 120, 300, 600, 900][Math.min(tried-1,4)]);
-            }
-          }
-
-          forceTop();
-          requestAnimationFrame(forceTop);
-          window.addEventListener('load', forceTop, {once:false});
-          document.addEventListener('visibilitychange', function(){
-            if (document.visibilityState === 'visible') forceTop();
-          });
-          window.addEventListener('hashchange', forceTop, {passive:true});
-
-          const target = document.querySelector('body');
-          if (target && 'MutationObserver' in window) {
-            const mo = new MutationObserver(() => {
-              forceTop();
-            });
-            mo.observe(target, {childList:true, subtree:true});
-          }
-        })();
-        </script>
-        """,
-        height=1,                      # ← 0 → 1
-        key="global-scroll-manager"    # ← 고유 key 추가
-    )
-
-def enforce_top_after_render(step_key: str):
-    # 렌더가 끝난 직후 여러 번 상단으로 보정
-    html = """
-    <script>
-    (function(){
-      try { history.scrollRestoration = 'manual'; } catch(e) {}
-
-      function top(){
-        try {
-          window.scrollTo(0,0);
-          document.body && (document.body.scrollTop = 0);
-          document.documentElement && (document.documentElement.scrollTop = 0);
-
-          const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
-          for (const sel of sels){
-            const el = document.querySelector(sel);
-            if (el){
-              el.scrollTop = 0;
-              if (el.scrollTo) el.scrollTo(0,0);
-            }
-          }
-
-          const topEl = document.getElementById('page-top');
-          if (topEl && topEl.scrollIntoView) topEl.scrollIntoView({behavior:'auto', block:'start'});
-          try {
-            if (window.parent && window.parent !== window) {
-              window.parent.scrollTo(0,0);
-            }
-          } catch(e){}
-        } catch(e){}
-      }
-
-      top();
-      requestAnimationFrame(top);
-      setTimeout(top, 60);
-      setTimeout(top, 180);
-      setTimeout(top, 400);
-      setTimeout(top, 800);
-    })();
-    </script>
-    """
-
-    components.html(
-        html,
-        height=1,                                   # ← 0 → 1
-        key=f"postrender-scroll-{step_key}"         # ← 단계별로 고유 key
-    )
 
 def initialize_session_state():
     """세션 상태 초기화 (자기효능감 필드 추가)"""
@@ -178,6 +106,9 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
     
     show_progress_indicator('consent')
     
@@ -188,11 +119,12 @@ def handle_consent_step():
         st.session_state.step = 'background_info'
         st.rerun()
 
-    enforce_top_after_render('consent')          # -> handle_consent_step()의 맨 끝
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
     
     show_progress_indicator('background_info')
     
@@ -203,11 +135,12 @@ def handle_background_info_step():
         st.session_state.step = 'first_recording'
         st.rerun()
 
-    enforce_top_after_render('background_info')  # -> handle_background_info_step()의 맨 끝
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
     
     show_progress_indicator('first_recording')
     
@@ -265,7 +198,6 @@ def handle_first_recording_step():
         if create_styled_button("🔄 Process First Recording", "primary", "🎙️"):
             process_first_recording()
 
-    enforce_top_after_render('first_recording')  # -> handle_first_recording_step()의 맨 끝
 
 def process_first_recording():
     """첫 번째 녹음 처리 (참고용 TOPIK 점수 생성 추가)"""
@@ -323,7 +255,10 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -541,11 +476,13 @@ def handle_feedback_step():
     else:
         st.error("❌ No feedback available. Please try recording again.")
 
-    enforce_top_after_render('feedback')         # -> handle_feedback_step()의 맨 끝
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('second_recording')
     
     st.markdown("### 🎤 Step 5: Second Recording")
@@ -608,7 +545,6 @@ def handle_second_recording_step():
         if create_styled_button("🔄 Process Second Recording", "primary", "🎤"):
             process_second_recording()
 
-    enforce_top_after_render('second_recording') # -> handle_second_recording_step()의 맨 끝
 
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장 (참고용 TOPIK 점수 생성 추가)"""
@@ -707,7 +643,9 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
     
     show_progress_indicator('survey')
     
@@ -782,7 +720,6 @@ def handle_survey_step():
             st.button("🎉 Finish Experiment", disabled=True, use_container_width=True)
             st.caption("👆 Please complete the survey first, then check the box above")
 
-    enforce_top_after_render('survey')           # -> handle_survey_step()의 맨 끝
 
 def save_and_backup_data():
     """데이터 저장 및 백업 (중복 저장 방지 포함 + 참고용 엑셀)"""
@@ -828,6 +765,9 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
     
     show_progress_indicator('completion')
     
@@ -851,7 +791,6 @@ def handle_completion_step():
     # 연락처 정보
     display_contact_info(st.session_state.session_id)
 
-    enforce_top_after_render('completion')       # -> handle_completion_step()의 맨 끝
 
 def display_optional_progress_view():
     """선택적 진행상황 표시 (2인칭 톤으로 수정)"""
@@ -1117,10 +1056,7 @@ def main():
     """메인 애플리케이션 함수 (iPhone 스크롤 최적화 + 참고용 TOPIK 점수 통합)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
-    inject_global_scroll_manager()
     
-
-
     # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
     
