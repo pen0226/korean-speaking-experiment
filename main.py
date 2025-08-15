@@ -1155,6 +1155,18 @@ def main():
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
     
+    # 🔥 모바일 전용 CSS transform으로 페이지 위치 조정
+    st.markdown("""
+    <style>
+    @media only screen and (max-width: 768px) {
+        .main .block-container {
+            transform: translateY(-200px) !important;
+            margin-top: 200px !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # 🔥 브라우저 스크롤 복원 완전 비활성화 (모바일 필수)
     st.markdown("""
     <script>
