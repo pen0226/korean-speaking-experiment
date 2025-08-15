@@ -29,7 +29,7 @@ from utils import (
 
 
 def scroll_to_top():
-    """강화된 페이지 스크롤 초기화 (페이지 높이 변화 대응)"""
+    """모바일 브라우저용 강력한 스크롤 초기화"""
     st.markdown(
         """
         <style>
@@ -40,69 +40,79 @@ def scroll_to_top():
         }
         </style>
         <script>
-        // 즉시 실행
-        window.scrollTo(0,0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
+        // 브라우저 스크롤 복원 완전 차단
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
         
-        // 지속적인 모니터링 (페이지 높이 변화 감지)
-        let checkCount = 0;
-        const maxChecks = 20; // 최대 4초간 체크
-        
-        const forceScrollTop = () => {
-            window.scrollTo(0,0);
-            document.body.scrollTop = 0;
+        // 강력한 즉시 스크롤
+        const forceScroll = () => {
+            window.scrollTo({top: 0, left: 0, behavior: 'auto'});
             document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
             
             // 앵커로도 스크롤
-            var pageTop = document.getElementById('page-top');
+            const pageTop = document.getElementById('page-top');
             if(pageTop) {
                 pageTop.scrollIntoView({behavior:'auto', block:'start'});
             }
             
-            // Streamlit 컨테이너들도 초기화
-            var containers = ['.main', '.block-container', '[data-testid="stAppViewContainer"]', '[data-testid="stApp"]', '.stApp'];
-            containers.forEach(function(sel){
-                var elements = document.querySelectorAll(sel);
-                elements.forEach(function(el){
-                    if(el) {
-                        el.scrollTop = 0;
-                        if(el.scrollTo) el.scrollTo(0,0);
-                    }
-                });
+            // 모든 Streamlit 컨테이너 초기화
+            const containers = document.querySelectorAll('.main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp');
+            containers.forEach(el => {
+                if (el) {
+                    el.scrollTop = 0;
+                    if (el.scrollTo) el.scrollTo(0, 0);
+                }
             });
             
-            checkCount++;
-            
-            if (checkCount < maxChecks) {
-                setTimeout(forceScrollTop, 200); // 0.2초마다 반복
-            }
+            // 모든 스크롤 가능한 요소 초기화
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach(el => {
+                if (el.scrollTop > 0) el.scrollTop = 0;
+                if (el.scrollLeft > 0) el.scrollLeft = 0;
+            });
         };
         
-        // 0.5초 후 시작 (Streamlit 렌더링 대기)
-        setTimeout(forceScrollTop, 500);
+        // 즉시 + 지속적 실행
+        forceScroll();
         
-        // 페이지 높이 변화 감지시에도 스크롤 초기화
+        // DOM 변화 감지하여 계속 스크롤 초기화 (더 공격적)
         const observer = new MutationObserver(() => {
-            window.scrollTo(0,0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
+            forceScroll();
         });
         
         observer.observe(document.body, {
-            childList: true,
-            subtree: true
+            childList: true, 
+            subtree: true,
+            attributes: true,
+            attributeOldValue: true
         });
         
-        // 3초 후 observer 정리
-        setTimeout(() => observer.disconnect(), 3000);
+        // 정기적으로 강제 스크롤 (0.1초마다)
+        let intervalCount = 0;
+        const scrollInterval = setInterval(() => {
+            forceScroll();
+            intervalCount++;
+            if (intervalCount > 50) { // 5초 후 중지
+                clearInterval(scrollInterval);
+            }
+        }, 100);
+        
+        // 5초 후 관찰 중지
+        setTimeout(() => {
+            observer.disconnect();
+            clearInterval(scrollInterval);
+        }, 5000);
         
         // 모바일 viewport 대응
         if(window.visualViewport) {
-            window.visualViewport.addEventListener('resize', function() {
-                window.scrollTo(0,0);
-            });
+            window.visualViewport.addEventListener('resize', forceScroll);
         }
+        
+        // 페이지 포커스 시에도 스크롤 초기화
+        window.addEventListener('focus', forceScroll);
+        window.addEventListener('pageshow', forceScroll);
         </script>
         """,
         unsafe_allow_html=True
@@ -156,9 +166,6 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
-    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
-    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -184,9 +191,6 @@ def handle_background_info_step():
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
-    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
-    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -313,9 +317,6 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
-    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
-    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -549,9 +550,6 @@ def handle_feedback_step():
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
-    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
-    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -735,9 +733,6 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
-    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
-    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -869,9 +864,6 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
-    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
-    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
-    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
