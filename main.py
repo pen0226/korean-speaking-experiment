@@ -1073,6 +1073,31 @@ def main():
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
     
+    # 🔥 브라우저 스크롤 복원 완전 비활성화 (모바일 필수)
+    st.markdown("""
+    <script>
+    // 페이지 로드 즉시 스크롤 복원 비활성화
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    
+    // 즉시 최상단으로 강제 이동
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    
+    // 페이지 로드 완료 후에도 최상단 유지
+    window.addEventListener('load', function() {
+        window.scrollTo(0, 0);
+    });
+    
+    // Streamlit rerun 이벤트 감지해서 스크롤 초기화
+    window.addEventListener('beforeunload', function() {
+        window.scrollTo(0, 0);
+    });
+    </script>
+    """, unsafe_allow_html=True)
+    
     # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
     
