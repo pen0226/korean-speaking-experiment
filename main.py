@@ -156,6 +156,9 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
+    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
+    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -181,6 +184,9 @@ def handle_background_info_step():
 
 def handle_first_recording_step():
     """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
+    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
+    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -307,6 +313,9 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
+    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
+    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -540,6 +549,9 @@ def handle_feedback_step():
 
 def handle_second_recording_step():
     """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
+    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
+    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -723,6 +735,9 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
+    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
+    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
@@ -854,6 +869,9 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
+    # 🔥 모바일 스크롤 문제 해결: 상단에 충분한 여백 추가
+    st.markdown('<div style="height:150px;"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
     scroll_to_top()
     
