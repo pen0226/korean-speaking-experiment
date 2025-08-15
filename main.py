@@ -29,7 +29,7 @@ from utils import (
 
 
 def scroll_to_top():
-    """강화된 페이지 스크롤 초기화 (모바일 완벽 호환)"""
+    """강화된 페이지 스크롤 초기화 (페이지 높이 변화 대응)"""
     st.markdown(
         """
         <style>
@@ -40,30 +40,27 @@ def scroll_to_top():
         }
         </style>
         <script>
-        // 즉시 실행 (브라우저 복원 방지)
+        // 즉시 실행
         window.scrollTo(0,0);
         document.body.scrollTop = 0;
         document.documentElement.scrollTop = 0;
         
-        // 모바일 viewport 강제 리셋
-        if(window.visualViewport) {
-            window.visualViewport.addEventListener('resize', function() {
-                window.scrollTo(0,0);
-            });
-        }
+        // 지속적인 모니터링 (페이지 높이 변화 감지)
+        let checkCount = 0;
+        const maxChecks = 20; // 최대 4초간 체크
         
-        // 100ms 후 첫 번째 강제 스크롤
-        setTimeout(function(){
+        const forceScrollTop = () => {
+            window.scrollTo(0,0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            
+            // 앵커로도 스크롤
             var pageTop = document.getElementById('page-top');
             if(pageTop) {
                 pageTop.scrollIntoView({behavior:'auto', block:'start'});
             }
             
-            window.scrollTo(0,0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
-            
-            // Streamlit 컨테이너들 모두 초기화
+            // Streamlit 컨테이너들도 초기화
             var containers = ['.main', '.block-container', '[data-testid="stAppViewContainer"]', '[data-testid="stApp"]', '.stApp'];
             containers.forEach(function(sel){
                 var elements = document.querySelectorAll(sel);
@@ -74,33 +71,38 @@ def scroll_to_top():
                     }
                 });
             });
-        }, 100);
-        
-        // 500ms 후 두 번째 강제 스크롤 (Streamlit 렌더링 완료 후)
-        setTimeout(function(){
-            window.scrollTo(0,0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
             
-            // 모든 스크롤 가능한 요소 초기화
-            var allScrollable = document.querySelectorAll('*');
-            for(var i = 0; i < allScrollable.length; i++) {
-                var el = allScrollable[i];
-                if(el.scrollTop > 0) {
-                    el.scrollTop = 0;
-                }
-                if(el.scrollLeft > 0) {
-                    el.scrollLeft = 0;
-                }
+            checkCount++;
+            
+            if (checkCount < maxChecks) {
+                setTimeout(forceScrollTop, 200); // 0.2초마다 반복
             }
-        }, 500);
+        };
         
-        // 1초 후 최종 확인 스크롤
-        setTimeout(function(){
+        // 0.5초 후 시작 (Streamlit 렌더링 대기)
+        setTimeout(forceScrollTop, 500);
+        
+        // 페이지 높이 변화 감지시에도 스크롤 초기화
+        const observer = new MutationObserver(() => {
             window.scrollTo(0,0);
             document.body.scrollTop = 0;
             document.documentElement.scrollTop = 0;
-        }, 1000);
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // 3초 후 observer 정리
+        setTimeout(() => observer.disconnect(), 3000);
+        
+        // 모바일 viewport 대응
+        if(window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() {
+                window.scrollTo(0,0);
+            });
+        }
         </script>
         """,
         unsafe_allow_html=True
