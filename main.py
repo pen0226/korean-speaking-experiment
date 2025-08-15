@@ -138,6 +138,16 @@ def handle_consent_step():
     st.markdown("Please read and agree to participate in this research study.")
     
     if handle_consent_only():
+        # 페이지 전환 전 강제 스크롤 초기화
+        st.markdown("""
+        <script>
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        setTimeout(function() { window.scrollTo(0, 0); }, 50);
+        </script>
+        """, unsafe_allow_html=True)
+        
         st.session_state.step = 'background_info'
         st.rerun()
 
@@ -153,6 +163,16 @@ def handle_background_info_step():
     st.markdown("Please provide some information about your Korean learning journey.")
     
     if handle_background_info_only():
+        # 페이지 전환 전 강제 스크롤 초기화
+        st.markdown("""
+        <script>
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        setTimeout(function() { window.scrollTo(0, 0); }, 50);
+        </script>
+        """, unsafe_allow_html=True)
+        
         st.session_state.step = 'first_recording'
         st.rerun()
 
@@ -265,6 +285,16 @@ def process_first_recording():
                 model_audio = process_feedback_audio(feedback)
                 st.session_state.model_audio = model_audio
                 
+                # 페이지 전환 전 강제 스크롤 초기화
+                st.markdown("""
+                <script>
+                window.scrollTo(0, 0);
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+                setTimeout(function() { window.scrollTo(0, 0); }, 50);
+                </script>
+                """, unsafe_allow_html=True)
+                
                 st.session_state.step = 'feedback'
                 st.rerun()
             else:
@@ -360,7 +390,7 @@ def handle_feedback_step():
         # 🔥 어휘 제안이 없으면 expander 자체를 표시하지 않음 (학생이 모든 단어를 올바르게 사용한 경우)
         
         
-        # Pattern & Sentence Tips (통합된 형태) - 포맷 개선
+        # Pattern & Sentence Tips (통합된 형태) - 포맷 개선 
         if feedback.get('grammar_expression_tip') or feedback.get('sentence_connection_tip'):
             with st.expander("🚀 Pattern & Sentence Tips", expanded=False):
                 st.markdown("*Use these patterns to make your Korean more natural and fluent!*")
@@ -481,14 +511,24 @@ def handle_feedback_step():
         **Quick Tips for Your Next Recording:**
         1. 🎤 **Listen to the model pronunciation above**
         2. 📝 **Use the grammar fixes** from the feedback
-        3. 💡 **Add 2–3 extra details** for each topic (time, place, feelings, reasons)
-        4. 🔄 **Try 1–2 new words or expressions** you learned from the model sentence
+        3. 💡 **Add 2—3 extra details** for each topic (time, place, feelings, reasons)
+        4. 🔄 **Try 1—2 new words or expressions** you learned from the model sentence
         5. 🎯 **Speak for 1~2 minutes** and answer **both topics fully**
         6. 🎤 **Speak clearly** and keep a steady speed for easier listening
         """)
         
         # 다음 단계 버튼
         if create_styled_button("🎤 Record Again with Improvements", "primary"):
+            # 페이지 전환 전 강제 스크롤 초기화
+            st.markdown("""
+            <script>
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            setTimeout(function() { window.scrollTo(0, 0); }, 50);
+            </script>
+            """, unsafe_allow_html=True)
+            
             st.session_state.step = 'second_recording'
             st.rerun()
     
@@ -507,6 +547,16 @@ def handle_second_recording_step():
     
     # 뒤로가기 버튼
     if create_styled_button("Back to Feedback", "secondary"):
+        # 페이지 전환 전 강제 스크롤 초기화
+        st.markdown("""
+        <script>
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        setTimeout(function() { window.scrollTo(0, 0); }, 50);
+        </script>
+        """, unsafe_allow_html=True)
+        
         st.session_state.step = 'feedback'
         st.rerun()
     
@@ -630,6 +680,16 @@ def process_second_recording():
                         st.rerun()
                     return  # 저장 실패시 다음 단계로 진행 안 함
             
+            # 페이지 전환 전 강제 스크롤 초기화
+            st.markdown("""
+            <script>
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            setTimeout(function() { window.scrollTo(0, 0); }, 50);
+            </script>
+            """, unsafe_allow_html=True)
+            
             st.session_state.step = 'survey'
             st.rerun()
         else:
@@ -731,6 +791,16 @@ def handle_survey_step():
     with col2:
         if survey_completed:
             if st.button("🎉 Finish Experiment", type="primary", use_container_width=True):
+                # 페이지 전환 전 강제 스크롤 초기화
+                st.markdown("""
+                <script>
+                window.scrollTo(0, 0);
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+                setTimeout(function() { window.scrollTo(0, 0); }, 50);
+                </script>
+                """, unsafe_allow_html=True)
+                
                 st.session_state.step = 'completion'
                 st.rerun()
         else:
