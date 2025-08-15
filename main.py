@@ -42,8 +42,8 @@ def inject_global_scroll_manager():
           function zeroAllScroll(){
             try {
               window.scrollTo(0,0);
-              document.body && (document.body.scrollTop = 0);
-              document.documentElement && (document.documentElement.scrollTop = 0);
+              if (document.body) document.body.scrollTop = 0;
+              if (document.documentElement) document.documentElement.scrollTop = 0;
               const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
               for (const sel of sels){
                 const el = document.querySelector(sel);
@@ -52,32 +52,58 @@ def inject_global_scroll_manager():
                   if (el.scrollTo) el.scrollTo(0,0);
                 }
               }
-              const a = document.getElementById('page-top');
-              if (a && a.scrollIntoView) a.scrollIntoView({behavior:'auto', block:'start'});
             } catch(e) {}
           }
 
-          let tries = 0, MAX_TRIES = 8;
+          function focusAnchor(){
+            // 질문 앵커가 있으면 최우선
+            const el = document.querySelector('#question-top') || document.getElementById('page-top');
+            if (el && el.scrollIntoView){
+              el.scrollIntoView({behavior:'auto', block:'start'});
+            } else {
+              zeroAllScroll();
+            }
+          }
+
+          // 초기 여러 프레임 동안 고정
+          let tries = 0, MAX_TRIES = 12;
           function tryMany(){
-            zeroAllScroll();
+            focusAnchor();
             if (++tries < MAX_TRIES) requestAnimationFrame(tryMany);
           }
           requestAnimationFrame(tryMany);
-          setTimeout(tryMany, 120);
+          setTimeout(tryMany, 160);
 
-          window.addEventListener('pageshow', zeroAllScroll, {passive:true});
-          document.addEventListener('visibilitychange', function(){
-            if (document.visibilityState === 'visible') zeroAllScroll();
-          }, {passive:true});
-          window.addEventListener('hashchange', zeroAllScroll, {passive:true});
+          // 입력 포커스/복귀/회전/해시/가시성 변경에도 재적용
           window.addEventListener('focusin', function(ev){
             const t = ev.target;
-            if (t && /input|textarea|select/i.test(t.tagName)) setTimeout(zeroAllScroll, 0);
+            if (t && /input|textarea|select|button/i.test(t.tagName)) {
+              setTimeout(focusAnchor, 0);
+            }
           }, {passive:true});
+          window.addEventListener('pageshow', focusAnchor, {passive:true});
+          window.addEventListener('orientationchange', focusAnchor, {passive:true});
+          window.addEventListener('hashchange', focusAnchor, {passive:true});
+          document.addEventListener('visibilitychange', function(){
+            if (document.visibilityState === 'visible') focusAnchor();
+          }, {passive:true});
+
+          // 키보드/주소창으로 viewport 높이 변할 때
+          if (window.visualViewport){
+            window.visualViewport.addEventListener('resize', () => {
+              requestAnimationFrame(focusAnchor);
+            }, {passive:true});
+          }
+
+          // 렌더 중 위젯 추가로 생기는 자동 스크롤을 1.5초간 무력화
+          const obs = new MutationObserver(() => { focusAnchor(); });
+          obs.observe(document.body, {childList:true, subtree:true});
+          setTimeout(() => obs.disconnect(), 1500);
         })();
         </script>
         """,
-        height=0
+        height=0,
+        key="__scroll_mgr"  # ✅ 중복 주입 방지
     )
     st.markdown("""
     <style>
@@ -85,6 +111,9 @@ def inject_global_scroll_manager():
       [data-testid="stAppViewContainer"], .block-container, .main, .stApp {
         scroll-behavior: auto !important;
       }
+      /* (선택) 상단 툴바/헤더로 인한 오프셋 줄이기 */
+      [data-testid="stToolbar"] { display: none !important; }
+      header, footer { visibility: hidden; height: 0; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -139,12 +168,13 @@ def handle_background_info_step():
 
 
 def handle_first_recording_step():
-    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-
+    """첫 번째 녹음 단계 처리 - 질문 먼저, 위젯은 버튼 눌러야 보이게"""
     show_progress_indicator('first_recording')
 
+    # 질문 섹션 앵커 (스크롤 기준점)
     st.markdown('<div id="question-top" style="position:relative;top:-1px;height:1px;"></div>', unsafe_allow_html=True)
-    # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
+
+    # 🔲 질문 카드 (그대로 유지)
     st.markdown(
         """
         <div style='
@@ -172,32 +202,36 @@ def handle_first_recording_step():
         """,
         unsafe_allow_html=True
     )
-    
-    # 2) 녹음 안내를 간결하게 (1-2분 목표로 수정)
-    st.markdown(
-        "🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
-    )
-    
-    # 3) 녹음 단계 제목
+
+    st.markdown("🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**")
     st.markdown("### 🎤 Step 3: First Recording")
-    
-    # 첫 번째 오디오 상태 초기화
+
+    # 세션 변수 초기화
     if "first_audio" not in st.session_state:
         st.session_state.first_audio = None
         st.session_state.first_audio_type = None
-    
-    # 녹음 인터페이스 (깔끔한 UI)
+    if "show_first_recorder" not in st.session_state:
+        st.session_state.show_first_recorder = False
+
+    # ⛔️ 기본 화면: 녹음/업로드 위젯은 숨김
+    if not st.session_state.show_first_recorder:
+        st.info("Press the button below to open the recorder or upload an audio file.")
+        if create_styled_button("🎙️ Open recorder / upload", "primary"):
+            st.session_state.show_first_recorder = True
+            st.rerun()
+        return  # 위젯을 아직 렌더하지 않음 (여기서 함수 종료)
+
+    # ✅ 버튼을 누른 이후에만 실제 위젯 렌더
     audio_data, source_type = record_audio("first_recording", "")
     if audio_data and source_type:
         st.session_state.first_audio = audio_data
         st.session_state.first_audio_type = source_type
-    
+
     # 처리 버튼
     if st.session_state.first_audio:
         st.markdown("---")
         if create_styled_button("🔄 Process First Recording", "primary", "🎙️"):
             process_first_recording()
-
 
 def process_first_recording():
     """첫 번째 녹음 처리 (참고용 TOPIK 점수 생성 추가)"""
@@ -475,19 +509,19 @@ def handle_feedback_step():
 
 
 def handle_second_recording_step():
-    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
-    
+    """두 번째 녹음 단계 처리 - 질문 먼저, 위젯은 버튼 눌러야 보이게"""
     show_progress_indicator('second_recording')
-    
     st.markdown("### 🎤 Step 5: Second Recording")
-    
+
     # 뒤로가기 버튼
     if create_styled_button("Back to Feedback", "secondary"):
         st.session_state.step = 'feedback'
         st.rerun()
-    
+
+    # 질문 섹션 앵커
     st.markdown('<div id="question-top" style="position:relative;top:-1px;height:1px;"></div>', unsafe_allow_html=True)
-    # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
+
+    # 🔲 질문 카드 (그대로 유지)
     st.markdown(
         """
         <div style='
@@ -515,31 +549,35 @@ def handle_second_recording_step():
         """,
         unsafe_allow_html=True
     )
-    
-    # 2) 녹음 안내 추가 (1-2분 목표로 수정)
-    st.markdown(
-        "🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
-    )
-    
+
+    st.markdown("🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**")
     st.write("🚀 Now try again! Apply the feedback you received to improve your answer.")
-    
-    # 두 번째 오디오 상태 초기화
+
+    # 세션 변수 초기화
     if "second_audio" not in st.session_state:
         st.session_state.second_audio = None
         st.session_state.second_audio_type = None
-    
-    # 녹음 인터페이스 (깔끔한 UI)
+    if "show_second_recorder" not in st.session_state:
+        st.session_state.show_second_recorder = False
+
+    # ⛔️ 기본 화면: 녹음/업로드 위젯 숨김
+    if not st.session_state.show_second_recorder:
+        if create_styled_button("🎙️ Open recorder / upload", "primary"):
+            st.session_state.show_second_recorder = True
+            st.rerun()
+        return
+
+    # ✅ 버튼을 누른 이후에만 실제 위젯 렌더
     audio_data, source_type = record_audio("second_recording", "")
     if audio_data and source_type:
         st.session_state.second_audio = audio_data
         st.session_state.second_audio_type = source_type
-    
+
     # 처리 버튼
     if st.session_state.second_audio:
         st.markdown("---")
         if create_styled_button("🔄 Process Second Recording", "primary", "🎤"):
             process_second_recording()
-
 
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장 (참고용 TOPIK 점수 생성 추가)"""
