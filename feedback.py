@@ -251,7 +251,7 @@ def classify_error_type(issue_text):
 
         # 1-2) Particle  ← 키워드 보강
         if any(k in explanation for k in [
-            "particle", "조사", "을/를", "이/가", "은/는", "에/에서", "으로/로",
+            "particle", "조사", "을/를", "이/가", "은/는", "에/에서", "으로/로", "도",
             "object marker", "subject marker", "topic marker",
             "use '을'", "use '를'", "use '이'", "use '가'", "use '은'", "use '는'",
             "mark the object", "mark the subject", "mark the topic",
@@ -268,14 +268,14 @@ def classify_error_type(issue_text):
 
         # 1-4) Word Order
         if any(k in explanation for k in [
-            "word order", "어순", "order", "position", "placement",
+            "word order", "어순", "order", "position", "placement", "Place"
             "reorder", "more natural word order", "sov", "comes before", "comes after"
         ]):
             return "Word Order"
 
         # 1-5) Connectives
         if any(k in explanation for k in [
-            "connective", "연결", "transition", "connecting word",
+            "connective", "연결", "transition", "connecting word", "connect"
             "use '그래서'", "use '그리고'", "use '그런데'", "use '하지만'", "use '또'"
         ]):
             return "Connectives"
