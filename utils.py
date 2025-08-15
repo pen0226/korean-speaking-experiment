@@ -1,10 +1,12 @@
 """
 utils.py
-시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (나이트 모드 최적화) - vs 방식 어휘 팁으로 업데이트
+시각적 하이라이팅, UI 컴포넌트 및 유틸리티 함수 모듈 (나이트 모드 최적화) - vs 방식 어휘 판으로 업데이트
+NoSleep.js 적용으로 모바일 녹음 중 화면 꺼짐 방지
 """
 
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
+import streamlit.components.v1 as components  # NoSleep.js용 추가
 import difflib
 import re
 from config import EXPERIMENT_STEPS, SUPPORTED_AUDIO_FORMATS, UI_COLORS, EXPERIMENT_QUESTION, AUDIO_QUALITY
@@ -159,9 +161,9 @@ def parse_grammar_issue(issue_text):
             }
     
     # 기존 형식 처리 (fallback)
-    if "❗️" in issue_text and "Original:" in issue_text and "→" in issue_text:
+    if "◉" in issue_text and "Original:" in issue_text and "→" in issue_text:
         try:
-            error_type = issue_text.split("❗️")[1].split("\\n")[0].strip()
+            error_type = issue_text.split("◉")[1].split("\\n")[0].strip()
             original = issue_text.split("Original:")[1].split("→")[0].strip().strip("'\"")
             fix_part = issue_text.split("→ Fix:")[1] if "→ Fix:" in issue_text else issue_text.split("→")[1]
             fix = fix_part.split("\\n🧠")[0].strip().strip("'\"")
@@ -249,12 +251,12 @@ def parse_vocabulary_suggestion(suggestion):
             elif line.startswith('🟢 '):
                 result['examples'] = line.replace('🟢 ', '').strip()
             
-            elif line.startswith('📝 '):
-                result['key_point'] = line.replace('📝 ', '').strip()
+            elif line.startswith('🔍 '):
+                result['key_point'] = line.replace('🔍 ', '').strip()
         
         # 기본값 처리
         for key, value in result.items():
-            if not value or value in ['❓', '💡', '🟢', '📝']:
+            if not value or value in ['❓', '💡', '🟢', '🔍']:
                 if key == 'title':
                     result[key] = "Word vs Word"
                 elif key == 'word_a':
@@ -346,7 +348,7 @@ def display_vocabulary_tips_simplified(feedback):
         
         # 핵심 포인트 표시
         if parsed['key_point']:
-            st.markdown(f"📝 **Key Point:** {parsed['key_point']}")
+            st.markdown(f"🔍 **Key Point:** {parsed['key_point']}")
         
         st.markdown("")  # 간격 추가
 
@@ -452,6 +454,7 @@ def display_question(step_context=""):
 def record_audio(key, label):
     """
     간소화된 녹음 인터페이스 (2분 목표) - 노란색 박스로 변경
+    NoSleep.js 적용으로 모바일 녹음 중 화면 꺼짐 방지
     
     Args:
         key: 컴포넌트 키
@@ -462,11 +465,43 @@ def record_audio(key, label):
     """
     # 노란색 안내 메시지 (학생들이 해야할 일이므로)
     st.warning("🎙️ Click Start Recording or upload an audio file")
+    st.info("📱 **On mobile, do not leave this page. The recording will stop.**")
+    
+    # 🔥 모바일 화면 꺼짐 방지: NoSleep.js (iPhone 녹음 문제 해결)
+    components.html("""
+    <script src="https://unpkg.com/nosleep.js@0.12.0/dist/NoSleep.min.js"></script>
+    <script>
+    (function(){
+      try {
+        if (!window.__noSleep__) window.__noSleep__ = new NoSleep();
+        // 첫 클릭/터치가 일어나면 enable() 실행 → iOS 제스처 정책 충족
+        if (!window.__noSleepArmed__) {
+          const activate = () => {
+            try { 
+              window.__noSleep__.enable(); 
+              console.log('[NoSleep] enabled for recording'); 
+            } catch(e){ 
+              console.log('[NoSleep] enable failed:', e.message); 
+            }
+            window.__noSleepArmed__ = true;
+            window.removeEventListener('touchstart', activate);
+            window.removeEventListener('click', activate);
+          };
+          window.addEventListener('touchstart', activate, { once:true });
+          window.addEventListener('click', activate, { once:true });
+          console.log('[NoSleep] armed (will enable on first user interaction)');
+        }
+      } catch(e) { 
+        console.log('[NoSleep] script error:', e.message); 
+      }
+    })();
+    </script>
+    """, height=0)
     
     # 마이크 녹음
     audio = mic_recorder(
         start_prompt="🎙️ Start Recording",
-        stop_prompt="⏹️ Stop Recording", 
+        stop_prompt="⹙ Stop Recording", 
         format="wav",
         just_once=True,
         use_container_width=True,
@@ -474,6 +509,18 @@ def record_audio(key, label):
     )
     
     if audio:
+        # 🔥 녹음 종료 → 화면유지 해제 (배터리 절약)
+        components.html("""
+        <script>
+        try { 
+          if (window.__noSleep__) { 
+            window.__noSleep__.disable(); 
+            console.log('[NoSleep] disabled (recording complete)'); 
+          } 
+        } catch(e){}
+        </script>
+        """, height=0)
+        
         st.success("✅ Recording captured successfully.")
         st.audio(audio['bytes'])
         return audio, "recording"
@@ -486,6 +533,18 @@ def record_audio(key, label):
     )
     
     if uploaded_file:
+        # 🔥 업로드 사용 시 화면유지 불필요 → 해제
+        components.html("""
+        <script>
+        try { 
+          if (window.__noSleep__) { 
+            window.__noSleep__.disable(); 
+            console.log('[NoSleep] disabled (file upload)'); 
+          } 
+        } catch(e){}
+        </script>
+        """, height=0)
+        
         st.success("✅ Audio file uploaded successfully.")
         st.audio(uploaded_file.read())
         uploaded_file.seek(0)  # 포인터 리셋
@@ -505,7 +564,7 @@ def display_transcription_with_highlights(transcription, feedback, title="What Y
         audio_data: 오디오 데이터 (선택사항)
     """
     st.markdown(f"#### {title}")
-    st.markdown("*Here's what you said — compare it with the model answer in the green box below.*")
+    st.markdown("*Here's what you said – compare it with the model answer in the green box below.*")
     
     # 음성 재생 부분
     if audio_data:
@@ -644,13 +703,13 @@ def format_feedback_content(content):
     
     # 이모지와 강조 표시 기본 처리
     formatted = formatted.replace('💡', '<span style="color: #f59e0b;">💡</span>')
-    formatted = formatted.replace('📝', '<span style="color: #3b82f6;">📝</span>')
+    formatted = formatted.replace('🔍', '<span style="color: #3b82f6;">🔍</span>')
     formatted = formatted.replace('🎯', '<span style="color: #10b981;">🎯</span>')
     formatted = formatted.replace('⚠️', '<span style="color: #ef4444;">⚠️</span>')
     formatted = formatted.replace('✅', '<span style="color: #10b981;">✅</span>')
     formatted = formatted.replace('💬', '<span style="color: #8b5cf6;">💬</span>')
     formatted = formatted.replace('🧠', '<span style="color: #6366f1;">🧠</span>')
-    formatted = formatted.replace('❗️', '<span style="color: #ef4444;">❗️</span>')
+    formatted = formatted.replace('◉', '<span style="color: #ef4444;">◉</span>')
     formatted = formatted.replace('💭', '<span style="color: #ec4899;">💭</span>')
     formatted = formatted.replace('🚀', '<span style="color: #3b82f6;">🚀</span>')
     
@@ -679,7 +738,7 @@ def format_detailed_feedback(content):
     # 기본 줄바꿈 처리
     formatted = content.replace('\\n', '\n')
     
-    # 🚩, 🌟, 🎯, 📝 섹션별로 분리
+    # 🚩, 🌟, 🎯, 🔍 섹션별로 분리
     sections = {
         'task_check': '',
         'what_you_did_well': '',
@@ -706,7 +765,7 @@ def format_detailed_feedback(content):
         elif '🎯' in line or 'Key Improvements' in line or 'Things to Improve' in line:
             current_section = 'key_improvements'
             continue  # 헤더는 건너뛰기
-        elif '📝' in line or 'Try This Next Time' in line:
+        elif '🔍' in line or 'Try This Next Time' in line:
             current_section = 'improved_examples'
             continue  # 헤더는 건너뛰기
         else:
@@ -759,13 +818,13 @@ def format_detailed_feedback(content):
         </div>
         """)
     
-    # 📝 Improved Examples 섹션
+    # 🔍 Improved Examples 섹션
     if sections['improved_examples'].strip():
         examples_content = format_bullet_points(sections['improved_examples'].strip())
         html_parts.append(f"""
         <div style="margin-bottom: 10px;">
             <div style="font-weight: bold; color: #7c3aed; margin-bottom: 8px; font-size: 15px;">
-                📝 Try This Next Time:
+                🔍 Try This Next Time:
             </div>
             <div style="color: inherit; line-height: 1.5; font-size: 16px;">
                 {examples_content}
@@ -874,28 +933,28 @@ def format_content_ideas(content):
     formatted = formatted.replace('\n', '<br>')
     
     # === Content Ideas 포맷 처리 ===
-    # 패턴: 💬 Topic: [토픽명] 📝 Example: [한국어] '[영어]'
-    # 결과: 💬 **[토픽명]** 📝 [한국어] *'[영어]'*
+    # 패턴: 💬 Topic: [토픽명] 🔍 Example: [한국어] '[영어]'
+    # 결과: 💬 **[토픽명]** 🔍 [한국어] *'[영어]'*
     
     # Content Ideas 패턴 매칭 및 변환
-    content_pattern = r'💬\s*Topic:\s*(.*?)<br>📝\s*Example:\s*(.*?)<br>\s*\'(.*?)\''
+    content_pattern = r'💬\s*Topic:\s*(.*?)<br>🔍\s*Example:\s*(.*?)<br>\s*\'(.*?)\''
     
     def replace_content_format(match):
         topic = match.group(1).strip()
         korean_example = match.group(2).strip()
         english_translation = match.group(3).strip()
         
-        return f'💬 **{topic}**<br>📝 {korean_example}<br><span style="margin-left:20px; color: inherit; opacity: 0.7; font-style:italic;">*\'{english_translation}\'*</span>'
+        return f'💬 **{topic}**<br>🔍 {korean_example}<br><span style="margin-left:20px; color: inherit; opacity: 0.7; font-style:italic;">*\'{english_translation}\'*</span>'
     
     formatted = re.sub(content_pattern, replace_content_format, formatted)
     
     # === Advanced Grammar Pattern 포맷 처리 ===
-    # 패턴: 🚀 Try this: '[패턴]' = '[의미]' 📝 Example: '[예시]' 💡 When to use: [설명]
-    # 결과: 🚀 Try this: **'[패턴]'** = '[의미]' 📝 '[예시]' 💡 [설명]
+    # 패턴: 🚀 Try this: '[패턴]' = '[의미]' 🔍 Example: '[예시]' 💡 When to use: [설명]
+    # 결과: 🚀 Try this: **'[패턴]'** = '[의미]' 🔍 '[예시]' 💡 [설명]
     
     # Advanced Pattern 포맷 개선
-    advanced_pattern1 = r'🚀\s*Try:\s*(.*?)<br>📝\s*Example:\s*(.*?)<br>💡\s*When to use:\s*(.*?)(?=<br>|$)'
-    advanced_pattern2 = r'🚀\s*Try this:\s*(.*?)<br>📝\s*Example:\s*(.*?)<br>💡\s*When to use:\s*(.*?)(?=<br>|$)'
+    advanced_pattern1 = r'🚀\s*Try:\s*(.*?)<br>🔍\s*Example:\s*(.*?)<br>💡\s*When to use:\s*(.*?)(?=<br>|$)'
+    advanced_pattern2 = r'🚀\s*Try this:\s*(.*?)<br>🔍\s*Example:\s*(.*?)<br>💡\s*When to use:\s*(.*?)(?=<br>|$)'
     
     def replace_advanced_format(match):
         pattern_desc = match.group(1).strip()
@@ -906,7 +965,7 @@ def format_content_ideas(content):
         pattern_desc = re.sub(r"'([^']+)'", r"**'\1'**", pattern_desc)
         pattern_desc = re.sub(r'"([^"]+)"', r'**"\1"**', pattern_desc)
         
-        return f'🚀 Try this: {pattern_desc}<br>📝 {example}<br>💡 {usage}'
+        return f'🚀 Try this: {pattern_desc}<br>🔍 {example}<br>💡 {usage}'
     
     formatted = re.sub(advanced_pattern1, replace_advanced_format, formatted)
     formatted = re.sub(advanced_pattern2, replace_advanced_format, formatted)
@@ -939,7 +998,7 @@ def display_grammar_tips_simplified(feedback):
         return
     
     # Streamlit expander를 사용하여 회색 박스 효과
-    with st.expander("📝 Grammar Tips", expanded=True):
+    with st.expander("🔍 Grammar Tips", expanded=True):
         st.markdown("*Areas where you can improve your Korean grammar:*")
         
         # 기본 3개 표시
@@ -1115,13 +1174,13 @@ def get_duration_status(duration):
     TARGET_FAIR_DURATION = AUDIO_QUALITY["fair_min_duration"] # 60초 (1분)
 
     if duration >= TARGET_EXCELLENT_DURATION: # 90초 이상
-        return f"✅ Excellent! {duration:.1f}s — a perfect length (1-2 minutes) for the interview!"
+        return f"✅ Excellent! {duration:.1f}s – a perfect length (1-2 minutes) for the interview!"
     elif duration >= TARGET_GOOD_DURATION: # 75초 이상
-        return f"🌟 Good! {duration:.1f}s — almost reached the 1-2 minute goal!"
+        return f"🌟 Good! {duration:.1f}s – almost reached the 1-2 minute goal!"
     elif duration >= TARGET_FAIR_DURATION: # 60초 이상
-        return f"⚠️ Fair! {duration:.1f}s — try for at least 1-2 minutes next time."
+        return f"⚠️ Fair! {duration:.1f}s – try for at least 1-2 minutes next time."
     else:
-        return f"❌ Short! {duration:.1f}s — aim for at least 1-2 minutes for a better score."
+        return f"❌ Short! {duration:.1f}s – aim for at least 1-2 minutes for a better score."
 
 
 def display_contact_info(session_id):
