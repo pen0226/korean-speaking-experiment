@@ -26,96 +26,61 @@ from utils import (
     parse_grammar_issue, parse_vocabulary_suggestion, display_vocabulary_tips_simplified, display_grammar_tips_simplified,
     format_detailed_feedback  # 🔥 새로 추가된 함수
 )
-import streamlit.components.v1 as components
 
-def inject_global_scroll_manager():
+
+def scroll_to_top():
+    """강화된 페이지 스크롤 초기화 (iPhone Safari 완벽 호환)"""
     st.markdown(
-        '<div id="page-top" style="position:absolute;top:0;height:1px;"></div>',
-        unsafe_allow_html=True
-    )
-    components.html(
         """
         <script>
-        (function(){
-          try { history.scrollRestoration = 'manual'; } catch(e) {}
-
-          function zeroAllScroll(){
-            try {
-              window.scrollTo(0,0);
-              if (document.body) document.body.scrollTop = 0;
-              if (document.documentElement) document.documentElement.scrollTop = 0;
-              const sels = ['[data-testid="stAppViewContainer"]','.block-container','.main','.stApp'];
-              for (const sel of sels){
-                const el = document.querySelector(sel);
-                if (el){
-                  el.scrollTop = 0;
-                  if (el.scrollTo) el.scrollTo(0,0);
+        // 0.1초 뒤 강제 스크롤 (렌더링 이후 적용)
+        setTimeout(function(){
+            // 앵커 스크롤
+            var pageTop = document.getElementById('page-top');
+            if(pageTop && pageTop.scrollIntoView){
+                pageTop.scrollIntoView({behavior:'auto', block:'start'});
+            }
+            
+            // 기본 스크롤
+            window.scrollTo(0,0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+            
+            // Streamlit 컨테이너까지 스크롤
+            var containers = ['.main','.block-container','[data-testid="stAppViewContainer"]','[data-testid="stApp"]','.stApp'];
+            containers.forEach(function(sel){
+                var el = document.querySelector(sel);
+                if(el){
+                    el.scrollTop = 0;
+                    if(el.scrollTo) el.scrollTo(0,0);
                 }
-              }
-            } catch(e) {}
-          }
-
-          function focusAnchor(){
-            // 질문 앵커가 있으면 최우선
-            const el = document.querySelector('#question-top') || document.getElementById('page-top');
-            if (el && el.scrollIntoView){
-              el.scrollIntoView({behavior:'auto', block:'start'});
-            } else {
-              zeroAllScroll();
+            });
+            
+            // 상위 프레임 처리 (iframe 환경)
+            try {
+                window.parent.scrollTo(0,0);
+                var parentContainers = window.parent.document.querySelectorAll('.main,.block-container');
+                parentContainers.forEach(function(el){
+                    if(el){
+                        el.scrollTop = 0;
+                        if(el.scrollTo) el.scrollTo(0,0);
+                    }
+                });
+            } catch(e) {
+                // 크로스 오리진 오류 무시
             }
-          }
-
-          // 초기 여러 프레임 동안 고정
-          let tries = 0, MAX_TRIES = 12;
-          function tryMany(){
-            focusAnchor();
-            if (++tries < MAX_TRIES) requestAnimationFrame(tryMany);
-          }
-          requestAnimationFrame(tryMany);
-          setTimeout(tryMany, 160);
-
-          // 입력 포커스/복귀/회전/해시/가시성 변경에도 재적용
-          window.addEventListener('focusin', function(ev){
-            const t = ev.target;
-            if (t && /input|textarea|select|button/i.test(t.tagName)) {
-              setTimeout(focusAnchor, 0);
-            }
-          }, {passive:true});
-          window.addEventListener('pageshow', focusAnchor, {passive:true});
-          window.addEventListener('orientationchange', focusAnchor, {passive:true});
-          window.addEventListener('hashchange', focusAnchor, {passive:true});
-          document.addEventListener('visibilitychange', function(){
-            if (document.visibilityState === 'visible') focusAnchor();
-          }, {passive:true});
-
-          // 키보드/주소창으로 viewport 높이 변할 때
-          if (window.visualViewport){
-            window.visualViewport.addEventListener('resize', () => {
-              requestAnimationFrame(focusAnchor);
-            }, {passive:true});
-          }
-
-          // 렌더 중 위젯 추가로 생기는 자동 스크롤을 1.5초간 무력화
-          const obs = new MutationObserver(() => { focusAnchor(); });
-          obs.observe(document.body, {childList:true, subtree:true});
-          setTimeout(() => obs.disconnect(), 1500);
-        })();
+        }, 300);
+        
+        // 즉시 한 번 더 시도 (보험)
+        var pageTop = document.getElementById('page-top');
+        if(pageTop && pageTop.scrollIntoView){
+            pageTop.scrollIntoView({behavior:'auto', block:'start'});
+        }
+        window.scrollTo(0,0);
         </script>
         """,
-        height=0,
-        key="__scroll_mgr"  # ✅ 중복 주입 방지
+        unsafe_allow_html=True
     )
-    st.markdown("""
-    <style>
-      html, body { overscroll-behavior: none; }
-      [data-testid="stAppViewContainer"], .block-container, .main, .stApp {
-        scroll-behavior: auto !important;
-      }
-      /* (선택) 상단 툴바/헤더로 인한 오프셋 줄이기 */
-      [data-testid="stToolbar"] { display: none !important; }
-      header, footer { visibility: hidden; height: 0; }
-    </style>
-    """, unsafe_allow_html=True)
 
 
 def initialize_session_state():
@@ -141,7 +106,9 @@ def initialize_session_state():
 
 def handle_consent_step():
     """동의서 단계 처리"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
     
     show_progress_indicator('consent')
     
@@ -155,8 +122,10 @@ def handle_consent_step():
 
 def handle_background_info_step():
     """배경 정보 단계 처리 (닉네임 + 학습기간 + 자신감 + 자기효능감)"""
-
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('background_info')
     
     st.markdown("### 📊 Background Information")
@@ -168,13 +137,14 @@ def handle_background_info_step():
 
 
 def handle_first_recording_step():
-    """첫 번째 녹음 단계 처리 - 질문 먼저, 위젯은 버튼 눌러야 보이게"""
+    """첫 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('first_recording')
-
-    # 질문 섹션 앵커 (스크롤 기준점)
-    st.markdown('<div id="question-top" style="position:relative;top:-1px;height:1px;"></div>', unsafe_allow_html=True)
-
-    # 🔲 질문 카드 (그대로 유지)
+    
+    # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
     st.markdown(
         """
         <div style='
@@ -202,36 +172,32 @@ def handle_first_recording_step():
         """,
         unsafe_allow_html=True
     )
-
-    st.markdown("🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**")
+    
+    # 2) 녹음 안내를 간결하게 (1-2분 목표로 수정)
+    st.markdown(
+        "🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
+    )
+    
+    # 3) 녹음 단계 제목
     st.markdown("### 🎤 Step 3: First Recording")
-
-    # 세션 변수 초기화
+    
+    # 첫 번째 오디오 상태 초기화
     if "first_audio" not in st.session_state:
         st.session_state.first_audio = None
         st.session_state.first_audio_type = None
-    if "show_first_recorder" not in st.session_state:
-        st.session_state.show_first_recorder = False
-
-    # ⛔️ 기본 화면: 녹음/업로드 위젯은 숨김
-    if not st.session_state.show_first_recorder:
-        st.info("Press the button below to open the recorder or upload an audio file.")
-        if create_styled_button("🎙️ Open recorder / upload", "primary"):
-            st.session_state.show_first_recorder = True
-            st.rerun()
-        return  # 위젯을 아직 렌더하지 않음 (여기서 함수 종료)
-
-    # ✅ 버튼을 누른 이후에만 실제 위젯 렌더
+    
+    # 녹음 인터페이스 (깔끔한 UI)
     audio_data, source_type = record_audio("first_recording", "")
     if audio_data and source_type:
         st.session_state.first_audio = audio_data
         st.session_state.first_audio_type = source_type
-
+    
     # 처리 버튼
     if st.session_state.first_audio:
         st.markdown("---")
         if create_styled_button("🔄 Process First Recording", "primary", "🎙️"):
             process_first_recording()
+
 
 def process_first_recording():
     """첫 번째 녹음 처리 (참고용 TOPIK 점수 생성 추가)"""
@@ -289,7 +255,10 @@ def process_first_recording():
 
 def handle_feedback_step():
     """피드백 표시 단계 처리 - 간소화된 버전 + 하이라이트 개선 (나이트 모드 최적화)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('feedback')
     
     # 🔥 피드백 경고 배너를 이 단계에서만 표시
@@ -509,19 +478,21 @@ def handle_feedback_step():
 
 
 def handle_second_recording_step():
-    """두 번째 녹음 단계 처리 - 질문 먼저, 위젯은 버튼 눌러야 보이게"""
+    """두 번째 녹음 단계 처리 - 개선된 레이아웃 (나이트 모드 최적화, 수정된 질문 반영)"""
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('second_recording')
+    
     st.markdown("### 🎤 Step 5: Second Recording")
-
+    
     # 뒤로가기 버튼
     if create_styled_button("Back to Feedback", "secondary"):
         st.session_state.step = 'feedback'
         st.rerun()
-
-    # 질문 섹션 앵커
-    st.markdown('<div id="question-top" style="position:relative;top:-1px;height:1px;"></div>', unsafe_allow_html=True)
-
-    # 🔲 질문 카드 (그대로 유지)
+    
+    # 1) 🔥 수정된 질문 영역을 박스로 분리 (나이트 모드 최적화)
     st.markdown(
         """
         <div style='
@@ -549,35 +520,31 @@ def handle_second_recording_step():
         """,
         unsafe_allow_html=True
     )
-
-    st.markdown("🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**")
+    
+    # 2) 녹음 안내 추가 (1-2분 목표로 수정)
+    st.markdown(
+        "🔴 **Aim for about 1~2 minutes total** | 🎧 **Quiet environment & headphones recommended**"
+    )
+    
     st.write("🚀 Now try again! Apply the feedback you received to improve your answer.")
-
-    # 세션 변수 초기화
+    
+    # 두 번째 오디오 상태 초기화
     if "second_audio" not in st.session_state:
         st.session_state.second_audio = None
         st.session_state.second_audio_type = None
-    if "show_second_recorder" not in st.session_state:
-        st.session_state.show_second_recorder = False
-
-    # ⛔️ 기본 화면: 녹음/업로드 위젯 숨김
-    if not st.session_state.show_second_recorder:
-        if create_styled_button("🎙️ Open recorder / upload", "primary"):
-            st.session_state.show_second_recorder = True
-            st.rerun()
-        return
-
-    # ✅ 버튼을 누른 이후에만 실제 위젯 렌더
+    
+    # 녹음 인터페이스 (깔끔한 UI)
     audio_data, source_type = record_audio("second_recording", "")
     if audio_data and source_type:
         st.session_state.second_audio = audio_data
         st.session_state.second_audio_type = source_type
-
+    
     # 처리 버튼
     if st.session_state.second_audio:
         st.markdown("---")
         if create_styled_button("🔄 Process Second Recording", "primary", "🎤"):
             process_second_recording()
+
 
 def process_second_recording():
     """두 번째 녹음 처리 + 즉시 데이터 저장 (참고용 TOPIK 점수 생성 추가)"""
@@ -676,7 +643,10 @@ def display_improvement_summary(improvement_data):
 
 def handle_survey_step():
     """설문조사 단계 처리 (데이터는 이미 저장된 상태)"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 6: Required Survey")
@@ -795,7 +765,10 @@ def save_and_backup_data():
 
 def handle_completion_step():
     """완료 단계 처리"""
-
+    # 🔥 앵커 + 스크롤을 맨 처음에!
+    st.markdown('<div id="page-top" style="position:absolute;top:0;height:1px;visibility:hidden;"></div>', unsafe_allow_html=True)
+    scroll_to_top()
+    
     show_progress_indicator('completion')
     
     # 완료 축하 (간소화된 버전)
@@ -1083,9 +1056,7 @@ def main():
     """메인 애플리케이션 함수 (iPhone 스크롤 최적화 + 참고용 TOPIK 점수 통합)"""
     # 페이지 설정
     st.set_page_config(**PAGE_CONFIG)
-
-    inject_global_scroll_manager()   # ✅ 여기서 한 번만
-
+    
     # 세션 상태 초기화 (자기효능감 포함)
     initialize_session_state()
     
