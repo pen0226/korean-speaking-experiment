@@ -25,14 +25,14 @@ def enhanced_consent_section():
         st.markdown("""
         ### 🔬 Experiment Flow
         
-        **📅 2 Sessions** (~20-25 mins each, 1 week apart)
+        **📅 2 Sessions** (20- mins each, 1 week apart)
         
         **🔄 Each Session:**
         
         🎙️ First Record → 🤖 AI Feedback → 🎙️ Second Record → 📝 Survey
         
         💻 (Optional) After all sessions, 
-        20-min Zoom chat about your experience 
+        30-60 min Zoom chat about your experience 
         
         🔔 **Notice**
         This activity is part of a research study.
@@ -159,7 +159,7 @@ def enhanced_consent_section():
 
 def collect_background_information():
     """
-    배경 정보 수집 섹션 (닉네임 + 학습기간 + 자신감 + 자기효능감 8문항)
+    배경 정보 수집 섹션 (닉네임 + 학습기간 + 자기효능감 12문항)
     
     Returns:
         tuple: (background_completed, background_details)
@@ -181,7 +181,7 @@ def collect_background_information():
     st.markdown("### 📊 Tell About Your Korean Learning Journey")
     
     # 안내 문구 추가 (노란색)
-    st.warning("💡 This short survey has 11 questions and takes about 1 minute. Please answer honestly for better feedback.")
+    st.warning("💡 This short survey has 13 questions and takes about 1-2 minute. Please answer honestly for better feedback.")
     
     # 학습 기간 질문
     st.markdown("**🕐 How long have you been learning Korean?**")
