@@ -650,9 +650,6 @@ def handle_survey_step():
     show_progress_indicator('survey')
     
     st.markdown("### 📋 Step 6: Required Survey")
-    
-    # 진행상황 표시 (선택사항)
-    display_optional_progress_view()
 
     # 데이터 저장 상태 확인 및 안내
     if hasattr(st.session_state, 'data_saved') and st.session_state.data_saved:
@@ -660,6 +657,9 @@ def handle_survey_step():
     else:
         st.warning("⚠️ Data may not be saved. Please contact the researcher if you see this message.")
     
+        # 진행상황 표시 (선택사항)
+    display_optional_progress_view()
+
     # 설문조사 안내
     st.markdown("---")
     st.markdown("### 📝 Complete the Survey")
