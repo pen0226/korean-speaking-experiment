@@ -71,7 +71,8 @@ BACKGROUND_INFO = {
         "Less than 6 months",
         "6 months – 1 year",
         "1 – 2 years", 
-        "More than 2 years"
+        "2 - 3 years",
+        "More than 3 years"
     ]
 }
 
