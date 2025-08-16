@@ -196,10 +196,6 @@ def collect_background_information():
     
     st.markdown("---")
     
-
-
-    
-    st.markdown("---")
     
     # 자기효능감 문항 12개 추가
     st.markdown("### 🎯 Korean Speaking Self-Efficacy")
