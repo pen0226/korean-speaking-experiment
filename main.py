@@ -69,7 +69,7 @@ def scroll_to_top():
             } catch(e) {
                 // 크로스 오리진 오류 무시
             }
-        }, 100);
+        }, 300);
         
         // 즉시 한 번 더 시도 (보험)
         var pageTop = document.getElementById('page-top');
