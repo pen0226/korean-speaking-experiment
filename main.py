@@ -868,9 +868,9 @@ def display_improvement_details_personal(improvement):
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;👉 **예:** {tip['example']}")
         st.markdown("")  # 간격 추가
     
-    # 💡 Quick Tip
-    st.markdown("#### 💡 Quick Tip")
-    st.success("Practice these expressions before your next recording!")
+    # 💝 You're Ready for This!
+    st.markdown("#### 💝 You're Ready for This!")
+    st.success("🧘‍♀️ **Deep breath first** - nerves are normal! • 😊 **Smile while speaking** - it calms your voice • 🐌 **Slow and steady wins** - better than fast and messy • 💪 **Remember: You've been practicing!** Your Korean is better than you think! 화이팅! 🎉")
 
 
 def convert_to_actionable_summary(analysis_text, overall_assessment):

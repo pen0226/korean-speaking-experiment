@@ -441,17 +441,18 @@ Student answered "{question}": {transcript}
 
 **CRITICAL: GRAMMAR ANALYSIS RULES**
 **STRICTLY PROHIBITED – NEVER FLAG THESE AS ERRORS**  
-(These are correct forms and must NOT appear in grammar_issues)
-- Natural particle omission when the meaning is clear: "사과 먹어요", "책 읽어요", "영화 봤어요"
-- Using "도" (also/too) instead of "을/를": "김치도 먹어요" is correct — do NOT suggest "김치를"
-- Using "하고" instead of "과/와": both are equally correct for "and/with"
-- Colloquial forms that are grammatically acceptable in spoken Korean (예: "갔다 왔어요" for "갔습니다")
-- Natural word order variations common in spoken Korean
+    (These are correct forms and must NOT appear in grammar_issues)
+    - Natural particle omission when the meaning is clear: "사과 먹어요", "책 읽어요", "영화 봤어요"
+    - Using "도" (also/too) instead of "을/를": "할아버지도 만나고", "김치도 먹어요" are correct – NEVER suggest changing "도" to "을/를"
+    - Using "하고" instead of "과/와": both are equally correct for "and/with"
+    - Natural spoken Korean expressions and colloquial forms that are commonly used in conversation
+    - Natural word order variations common in spoken Korean
+
 **ONLY FLAG GENUINE ERRORS THAT IMPEDE COMMUNICATION**  
-(Show the wrong form first, then the correct form)
-- Wrong particle for location/direction: "학교를 가요" (WRONG) → "학교에 가요" (CORRECT)
-- Incorrect tense usage with time markers: "어제 가요" (WRONG) → "어제 갔어요" (CORRECT)
-- Clearly ungrammatical constructions that native speakers would not use
+    (Show the wrong form first, then the correct form)
+    - Wrong particle for location/direction: "학교를 가요" (WRONG) → "학교에 가요" (CORRECT)
+    - Incorrect tense usage with time markers: "어제 가요" (WRONG) → "어제 갔어요" (CORRECT)
+    - Clearly ungrammatical constructions that native speakers would not use
 
 
 **⚠️⚠️ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE ⚠️⚠️**
@@ -544,9 +545,8 @@ Make this the FIRST point in "Key Improvements".
    
 4. **One Advanced Pattern (학생 답변 기반)**
    - **학생이 사용한 패턴을 확장하는 방향**
-   - **예시**: 학생이 "~고 싶다" 많이 사용 → "~고 싶어서" 이유 표현 가르치기
    - Provide one useful pattern for the placement interview.
-   - Must be appropriate for their level (TOPIK 1–2).
+   - Must be appropriate for their level (TOPIK 2-3).
    - Connect to what the student actually said.
 
 5. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
@@ -568,11 +568,11 @@ Make this the FIRST point in "Key Improvements".
     "suggested_model_sentence": "Write one natural Korean paragraph that answers both the past vacation and future plans questions, based strictly on the student's answer. Keep all original ideas and details from the student's response, correcting any grammar or vocabulary errors and using appropriate TOPIK 2 level expressions. If the student's sentences are too short, connect them smoothly with linking words. If the student skipped part of the question, add a relevant and realistic detail to complete the answer. You may also add small, realistic details to make the story more vivid, but ensure they fit naturally with the student's content. The final paragraph should be clear, cohesive, and natural, and long enough to be spoken at a normal pace for about 1 to 2 minutes.",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation with why the original is wrong and when to use the correct form",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation with why the original is wrong and when to use the correct form",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation with why the original is wrong and when to use the correct form",   
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation with why the original is wrong and when to use the correct form",   
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation with why the original is wrong and when to use the correct form"
     ],
     "vocabulary_suggestions": [
         "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both in context]\\n📝 [key difference]",
