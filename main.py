@@ -857,7 +857,7 @@ def display_improvement_details_personal(improvement):
         st.info("Good effort! Focus on speaking longer with more specific details.")
     
     # 🔧 핵심 개선사항 (Top 3)
-    st.markdown("#### 🔧 Fix These 3 Things")
+    st.markdown("#### 🔧 Remember These 3 Things")
     
     # 구체적인 개선사항 생성
     actionable_tips = generate_actionable_tips(improvement)
@@ -868,10 +868,15 @@ def display_improvement_details_personal(improvement):
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;👉 **예:** {tip['example']}")
         st.markdown("")  # 간격 추가
     
-    # 💝 You're Ready for This!
     st.markdown("#### 💝 You're Ready for This!")
-    st.success("🧘‍♀️ **Deep breath first** - nerves are normal! • 😊 **Smile while speaking** - it calms your voice • 🐌 **Slow and steady wins** - better than fast and messy • 💪 **Remember: You've been practicing!** Your Korean is better than you think! 화이팅! 🎉")
+    st.markdown("""
+    ✅ **Interview Tips:**
 
+    🧘‍♀️ **Deep breath first** - nerves are normal!  
+    😊 **Smile while speaking** - it calms your voice  
+    🐌 **Slow and steady wins** - better than fast and messy  
+    💪 **Remember: You've been practicing!** Your Korean is better than you think! 화이팅! 🎉
+    """)
 
 def convert_to_actionable_summary(analysis_text, overall_assessment):
     """추상적 텍스트를 간단한 핵심 요약으로 변환"""
@@ -928,9 +933,9 @@ def generate_actionable_tips(improvement):
     if len(tips) < 3:
         default_tips = [
             {
-                'category': 'Speaking length',
-                'description': 'Try to speak for at least 60-90 seconds total',
-                'example': 'Add more details about what you did and why you plan to do something'
+                'category': 'Detail & Examples',
+                'description': 'Add more specific details and personal examples to your answer',
+                'example': 'Add more details about what you did and why you plan to do something. e.g. where, when, who, what, how, and why'
             },
             {
                 'category': 'Connecting words',
