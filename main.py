@@ -671,7 +671,7 @@ def handle_survey_step():
         st.markdown(
             f"""
             <div style="margin: 20px 0;">
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSds3zsmZYjN3QSc-RKRtbDPTF0ybLrwJW4qVLDg2_xoumBLDw/viewform?usp=header" 
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSdVR93aPPdxLOJAN167Fi42EDcjbQLbZrPPe9vEPpfY1Rbtvw/viewform?usp=header" 
                    target="_blank" 
                    style="
                        background-color: #dc2626; 
