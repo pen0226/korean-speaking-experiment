@@ -48,7 +48,7 @@ def get_secret(key, default=None):
 
 
 # 세션 설정
-CURRENT_SESSION = 1  # 1차 세션: 1, 2차 세션: 2로 변경
+CURRENT_SESSION = 2  # 1차 세션: 1, 2차 세션: 2로 변경
 SESSION_LABELS = {
     1: "Session 1",
     2: "Session 2"
