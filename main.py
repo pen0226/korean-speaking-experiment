@@ -88,7 +88,7 @@ def initialize_session_state():
     if 'step' not in st.session_state:
         st.session_state.step = 'consent'  # 첫 단계를 'consent'로 변경
         st.session_state.session_number = CURRENT_SESSION
-        st.session_state.session_label = SESSION_LABELS.get(CURRENT_SESSION, "Session 1")
+        st.session_state.session_label = SESSION_LABELS.get(CURRENT_SESSION, "Session 2")
         st.session_state.session_id = ""
         st.session_state.transcription_1 = ""
         st.session_state.transcription_2 = ""
@@ -1066,7 +1066,7 @@ def main():
     initialize_session_state()
     
     # 제목 (세션 정보 포함)
-    session_info = f" - {SESSION_LABELS.get(CURRENT_SESSION, 'Session 1')}"
+    session_info = f" - {SESSION_LABELS.get(CURRENT_SESSION, 'Session 2')}"
     st.title(f"🇰🇷 Korean Speaking Practice with AI Feedback{session_info}")
     
     # 🔥 경고 배너는 피드백 단계에서만 표시 (handle_feedback_step()에서 처리)
