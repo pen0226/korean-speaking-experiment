@@ -1,6 +1,6 @@
 """
 feedback.py
-GPT를 이용한 한국어 학습 피드백 생성 (이중 평가 시스템: 연구용 + 학생용) - STT 검증 및 점수 수정 + 한국어 문법 규칙 검증
+GPT를 이용한 한국어 학습 피드백 생성 (이중 평가 시스템: 연구용 + 학생용) - STT 검증 및 점수 수정
 """
 
 import openai
@@ -144,8 +144,8 @@ def split_korean_sentences(text):
     Returns:
         list: 분할된 문장들
     """
-    # 한국어 문장 구분자: ., !, ?, 요"/어요"/습니다 뒤의 공백
-    pattern = r'([.!?]|(?:요"|어요"|습니다|세요"|해요"|이에요"|예요")\s*)'
+    # 한국어 문장 구분자: ., !, ?, 요/어요/습니다 뒤의 공백
+    pattern = r'([.!?]|(?:요|어요|습니다|세요|해요|이에요|예요)\s*)'
     sentences = re.split(pattern, text)
     
     # 분할된 부분을 다시 조합
@@ -259,7 +259,7 @@ def classify_error_type(issue_text):
         ]):
             return "Particle"
 
-        # 1-3) Verb Ending (어미/높임/경어/말)
+        # 1-3) Verb Ending (어미/높임/경어/말끝)
         if any(k in explanation for k in [
             "ending", "verb ending", "conjugation", "politeness",
             "speech level", "speech style ", "speech consistency" "formality", "해요", "합니다", "자연스러운 어미"
@@ -293,112 +293,6 @@ def classify_error_type(issue_text):
         return "Connectives"
 
     return "Others"
-
-
-# === 🔥 한국어 문법 규칙 검증 시스템 (새로 추가) ===
-
-def validate_korean_grammar_corrections(grammar_issues):
-    """
-    🇰🇷 한국어 문법 수정 제안을 검증하여 부적절한 것들 제거
-    
-    Args:
-        grammar_issues: GPT가 생성한 문법 이슈 리스트
-        
-    Returns:
-        list: 검증된 문법 이슈 리스트 (부적절한 제안 제거됨)
-    """
-    
-    # 🚫 절대 틀렸다고 하면 안 되는 패턴들 (정규표현식)
-    PROHIBITED_CORRECTIONS = [
-        # "하고" 사용 (완전히 올바름)
-        {
-            'pattern': r'(.+)하고(.+)→(.+)(과|와)(.+)',
-            'reason': '"하고"는 구어체에서 자연스럽고 올바른 표현',
-            'examples': ['친구하고 갔어요', '부모님하고 살아요', '선생님하고 이야기했어요']
-        },
-        
-        # "도" 사용 (이미 맞는 조사)
-        {
-            'pattern': r'(.+)도\s+(먹어요|갔어요|했어요|봤어요|만났어요|공부했어요)(.+)→(.+)(을|를)(.+)',
-            'reason': '"도"는 이미 올바른 조사 (also/too 의미)',
-            'examples': ['김치도 먹어요', '영화도 봤어요', '친구도 만났어요', '한국어도 공부해요']
-        },
-        
-        # 자연스러운 조사 생략 (의미가 명확할 때)
-        {
-            'pattern': r'(사과|책|물|커피|음식|영화|음악)\s+(먹어요|읽어요|마셔요|봤어요|들어요)(.+)→(.+)(을|를)(.+)',
-            'reason': '의미가 명확할 때 조사 생략은 자연스러움',
-            'examples': ['사과 먹어요', '책 읽어요', '물 마셔요', '영화 봤어요', '음악 들어요']
-        },
-        
-        # 자연스러운 어순 변화 (구어체)
-        {
-            'pattern': r'(한국에서|집에서|학교에서)\s+(저는|나는)(.+)→(.+)(저는|나는)\s+(한국에서|집에서|학교에서)(.+)',
-            'reason': '구어체에서 어순 변화는 자연스러움',
-            'examples': ['한국에서 저는 공부해요', '집에서 저는 쉬어요', '학교에서 저는 한국어 배워요']
-        },
-        
-        # "에서" vs "에" (둘 다 맞을 때)
-        {
-            'pattern': r'(.+)(에서)\s+(살아요|있어요|머물러요)(.+)→(.+)(에)(.+)',
-            'reason': '장소에서의 행동/상태 표현시 "에서"도 자연스러움',
-            'examples': ['한국에서 살아요', '서울에서 있어요', '집에서 머물러요']
-        }
-    ]
-    
-    # 검증된 이슈들을 담을 리스트
-    validated_issues = []
-    removed_issues = []
-    
-    for issue in grammar_issues:
-        if not isinstance(issue, str) or '|' not in issue:
-            continue
-            
-        # 이슈 파싱: "Type|Original|Fix|Explanation"
-        parts = issue.split('|')
-        if len(parts) < 3:
-            continue
-            
-        error_type, original, fix = parts[0].strip(), parts[1].strip(), parts[2].strip()
-        correction_text = f"{original}→{fix}"
-        
-        # 금지된 패턴인지 체크
-        is_prohibited = False
-        for prohibited in PROHIBITED_CORRECTIONS:
-            if re.search(prohibited['pattern'], correction_text, re.IGNORECASE):
-                removed_issues.append({
-                    'correction': correction_text,
-                    'reason': prohibited['reason'],
-                    'examples': prohibited['examples'][:2]  # 예시 2개만
-                })
-                is_prohibited = True
-                break
-        
-        # 금지된 패턴이 아니면 유지
-        if not is_prohibited:
-            validated_issues.append(issue)
-    
-    # 제거된 항목들 로그 (streamlit 환경에서 확인 가능)
-    if removed_issues:
-        print(f"🚫 부적절한 문법 수정 제안 {len(removed_issues)}개 제거됨:")
-        for removed in removed_issues:
-            print(f"   - {removed['correction']} (이유: {removed['reason']})")
-            # Streamlit 사이드바에도 표시 (디버깅용)
-            if hasattr(st, 'sidebar'):
-                st.sidebar.info(f"🚫 제거됨: {removed['correction']}")
-    
-    return validated_issues
-
-
-def get_safe_default_grammar_issues():
-    """
-    한국어 규칙에 맞는 안전한 기본 문법 이슈들만 제공
-    """
-    return [
-        "Particle|학교를 가요|학교에 가요|Use '에' for destination, not '를'",
-        "Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'", 
-        "Verb Ending|음악을 좋아요|음악을 좋아해요|Use '좋아해요' when expressing preferences"
-    ]
 
 
 # === 🔥 스마트한 중복 필터링 함수 (vs 방식으로 수정됨) ===
@@ -532,7 +426,7 @@ def generate_prompt(template, **kwargs):
     return template.format(**kwargs)
 
 
-# === 🔥 개선된 피드백 프롬프트 템플릿 (한국어 규칙 강화) ===
+# === 🔥 개선된 피드백 프롬프트 템플릿 (문장 연결 팁 추가 + 자연스러운 변형 허용) ===
 IMPROVED_FEEDBACK_PROMPT_TEMPLATE = """Analyze this Korean speaking response from a beginner student.
 
 Student answered "{question}": {transcript}
@@ -545,38 +439,30 @@ Student answered "{question}": {transcript}
 5. Allowed speech styles: {allowed_styles}
 6. Forbidden speech styles: {forbidden_styles}
 
-**🇰🇷 CRITICAL KOREAN GRAMMAR RULES - ABSOLUTELY MANDATORY:**
+**CRITICAL: GRAMMAR ANALYSIS RULES**
+**STRICTLY PROHIBITED – NEVER FLAG THESE AS ERRORS**  
+    (These are correct forms and must NOT appear in grammar_issues)
+    - Natural particle omission when the meaning is clear: "사과 먹어요", "책 읽어요", "영화 봤어요"
+    - Using "도" (also/too) instead of "을/를": "할아버지도 만나고", "김치도 먹어요" are correct – NEVER suggest changing "도" to "을/를"
+    - Using "하고" instead of "과/와": both are equally correct for "and/with"
+    - Natural spoken Korean expressions and colloquial forms that are commonly used in conversation
+    - Natural word order variations common in spoken Korean
 
-**🚫 STRICTLY PROHIBITED – NEVER FLAG THESE AS ERRORS:**
-(These are completely correct and natural Korean expressions)
+**ONLY FLAG GENUINE ERRORS THAT IMPEDE COMMUNICATION**  
+    (Show the wrong form first, then the correct form)
+    - Wrong particle for location/direction: "학교를 가요" (WRONG) → "학교에 가요" (CORRECT)
+    - Incorrect tense usage with time markers: "어제 가요" (WRONG) → "어제 갔어요" (CORRECT)
+    - Clearly ungrammatical constructions that native speakers would not use
 
-1. **"하고" usage**: "친구하고 갔어요", "가족하고 여행했어요" are PERFECT Korean
-   - NEVER suggest changing "하고" to "과/와" - both are equally correct
-   - "하고" is natural and widely used in spoken Korean
 
-2. **"도" particle**: "김치도 먹어요", "영화도 봤어요" are PERFECT Korean  
-   - NEVER suggest changing "도" to "을/를" - "도" means "also/too"
-   - This is already correct particle usage
-
-3. **Natural particle omission**: "사과 먹어요", "책 읽어요" when meaning is clear
-   - This is natural spoken Korean, not an error
-
-4. **Natural word order variations**: "한국에서 저는" is acceptable in spoken Korean
-
-**✅ ONLY FLAG GENUINE ERRORS THAT NATIVE SPEAKERS WOULD NEVER SAY:**
-- Location particles: "학교를 가요" → "학교에 가요" (wrong direction particle)  
-- Tense mismatches: "어제 가요" → "어제 갔어요" (past time + present tense)
-- Clear grammatical mistakes: "좋아요" → "좋아해요" (adjective vs verb confusion)
-
-**⚠️ IF UNSURE, DO NOT FLAG AS ERROR! It's better to miss an error than create a wrong correction.**
-
-**âš ï¸âš ï¸ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE âš ï¸âš ï¸**
+**⚠️⚠️ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE ⚠️⚠️**
 - **ABSOLUTELY DO NOT change all sentences into one style.** You MUST preserve the student's speech style for EACH sentence individually.
 - If a sentence uses 해요(해요, 이에요, 가요, 와요, 봐요, etc.), write that sentence in 해요-style.
 - If a sentence uses 합니다(합니다, 입니다, 갑니다, 옵니다, etc.), write that sentence in 합니다-style.
 - If the student mixes styles within their response, you MUST reflect that mix in the `suggested_model_sentence`.
-- **STRICTLY PROHIBITED:** Do NOT use 반말 or plain dictionary-style endings (e.g., "–다"). ONLY use speech styles that are appropriate for an interview: either 합니다-style or 해요-style, following the student's usage.
+- **STRICTLY PROHIBITED:** Do NOT use 반말 or plain dictionary-style endings (e.g., "‑다"). ONLY use speech styles that are appropriate for an interview: either 합니다-style or 해요-style, following the student's usage.
 
+  
 **🚩 TASK COMPLETION CHECK (CRITICAL):**
 You MUST check if the student addressed BOTH parts of the question:
 1. Past vacation (지난 방학): Check for past tense usage (갔어요, 했어요, 있었어요, etc.)
@@ -586,13 +472,13 @@ In the "detailed_feedback" field, ALWAYS start with a "🚩 Task Completion Chec
 
 - ✅ or ❌ Past vacation: [Covered well / Partially covered / Missing] — Brief specific comment
 - ✅ or ❌ Future plans: [Covered well / Partially covered / Missing] — Brief specific comment
-- 📌 Detail richness: Comment on whether the answer included enough specific details (e.g., where, with whom, why). If lacking, say "Details missing" and suggest 1—2 things to add.
+- 📌 Detail richness: Comment on whether the answer included enough specific details (e.g., where, with whom, why). If lacking, say "Details missing" and suggest 1–2 things to add.
 - ⚠️ Tense usage: Comment on past/future tense accuracy
 
 If either topic is missing or incomplete:
-- Lower the "interview_readiness_score" by 2—3 points (keep it within 1—10).
+- Lower the "interview_readiness_score" by 2–3 points (keep it within 1–10).
 - Add an English guidance sentence: "Please talk about BOTH your past vacation and your future plans."
-- Provide 2 short example sentences in Korean for the missing part (TOPIK 1—2 level, 해요체).
+- Provide 2 short example sentences in Korean for the missing part (TOPIK 1–2 level, 해요체).
 
 If details are missing for a covered topic:
 - Mention this in "Key Improvements" with a specific example of what detail to add.
@@ -616,7 +502,7 @@ Make this the FIRST point in "Key Improvements".
    - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
     **GRAMMAR ERROR TYPES**
     - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
-    - **Verb Ending**: Wrong verb ending or politeness ending (예요"/이에요", 아요"/어요", etc.)
+    - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
     - **Tense**: Incorrect tense usage (past/present/future)
     - **Word Order**: Unnatural word order in sentences
     - **Connectives**: Inappropriate connecting expressions or overuse of 그리고
@@ -682,11 +568,11 @@ Make this the FIRST point in "Key Improvements".
     "suggested_model_sentence": "Write one natural Korean paragraph that answers both the past vacation and future plans questions, based strictly on the student's answer. Keep all original ideas and details from the student's response, correcting any grammar or vocabulary errors and using appropriate TOPIK 2 level expressions. If the student's sentences are too short, connect them smoothly with linking words. If the student skipped part of the question, add a relevant and realistic detail to complete the answer. You may also add small, realistic details to make the story more vivid, but ensure they fit naturally with the student's content. The final paragraph should be clear, cohesive, and natural, and long enough to be spoken at a normal pace for about 1 to 2 minutes.",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
-        "◗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
-        "◗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
-        "◗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",   
-        "◗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",   
-        "◗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",   
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",   
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
     ],
     "vocabulary_suggestions": [
         "❓ **Word A vs Word B**\\n💡 Word A: [explanation of when to use A]\\n💡 Word B: [explanation of when to use B]\\n🟢 [examples showing both in context]\\n📝 [key difference]",
@@ -700,17 +586,15 @@ Make this the FIRST point in "Key Improvements".
     "sentence_connection_tip": "🎯 **Tip for Longer Sentences**\\n❌ [student's actual short sentences from their response]\\n✅ [combined longer sentence using connectives]\\n💡 Use connectives like 그리고, 그래서, -고, -아서/어서 to sound more natural",
     "interview_readiness_score": [1-10],
     "interview_readiness_reason": "Encouraging explanation of score with specific praise and improvements",
-    "detailed_feedback": "🚩 Task Completion Check\\n- [✅/❌] Past vacation: [Covered well/Partially covered/Missing] - [specific comment]\\n- [✅/❌] Future plans: [Covered well/Partially covered/Missing] - [specific comment]\\n- ⚠️ Tense usage: [comment on past/future tense accuracy]\\n\\n🌟 What You Did Well\\n- [specific praise point 1 with example from their answer]\\n- [specific praise point 2] Great job! 😊 잘 이야기했어요! 👍\\n\\n🎯 Things to Improve\\n- [if missing topic: 'You need to answer BOTH parts: 지난 방학 AND 다음 방학']\\n- [specific grammar issue with concrete example: 'Instead of X, try Y']\\n- [specific content suggestion with example]\\n\\n📝 Try This Next Time\\n1. [Always check: Did I answer ALL parts of the question?]\\n2. [actionable tip 2]\\n3. [actionable tip 3]"
+    "detailed_feedback": "🚩 Task Completion Check\\n- [✅/❌] Past vacation: [Covered well/Partially covered/Missing] - [specific comment]\\n- [✅/❌] Future plans: [Covered well/Partially covered/Missing] - [specific comment]\\n- ⚠️ Tense usage: [comment on past/future tense accuracy]\\n\\n🌟 What You Did Well\\n- [specific praise point 1 with example from their answer]\\n- [specific praise point 2] Great job! 😊 잘 이야기했어요! 👏\\n\\n🎯 Things to Improve\\n- [if missing topic: 'You need to answer BOTH parts: 지난 방학 AND 다음 방학']\\n- [specific grammar issue with concrete example: 'Instead of X, try Y']\\n- [specific content suggestion with example]\\n\\n📝 Try This Next Time\\n1. [Always check: Did I answer ALL parts of the question?]\\n2. [actionable tip 2]\\n3. [actionable tip 3]"
 }}
 
 """
 
 
-# === 메인 피드백 함수들 (한국어 문법 규칙 검증 적용) ===
-
+# === 메인 피드백 함수들 (개선된 프롬프트 적용 + STT 검증) ===
 def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     """
-    🇰🇷 한국어 문법 규칙 검증이 추가된 GPT 피드백 생성
     STT 기반 루브릭을 적용한 GPT 피드백 생성 (이중 평가 시스템 적용 + 개선된 프롬프트 + STT 검증)
     
     Args:
@@ -752,20 +636,15 @@ def get_gpt_feedback(transcript, attempt_number=1, duration=0):
     if len(transcript) != len(processed_transcript):
         st.info(f"📝 Text processed: {len(transcript)} → {len(processed_transcript)} characters for better AI analysis")
     
-    # 🔥 한국어 규칙이 강화된 프롬프트 템플릿 사용
+    # 🔥 개선된 프롬프트 템플릿 사용
     enhanced_prompt_template = IMPROVED_FEEDBACK_PROMPT_TEMPLATE + f"""
 
 **STUDENT SPEAKING DURATION:** {duration:.1f} seconds
 
-**🇰🇷 FINAL REMINDER - KOREAN LANGUAGE RULES:**
-- "하고" is COMPLETELY CORRECT - never suggest changing to "과/와"
-- "도" is ALREADY CORRECT PARTICLE - never suggest changing to "을/를"  
-- Natural particle omission is acceptable when meaning is clear
-- Focus only on clear, genuine errors that impede communication
-
 **IMPORTANT TONE GUIDANCE - SPEAK DIRECTLY TO THE STUDENT:**
 - Always use "You" instead of "The student" 
 - Write feedback as if you're a warm Korean teacher talking directly to the student
+
 
 Use the actual duration ({duration:.1f}s) when generating your feedback and scoring."""
 
@@ -776,7 +655,7 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
     }
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
     
-    # 2번 시도 (타임아웃 60초로 연장)
+    # 2번 시도 (타임아웃 30초로 연장)
     for attempt in range(2):
         debug_info['attempts'] = attempt + 1
         
@@ -797,15 +676,12 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
             original_feedback = parse_gpt_response(raw_content)
             
             if original_feedback and original_feedback.get('suggested_model_sentence'):
-                # 🔥 한국어 문법 규칙 검증 적용
-                validated_feedback = validate_and_fix_feedback(original_feedback)
-                
                 # 🎯 이중 평가 시스템 적용
                 
                 # 1. 연구용 점수 계산
                 research_scores = get_research_scores(
                     transcript, 
-                    validated_feedback.get('grammar_issues', []), 
+                    original_feedback.get('grammar_issues', []), 
                     duration
                 )
                 
@@ -813,7 +689,7 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
                 student_feedback = get_student_feedback(
                     transcript, 
                     research_scores, 
-                    validated_feedback
+                    original_feedback
                 )
                 
                 # 3. 세션에 연구용 점수 저장
@@ -821,10 +697,9 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
                 
                 # 4. 디버그 정보 저장
                 debug_info['dual_evaluation'] = True
-                debug_info['korean_validation'] = True
                 st.session_state.gpt_debug_info = debug_info
                 
-                st.success("✅ AI feedback ready (Korean grammar rules validated)!")
+                st.success("✅ AI feedback ready!")
                 return student_feedback
             else:
                 raise ValueError("Missing required fields")
@@ -843,7 +718,6 @@ Use the actual duration ({duration:.1f}s) when generating your feedback and scor
     
     debug_info['errors'].append("All attempts failed - using fallback")
     debug_info['dual_evaluation'] = True
-    debug_info['korean_validation'] = False
     st.session_state.gpt_debug_info = debug_info
     
     # Fallback에서도 이중 평가 시스템 적용
@@ -868,7 +742,7 @@ def parse_gpt_response(raw_content):
     """GPT 응답을 JSON으로 파싱"""
     try:
         result = json.loads(raw_content)
-        return result  # validate_and_fix_feedback는 get_gpt_feedback에서 호출
+        return validate_and_fix_feedback(result)
     except json.JSONDecodeError:
         try:
             if "```json" in raw_content:
@@ -876,7 +750,7 @@ def parse_gpt_response(raw_content):
                 end = raw_content.find("```", start)
                 clean_content = raw_content[start:end].strip()
                 result = json.loads(clean_content)
-                return result
+                return validate_and_fix_feedback(result)
         except:
             pass
     
@@ -884,7 +758,7 @@ def parse_gpt_response(raw_content):
 
 
 def validate_and_fix_feedback(feedback):
-    """🔥 한국어 문법 규칙 검증이 강화된 피드백 검증 함수"""
+    """피드백 구조를 검증하고 누락된 필수 필드를 추가"""
     
     # 🔥 필수 필드 기본값 (vs 방식 어휘팁 + 2인칭 톤 + detailed_feedback + sentence_connection_tip)
     required_fields = {
@@ -902,24 +776,29 @@ def validate_and_fix_feedback(feedback):
         "encouragement_message": "Every practice makes you better! You're doing great learning Korean!"
     }
 
+    
     feedback = ensure_required_fields(feedback, required_fields)
     
-    # 🔥 한국어 문법 규칙 검증 적용
+    # 🔥 Grammar issues 검증 및 개선 (최대 6개, 모든 오류 표시 + 유형 분류 유지)
     if 'grammar_issues' in feedback and feedback['grammar_issues']:
-        original_count = len(feedback['grammar_issues'])
+        valid_issues = []
+        for i, issue in enumerate(feedback['grammar_issues'][:6]):  # 최대 6개
+            if isinstance(issue, str) and len(issue) > 10:
+                # 🎯 오류 타입 분류 (3개 주요 유형 + 기타)
+                error_type = classify_error_type(issue)
+                if not error_type:  # 3개 유형에 해당하지 않으면
+                    error_type = "Others"  # "Others" 유형으로 분류
+                
+                # 🔥 모든 유효한 문법 오류를 포함 (필터링 제거)
+                standardized_issue = standardize_grammar_issue(issue, error_type)
+                valid_issues.append(standardized_issue)
         
-        # 한국어 규칙에 맞게 검증 및 필터링
-        validated_issues = validate_korean_grammar_corrections(feedback['grammar_issues'])
-        
-        if validated_issues:
-            feedback['grammar_issues'] = validated_issues[:6]  # 최대 6개
-            if len(validated_issues) != original_count:
-                print(f"📝 문법 이슈: {original_count}개 → {len(validated_issues)}개로 검증됨")
+        if valid_issues:
+            feedback['grammar_issues'] = valid_issues
         else:
-            feedback['grammar_issues'] = get_safe_default_grammar_issues()
-            print("🔄 모든 문법 제안이 부적절하여 안전한 기본값 사용")
+            feedback['grammar_issues'] = get_default_grammar_issues()
     else:
-        feedback['grammar_issues'] = get_safe_default_grammar_issues()
+        feedback['grammar_issues'] = get_default_grammar_issues()
     
     # 🔥 Vocabulary suggestions 재구성 (vs 방식 + 스마트 중복 필터링)
     if 'vocabulary_suggestions' in feedback and feedback['vocabulary_suggestions']:
@@ -994,12 +873,23 @@ def get_default_explanation(error_type):
     return explanations.get(error_type, "Review this grammar point")
 
 
+def get_default_grammar_issues():
+    """기본 문법 이슈들 (5개 주요 유형)"""
+    return [
+        "Particle|학교를 가요|학교에 가요|Use '에' for destination, not '를'",  # 잘못된 조사 사용으로 변경,
+        "Verb Ending|좋아요|좋아해요|Use '좋아해요' when expressing preferences",
+        "Tense|어제 가요|어제 갔어요|Use past tense with time indicators like '어제'",
+        "Word Order|한국에서 저는 공부해요|저는 한국에서 공부해요|Subject comes before location",
+        "Connectives|그리고 그리고 또|그리고... 또한|Avoid repeating the same connector"
+    ]
+
+
 def get_fallback_feedback():
     """API 실패시 사용할 기본 피드백 (60-120초 기준, vs 방식 어휘 제안 포함, 2인칭 톤, detailed_feedback 포함, sentence_connection_tip 추가)"""
     return {
         "suggested_model_sentence": "지난 방학에는 가족과 함께 여행을 갔어요. 새로운 도시에서 맛있는 음식도 먹고 사진도 많이 찍었어요. 다음 방학에는 한국어 수업을 들을 거예요. 한국 문화를 더 배우고 싶어서 한국 친구들도 사귀고 싶어요.",
         "suggested_model_sentence_english": "During my last vacation, I went on a trip with my family. We ate delicious food in a new city and took lots of photos. Next vacation, I will take Korean language classes. I want to learn more about Korean culture, so I want to make Korean friends too.",
-        "grammar_issues": get_safe_default_grammar_issues(),
+        "grammar_issues": get_default_grammar_issues(),
         "vocabulary_suggestions": get_default_vocabulary_suggestions(),  # 🔥 vs 방식 어휘팁 포함
         "content_expansion_suggestions": [
             "💬 Topic: Summer vacation details\\n📝 Example: '친구들하고 캠핑도 갔어요. 밤에 별도 보고 바베큐도 했어요.'\\n   'I went camping with friends too. We looked at stars at night and had a barbecue.'",
@@ -1012,7 +902,6 @@ def get_fallback_feedback():
         "detailed_feedback": "🚩 Task Completion Check\\n- ❌ Past vacation: Missing — Please talk about what you did last vacation\\n- ❌ Future plans: Missing — Please talk about your next vacation plans\\n- 📌 Detail richness: Details missing — Add where, with whom, and specific activities\\n- ⚠️ Tense usage: Need to use past tense (갔어요, 했어요) and future tense (할 거예요)\\n\\n...",
         "encouragement_message": "Every practice session helps! Keep going! 화이팅!"
     }
-
 
 def get_improvement_assessment(first_transcript, second_transcript, original_feedback):
     """STT 기반 루브릭을 사용한 개선도 평가 (2인칭 톤)"""
@@ -1201,8 +1090,7 @@ def display_score_with_encouragement(score, duration=0):
         unsafe_allow_html=True
     )
 
-
-# === STT 검증 함수 ===
+    # === STT 검증 함수 ===
 def is_valid_transcript(text: str) -> bool:
     """
     STT 결과가 유효한지 검증
@@ -1313,7 +1201,6 @@ def get_research_scores(transcript, grammar_issues, duration_s):
         "error_count": error_count
     }
 
-
 def get_student_feedback(transcript, research_scores, original_feedback):
     """
     학생용 격려적 피드백 생성 (원본 GPT 피드백 유지)
@@ -1356,9 +1243,9 @@ def get_student_feedback(transcript, research_scores, original_feedback):
             "error_rate": research_scores.get("error_rate", 0),
             "word_count": research_scores.get("word_count", 0),
             "duration_s": research_scores.get("duration_s", 0),
-            "dual_evaluation_applied": True,
-            "korean_grammar_validated": True
+            "dual_evaluation_applied": True
         }
     })
     
     return student_feedback
+
