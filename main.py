@@ -159,7 +159,7 @@ def handle_first_recording_step():
             <div style='font-weight: bold; margin-bottom: 20px; color: inherit; opacity: 0.8; font-size: 16px;'>📝 Interview Question:</div>
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: inherit; line-height: 1.4;'>
-                    Please speak for about 1~2 minutes in total and talk about both topics below.
+                    Please speak again for about 1–2 minutes and talk about the two topics below, the same as last time.
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     1️⃣ <strong>지난 방학에 뭐 했어요? </strong>
