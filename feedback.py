@@ -440,7 +440,7 @@ Student answered "{question}": {transcript}
 6. Forbidden speech styles: {forbidden_styles}
 
 **CRITICAL: GRAMMAR ANALYSIS RULES**
-**STRICTLY PROHIBITED – NEVER FLAG THESE AS ERRORS**  
+**STRICTLY PROHIBITED – NEVER FLAG THESE AS GRAMMAR ISSUES**  
     (These are correct forms and must NOT appear in grammar_issues)
     - Natural particle omission when the meaning is clear: "사과 먹어요", "책 읽어요", "영화 봤어요"
     - Using "도" (also/too) instead of "을/를": "할아버지도 만나고", "김치도 먹어요" are correct – NEVER suggest changing "도" to "을/를"
@@ -449,7 +449,6 @@ Student answered "{question}": {transcript}
     - Natural word order variations common in spoken Korean
 
 **ONLY FLAG GENUINE ERRORS THAT IMPEDE COMMUNICATION**  
-    (Show the wrong form first, then the correct form)
     - Wrong particle for location/direction: "학교를 가요" (WRONG) → "학교에 가요" (CORRECT)
     - Incorrect tense usage with time markers: "어제 가요" (WRONG) → "어제 갔어요" (CORRECT)
     - Clearly ungrammatical constructions that native speakers would not use
@@ -495,7 +494,7 @@ Make this the FIRST point in "Key Improvements".
 
 1. **Grammar Issues (5-6개, 다양한 유형 우선)**
    - **우선순위 적용**: 
-     1. 실제로 틀린 문법 (자연스러운 변형은 제외)
+     1. 실제로 틀린 문법 (자연스러운 구어체 사용은 제외)
      2. 의사소통에 가장 큰 영향을 주는 오류
      3. 초급자가 자주 틀리는 패턴
      
@@ -509,7 +508,6 @@ Make this the FIRST point in "Key Improvements".
     - **Others**: For grammar mistakes that do not fit the above categories
    
    - **MUST include "Original:" and "→ Fix:" format.**
-   - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
    - **Target: Find 5-6 issues with TYPE DIVERSITY if they exist.**
 
 2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
