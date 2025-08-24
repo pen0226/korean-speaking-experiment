@@ -495,7 +495,7 @@ Make this the FIRST point in "Key Improvements".
    
    - **MUST include "Original:" and "→ Fix:" format.**
    - **Target: Find 5-6 issues with TYPE DIVERSITY if they exist.**
-   - '하고(with)', '도(as well, too)' 등 알맞게 사용된 문법을 틀렸다고 하지 않도록 재검토하기
+   - **'하고(with)', '도(as well, too)' , '자연스러운 목적어(을,를) 생략' 등 알맞게 사용된 문법을 틀렸다고 하지 않도록 재검토하기**
 
 2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
    - **학생이 실제로 사용한 표현의 개선에 초점**
