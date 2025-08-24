@@ -550,7 +550,7 @@ Make this the FIRST point in "Key Improvements".
 
 **Required JSON Structure:**
 {{
-    "suggested_model_sentence": "Write one perfect Korean paragraph that answers both the past vacation and future plans questions, based strictly on the student's answer. Keep all original ideas and details from the student's response, correcting any grammar or vocabulary errors and using appropriate TOPIK 2 level expressions.",
+    "suggested_model_sentence": "Write one natural Korean paragraph that answers both questions, based EXACTLY on what the student actually said. Keep ALL their specific details, places, activities, and personal experiences. ONLY fix grammar/vocabulary errors.",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
