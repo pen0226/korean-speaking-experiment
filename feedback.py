@@ -439,20 +439,6 @@ Student answered "{question}": {transcript}
 5. Allowed speech styles: {allowed_styles}
 6. Forbidden speech styles: {forbidden_styles}
 
-**CRITICAL: GRAMMAR ANALYSIS RULES**
-**STRICTLY PROHIBITED – NEVER FLAG THESE AS GRAMMAR ISSUES**  
-    (These are correct forms and must NOT appear in grammar_issues)
-    - Natural particle omission when the meaning is clear: "사과 먹어요", "책 읽어요", "영화 봤어요"
-    - Using "도" (also/too) instead of "을/를": "할아버지도 만나고", "김치도 먹어요" are correct – NEVER suggest changing "도" to "을/를"
-    - Using "하고" instead of "과/와": both are equally correct for "and/with"
-    - Natural spoken Korean expressions and colloquial forms that are commonly used in conversation
-    - Natural word order variations common in spoken Korean
-
-**ONLY FLAG GENUINE ERRORS THAT IMPEDE COMMUNICATION**  
-    - Wrong particle for location/direction: "학교를 가요" (WRONG) → "학교에 가요" (CORRECT)
-    - Incorrect tense usage with time markers: "어제 가요" (WRONG) → "어제 갔어요" (CORRECT)
-    - Clearly ungrammatical constructions that native speakers would not use
-
 
 **⚠️⚠️ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE ⚠️⚠️**
 - **ABSOLUTELY DO NOT change all sentences into one style.** You MUST preserve the student's speech style for EACH sentence individually.
@@ -500,7 +486,7 @@ Make this the FIRST point in "Key Improvements".
      
    - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
     **GRAMMAR ERROR TYPES**
-    - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
+    - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.), (자연스러운 조사 생략은 제외)
     - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
     - **Tense**: Incorrect tense usage (past/present/future)
     - **Word Order**: Unnatural word order in sentences
@@ -509,6 +495,7 @@ Make this the FIRST point in "Key Improvements".
    
    - **MUST include "Original:" and "→ Fix:" format.**
    - **Target: Find 5-6 issues with TYPE DIVERSITY if they exist.**
+   - '하고(with)', '도(as well, too)' 등 알맞게 사용된 문법을 틀렸다고 하지 않도록 재검토하기
 
 2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
    - **학생이 실제로 사용한 표현의 개선에 초점**
