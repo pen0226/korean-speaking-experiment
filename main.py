@@ -88,7 +88,7 @@ def initialize_session_state():
     if 'step' not in st.session_state:
         st.session_state.step = 'consent'  # 첫 단계를 'consent'로 변경
         st.session_state.session_number = CURRENT_SESSION
-        st.session_state.session_label = SESSION_LABELS.get(CURRENT_SESSION, "Session 2")
+        st.session_state.session_label = SESSION_LABELS.get(CURRENT_SESSION, "Session 1")
         st.session_state.session_id = ""
         st.session_state.transcription_1 = ""
         st.session_state.transcription_2 = ""
@@ -159,7 +159,7 @@ def handle_first_recording_step():
             <div style='font-weight: bold; margin-bottom: 20px; color: inherit; opacity: 0.8; font-size: 16px;'>📝 Interview Question:</div>
             <div style='text-align: center;'>
                 <div style='font-size: 22px; font-weight: bold; margin-bottom: 15px; color: inherit; line-height: 1.4;'>
-                    Please speak again for about 1–2 minutes and talk about the two topics below, the same as last time.
+                    Please speak for about 1~2 minutes in total and talk about both topics below.
                 </div>
                 <div style='font-size: 20px; color: inherit; margin: 10px 0;'>
                     1️⃣ <strong>지난 방학에 뭐 했어요? </strong>
@@ -671,7 +671,7 @@ def handle_survey_step():
         st.markdown(
             f"""
             <div style="margin: 20px 0;">
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSdVR93aPPdxLOJAN167Fi42EDcjbQLbZrPPe9vEPpfY1Rbtvw/viewform?usp=header" 
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSds3zsmZYjN3QSc-RKRtbDPTF0ybLrwJW4qVLDg2_xoumBLDw/viewform?usp=header" 
                    target="_blank" 
                    style="
                        background-color: #dc2626; 
@@ -857,7 +857,7 @@ def display_improvement_details_personal(improvement):
         st.info("Good effort! Focus on speaking longer with more specific details.")
     
     # 🔧 핵심 개선사항 (Top 3)
-    st.markdown("#### 🔧 Remember These 3 Things")
+    st.markdown("#### 🔧 Fix These 3 Things")
     
     # 구체적인 개선사항 생성
     actionable_tips = generate_actionable_tips(improvement)
@@ -868,15 +868,10 @@ def display_improvement_details_personal(improvement):
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;👉 **예:** {tip['example']}")
         st.markdown("")  # 간격 추가
     
-    st.markdown("#### 💝 You're Ready for This!")
-    st.markdown("""
-    ✅ **Interview Tips:**
+    # 💡 Quick Tip
+    st.markdown("#### 💡 Quick Tip")
+    st.success("Practice these expressions before your next recording!")
 
-    🧘‍♀️ **Deep breath first** - nerves are normal!  
-    😊 **Smile while speaking** - it calms your voice  
-    🐌 **Slow and steady wins** - better than fast and messy  
-    💪 **Remember: You've been practicing!** Your Korean is better than you think! 화이팅! 🎉
-    """)
 
 def convert_to_actionable_summary(analysis_text, overall_assessment):
     """추상적 텍스트를 간단한 핵심 요약으로 변환"""
@@ -933,9 +928,9 @@ def generate_actionable_tips(improvement):
     if len(tips) < 3:
         default_tips = [
             {
-                'category': 'Detail & Examples',
-                'description': 'Add more specific details and personal examples to your answer',
-                'example': 'Add more details about what you did and why you plan to do something. e.g. where, when, who, what, how, and why'
+                'category': 'Speaking length',
+                'description': 'Try to speak for at least 60-90 seconds total',
+                'example': 'Add more details about what you did and why you plan to do something'
             },
             {
                 'category': 'Connecting words',
@@ -1066,7 +1061,7 @@ def main():
     initialize_session_state()
     
     # 제목 (세션 정보 포함)
-    session_info = f" - {SESSION_LABELS.get(CURRENT_SESSION, 'Session 2')}"
+    session_info = f" - {SESSION_LABELS.get(CURRENT_SESSION, 'Session 1')}"
     st.title(f"🇰🇷 Korean Speaking Practice with AI Feedback{session_info}")
     
     # 🔥 경고 배너는 피드백 단계에서만 표시 (handle_feedback_step()에서 처리)
