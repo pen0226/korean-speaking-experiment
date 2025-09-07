@@ -463,7 +463,7 @@ In the "detailed_feedback" field, ALWAYS start with a "🚩 Task Completion Chec
 If either topic is missing or incomplete:
 - Lower the "interview_readiness_score" by 2–3 points (keep it within 1–10).
 - Add an English guidance sentence: "Please talk about BOTH your past vacation and your future plans."
-- Provide 2 short example sentences in Korean for the missing part (TOPIK 1–2 level, 해요체).
+- Provide 2 short example sentences in Korean for the missing part (TOPIK 2 level, 해요체).
 
 If details are missing for a covered topic:
 - Mention this in "Key Improvements" with a specific example of what detail to add.
