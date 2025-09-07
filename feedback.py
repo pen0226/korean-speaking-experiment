@@ -439,20 +439,6 @@ Student answered "{question}": {transcript}
 5. Allowed speech styles: {allowed_styles}
 6. Forbidden speech styles: {forbidden_styles}
 
-**CRITICAL: GRAMMAR ANALYSIS RULES**
-**STRICTLY PROHIBITED – NEVER FLAG THESE AS ERRORS**  
-(These are correct forms and must NOT appear in grammar_issues)
-- Natural particle omission when the meaning is clear: "사과 먹어요", "책 읽어요", "영화 봤어요"
-- Using "도" (also/too) instead of "을/를": "김치도 먹어요" is correct — do NOT suggest "김치를"
-- Using "하고" instead of "과/와": both are equally correct for "and/with"
-- Colloquial forms that are grammatically acceptable in spoken Korean (예: "갔다 왔어요" for "갔습니다")
-- Natural word order variations common in spoken Korean
-**ONLY FLAG GENUINE ERRORS THAT IMPEDE COMMUNICATION**  
-(Show the wrong form first, then the correct form)
-- Wrong particle for location/direction: "학교를 가요" (WRONG) → "학교에 가요" (CORRECT)
-- Incorrect tense usage with time markers: "어제 가요" (WRONG) → "어제 갔어요" (CORRECT)
-- Clearly ungrammatical constructions that native speakers would not use
-
 
 **⚠️⚠️ CRITICAL STYLE MATCHING REQUIREMENT: ADHERE TO STUDENT'S ORIGINAL SPEECH STYLE PER SENTENCE ⚠️⚠️**
 - **ABSOLUTELY DO NOT change all sentences into one style.** You MUST preserve the student's speech style for EACH sentence individually.
@@ -494,13 +480,13 @@ Make this the FIRST point in "Key Improvements".
 
 1. **Grammar Issues (5-6개, 다양한 유형 우선)**
    - **우선순위 적용**: 
-     1. 실제로 틀린 문법 (자연스러운 변형은 제외)
+     1. 실제로 틀린 문법 (자연스러운 구어체 사용은 제외)
      2. 의사소통에 가장 큰 영향을 주는 오류
      3. 초급자가 자주 틀리는 패턴
      
    - **유형 다양화 필수**: 조사 오류가 많아도 최대 1-2개만 선택하고, 반드시 다른 유형 포함
     **GRAMMAR ERROR TYPES**
-    - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.)
+    - **Particle**: Wrong particle (은/는, 이/가, 을/를, etc.), (자연스러운 조사 생략은 제외)
     - **Verb Ending**: Wrong verb ending or politeness ending (예요/이에요, 아요/어요, etc.)
     - **Tense**: Incorrect tense usage (past/present/future)
     - **Word Order**: Unnatural word order in sentences
@@ -508,8 +494,8 @@ Make this the FIRST point in "Key Improvements".
     - **Others**: For grammar mistakes that do not fit the above categories
    
    - **MUST include "Original:" and "→ Fix:" format.**
-   - **CRITICAL: DO NOT classify unnatural word choice as a grammar issue if the grammar itself is correct.**
    - **Target: Find 5-6 issues with TYPE DIVERSITY if they exist.**
+   - **'하고(with)', '도(as well, too)' , '자연스러운 목적어(을,를) 생략' 등 알맞게 사용된 문법을 틀렸다고 하지 않도록 재검토하기**
 
 2. **Vocabulary (2-3개, 학생 답변 기반 실용적 개선)**
    - **학생이 실제로 사용한 표현의 개선에 초점**
@@ -544,9 +530,8 @@ Make this the FIRST point in "Key Improvements".
    
 4. **One Advanced Pattern (학생 답변 기반)**
    - **학생이 사용한 패턴을 확장하는 방향**
-   - **예시**: 학생이 "~고 싶다" 많이 사용 → "~고 싶어서" 이유 표현 가르치기
    - Provide one useful pattern for the placement interview.
-   - Must be appropriate for their level (TOPIK 1–2).
+   - Must be appropriate for their level (TOPIK 2-3).
    - Connect to what the student actually said.
 
 5. **🔥 Sentence Connection Tip (학생 답변 기반 문장 연결)**
@@ -565,13 +550,13 @@ Make this the FIRST point in "Key Improvements".
 
 **Required JSON Structure:**
 {{
-    "suggested_model_sentence": "Write one natural Korean paragraph that answers both the past vacation and future plans questions, based strictly on the student's answer. Keep all original ideas and details from the student's response, correcting any grammar or vocabulary errors and using appropriate TOPIK 2 level expressions. If the student's sentences are too short, connect them smoothly with linking words. If the student skipped part of the question, add a relevant and realistic detail to complete the answer. You may also add small, realistic details to make the story more vivid, but ensure they fit naturally with the student's content. The final paragraph should be clear, cohesive, and natural, and long enough to be spoken at a normal pace for about 1 to 2 minutes.",
+    "suggested_model_sentence": "Write one natural Korean paragraph that answers both questions, based EXACTLY on what the student actually said. Keep ALL their specific details, places, activities, and personal experiences. ONLY fix grammar/vocabulary errors.",
     "suggested_model_sentence_english": "English translation",
     "grammar_issues": [
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
-        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",        
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",   
+        "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation",   
         "❗️ [Type]\\n• Original: '[exactly what they said]' → Fix: '[corrected version]'\\n🧠 Simple explanation"
     ],
     "vocabulary_suggestions": [
