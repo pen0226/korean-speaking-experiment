@@ -1012,7 +1012,7 @@ def display_grammar_tips_simplified(feedback):
             )
             
             # Streamlit 마크다운으로 표시 (HTML 허용)
-            st.markdown(f"**#{i} {parsed['error_type']}**")
+            st.markdown(f"**#{i}**")
             st.markdown(f"❌ {highlighted_original}", unsafe_allow_html=True)
             st.markdown(f"✅ {highlighted_fixed}", unsafe_allow_html=True)
             st.markdown(f"💡 {parsed['explanation']}")
@@ -1042,7 +1042,7 @@ def display_grammar_tips_simplified(feedback):
                     )
                     
                     # Streamlit 마크다운으로 표시 (HTML 허용)
-                    st.markdown(f"**#{i} {parsed['error_type']}**")
+                    st.markdown(f"**#{i}**")
                     st.markdown(f"❌ {highlighted_original}", unsafe_allow_html=True)
                     st.markdown(f"✅ {highlighted_fixed}", unsafe_allow_html=True)
                     st.markdown(f"💡 {parsed['explanation']}")
